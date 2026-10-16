@@ -136,6 +136,40 @@ impl Plan {
         waves
     }
 
+    /// The lot a fix belongs to: its own lot when it exists, else the only lot
+    /// owning the file named in `where`, else the only lot of the plan.
+    /// `None` when the fix cannot be attributed without guessing.
+    pub fn route_fix(&self, fix: &Fix) -> Option<&str> {
+        if let Some(l) = self.lot(&fix.lot) {
+            return Some(l.id.as_str());
+        }
+        let place = fix.r#where.replace('\\', "/").to_lowercase();
+        let owners: Vec<&Lot> = self
+            .lots
+            .iter()
+            .filter(|l| l.files.iter().any(|f| {
+                let f = f.replace('\\', "/").to_lowercase();
+                // Whole path segments only: `a.rs` must not match `data.rs`.
+                !f.is_empty() && place.match_indices(&f).any(|(i, _)| i == 0 || (!place.as_bytes()[i - 1].is_ascii_alphanumeric() && place.as_bytes()[i - 1] != b'_'))
+            }))
+            .collect();
+        match (owners.as_slice(), self.lots.as_slice()) {
+            ([one], _) => Some(one.id.as_str()),
+            ([], [one]) => Some(one.id.as_str()),
+            _ => None,
+        }
+    }
+
+    /// Splits fix jobs into the plan's waves, so lots that may share files
+    /// are never fixed at the same time.
+    pub fn fix_waves<T: Clone>(&self, jobs: &[(String, T)]) -> Vec<Vec<(String, T)>> {
+        self.effective_waves()
+            .iter()
+            .map(|w| jobs.iter().filter(|(id, _)| w.contains(id)).cloned().collect::<Vec<_>>())
+            .filter(|w| !w.is_empty())
+            .collect()
+    }
+
     pub fn validate(&self) -> Result<()> {
         if self.lots.is_empty() {
             bail!("plan has no lots");
@@ -188,5 +222,29 @@ mod tests {
     fn rejects_shared_files_in_a_wave() {
         let p = plan(r#"{"lots":[{"id":"L1","title":"a","instructions":"x","files":["src/a.rs"]},{"id":"L2","title":"b","instructions":"y","files":["src\\A.rs"]}],"waves":[["L1","L2"]]}"#);
         assert!(p.validate().is_err());
+    }
+
+    fn fix(lot: &str, place: &str) -> Fix {
+        Fix { lot: lot.into(), r#where: place.into(), problem: "p".into(), fix: String::new() }
+    }
+
+    #[test]
+    fn fixes_are_routed_by_lot_then_file() {
+        let p = plan(r#"{"lots":[{"id":"L1","title":"a","instructions":"x","files":["src/a.rs"]},{"id":"L2","title":"b","instructions":"y","files":["src/b.rs"]}]}"#);
+        assert_eq!(p.route_fix(&fix("L2", "")), Some("L2"));
+        assert_eq!(p.route_fix(&fix("LX", "src\\B.rs:12")), Some("L2"));
+        assert_eq!(p.route_fix(&fix("LX", "somewhere else")), None, "no guess between two lots");
+        let short = plan(r#"{"lots":[{"id":"L1","title":"a","instructions":"x","files":["a.rs"]},{"id":"L2","title":"b","instructions":"y","files":["b.rs"]}]}"#);
+        assert_eq!(short.route_fix(&fix("LX", "src/data.rs:3")), None, "partial names do not match");
+        assert_eq!(short.route_fix(&fix("LX", "src/a.rs:3")), Some("L1"));
+        let single = plan(r#"{"lots":[{"id":"L1","title":"a","instructions":"x"}]}"#);
+        assert_eq!(single.route_fix(&fix("LX", "")), Some("L1"));
+    }
+
+    #[test]
+    fn fix_jobs_follow_the_waves() {
+        let p = plan(r#"{"lots":[{"id":"L1","title":"a","instructions":"x"},{"id":"L2","title":"b","instructions":"y"},{"id":"L3","title":"c","instructions":"z"}],"waves":[["L1","L2"],["L3"]]}"#);
+        let jobs = vec![("L3".to_string(), 3), ("L1".to_string(), 1)];
+        assert_eq!(p.fix_waves(&jobs), vec![vec![("L1".to_string(), 1)], vec![("L3".to_string(), 3)]]);
     }
 }
