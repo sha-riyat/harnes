@@ -13,9 +13,9 @@
   --faint: #3a3a3a;
   --ink: #0a0a0a; /* text on a white surface */
   --term-bg: #0a0a0a;
-  --shadow: 0 12px 40px rgb(0 0 0 / 0.5);
-  --radius: 12px;
-  --radius-sm: 8px;
+  --shadow: none;
+  --radius: 0;
+  --radius-sm: 0;
   --font: "Segoe UI Variable Text", "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
   --mono: "Cascadia Mono", "JetBrains Mono", "SF Mono", Consolas, ui-monospace, monospace;
   color-scheme: dark;
@@ -35,7 +35,7 @@
     --faint: #cfcfcf;
     --ink: #fafafa;
     --term-bg: #0a0a0a;
-    --shadow: 0 12px 40px rgb(0 0 0 / 0.08);
+    --shadow: none;
     color-scheme: light;
   }
 }
@@ -53,7 +53,7 @@
   --faint: #cfcfcf;
   --ink: #fafafa;
   --term-bg: #0a0a0a;
-  --shadow: 0 12px 40px rgb(0 0 0 / 0.08);
+  --shadow: none;
   color-scheme: light;
 }
 
@@ -64,7 +64,7 @@ button, input, textarea { font: inherit; color: inherit; }
 ::selection { background: var(--text); color: var(--bg); }
 :focus-visible { outline: 1px solid var(--text); outline-offset: 2px; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 8px; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 0; }
 ::-webkit-scrollbar-track { background: transparent; }
 
 .mono, .label, kbd, code { font-family: var(--mono); }
@@ -73,21 +73,17 @@ button, input, textarea { font: inherit; color: inherit; }
 .dim { color: var(--text-2); }
 .small { font-size: 11.5px; }
 .spacer { flex: 1; }
-kbd { font-size: 10px; padding: 1px 5px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--muted); }
+kbd { font-size: 10px; padding: 1px 5px; border: 1px solid var(--line-strong); border-radius: 0; color: var(--muted); }
 
 /* Controls */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line-strong); background: transparent; cursor: pointer; white-space: nowrap; font-size: 12.5px; }
-.btn:hover:not(:disabled) { border-color: var(--text-2); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 0; border: 1px solid var(--line-strong); background: transparent; cursor: pointer; white-space: nowrap; font-size: 12.5px; }
 .btn:disabled { opacity: 0.35; cursor: default; }
 .btn.solid { background: var(--text); color: var(--ink); border-color: var(--text); font-weight: 600; }
-.btn.solid:hover:not(:disabled) { opacity: 0.88; }
 .btn.ghost { border-color: transparent; color: var(--text-2); }
-.btn.ghost:hover:not(:disabled) { color: var(--text); background: var(--surface-2); }
-.icon-btn { display: inline-grid; place-items: center; width: 28px; height: 28px; border: none; border-radius: var(--radius-sm); background: transparent; color: var(--muted); cursor: pointer; }
-.icon-btn:hover { color: var(--text); background: var(--surface-2); }
+.icon-btn { display: inline-grid; place-items: center; width: 28px; height: 28px; border: none; border-radius: 0; background: transparent; color: var(--muted); cursor: pointer; }
 .icon-btn.on { color: var(--text); }
 .icon-btn.sm { width: 22px; height: 22px; }
-.field { width: 100%; background: transparent; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 8px 10px; outline: none; }
+.field { width: 100%; background: transparent; border: 1px solid var(--line-strong); border-radius: 0; padding: 8px 10px; outline: none; }
 .field:focus { border-color: var(--text-2); }
 
 /* Icons (Phosphor) and living ASCII */

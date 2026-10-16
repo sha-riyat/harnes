@@ -1,25 +1,24 @@
 /* "Every agent on the machine" view — monochrome. */
 .lookout { flex: 1; overflow-y: auto; width: 100%; max-width: 980px; margin: 0 auto; padding: 32px 28px; display: flex; flex-direction: column; gap: 26px; }
 .lookout h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-family: var(--mono); font-size: 10.5px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.needs { padding: 14px 16px; border: 1px solid var(--text); border-radius: var(--radius); }
-.need { display: grid; grid-template-columns: auto auto 1fr auto; gap: 4px 10px; align-items: center; width: 100%; text-align: left; margin-top: 6px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: none; cursor: pointer; }
+.needs { padding: 14px 16px; border: 1px solid var(--text); border-radius: 0; }
+.need { display: grid; grid-template-columns: auto auto 1fr auto; gap: 4px 10px; align-items: center; width: 100%; text-align: left; margin-top: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 0; background: none; cursor: pointer; }
 .need:hover { border-color: var(--text-2); }
 .need .why { grid-column: 2 / 4; font-family: var(--mono); font-size: 12px; color: var(--text-2); }
-.overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 .overview > div { padding: 16px; background: var(--bg); }
 .spark { width: 100%; height: 56px; }
 .spark polyline { stroke: var(--text) !important; }
 .spark polyline + polyline { stroke: var(--muted) !important; stroke-dasharray: 2 2; }
 .sources { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
 .sources h3 { width: 100%; }
-.src { padding: 3px 9px; border: 1px solid var(--line-strong); border-radius: 999px; font-family: var(--mono); font-size: 11px; }
+.src { padding: 3px 9px; border: 1px solid var(--line-strong); border-radius: 0; font-family: var(--mono); font-size: 11px; }
 .src.error { border-color: var(--text); }
 .src.not-set-up { opacity: 0.4; }
 .sessions { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .sessions th { text-align: left; font-family: var(--mono); font-size: 10px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line-strong); }
 .sessions td { padding: 10px; border-bottom: 1px solid var(--line); }
 .sessions tr.harnes { cursor: pointer; }
-.sessions tbody tr:hover td { background: var(--surface); }
 .sessions .badge { margin-left: 8px; }
 .prov { font-family: var(--mono); font-size: 11px; color: var(--text-2); }
 .events { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
