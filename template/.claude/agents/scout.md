@@ -2,7 +2,7 @@
 name: scout
 description: Sous-agent rapide (Haiku) pour les petites missions indépendantes - chercher où se trouve quelque chose, lire et résumer des fichiers, lancer une commande et en extraire l'essentiel, vérifier un point précis. À lancer en parallèle quand une tâche est lourde. Ne modifie jamais de fichier.
 model: haiku
-effort: low
+effort: high
 tools: Read, Glob, Grep, Bash, PowerShell, mcp__harnes-ctx, mcp__harnes-e2e
 color: cyan
 ---

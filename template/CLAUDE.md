@@ -8,7 +8,7 @@ Ce projet est piloté par l'application **harnes** (Rust + Tauri). L'application
 | Planner | `planner` | Opus | medium | `plan.json` |
 | Teacher | `teacher` | Opus | medium | `bar.json`, `gate-<n>.json` |
 | Workers | `worker` | Sonnet | high | `reports/<lot>.json` |
-| Scouts | `scout` | Haiku | low | sous-agents rapides |
+| Scouts | `scout` | Haiku | high | sous-agents rapides |
 | Reviewer | `reviewer` | Opus | medium | `review.json` |
 
 ## Fils de discussion
