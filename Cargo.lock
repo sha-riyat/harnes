@@ -1441,6 +1441,7 @@ dependencies = [
  "harnes-crew",
  "harnes-ctx",
  "harnes-lookout",
+ "harnes-os",
  "harnes-proxy",
  "harnes-pty",
  "harnes-threads",
@@ -1463,6 +1464,7 @@ dependencies = [
  "axum",
  "futures-util",
  "harnes-e2e",
+ "harnes-os",
  "harnes-threads",
  "parking_lot",
  "serde",
@@ -1476,6 +1478,7 @@ name = "harnes-ctx"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "harnes-os",
  "harnes-threads",
  "parking_lot",
  "rusqlite",
@@ -1506,6 +1509,17 @@ dependencies = [
  "serde",
  "serde_json",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "harnes-os"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "zip",
 ]
 
 [[package]]
@@ -2320,6 +2334,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nix"
+version = "0.31.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf20d2fde8ff38632c426f1165ed7436270b44f199fc55284c38276f9db47c3d"
+dependencies = [
+ "bitflags 2.13.2",
+ "cfg-if",
+ "cfg_aliases 0.2.2",
+ "libc",
+]
+
+[[package]]
 name = "nu-ansi-term"
 version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2760,7 +2786,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "log",
- "nix",
+ "nix 0.28.0",
  "serial2",
  "shared_library",
  "shell-words",
@@ -4569,6 +4595,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "typed-path"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e28f89b80c87b8fb0cf04ab448d5dd0dd0ade2f8891bae878de66a75a28600e"
+
+[[package]]
 name = "typeid"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5558,6 +5590,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "zip"
+version = "9.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a954114b47a54df49f83d2722814e86b23d4bb1b54a1b90fb7d92b41619ddc22"
+dependencies = [
+ "crc32fast",
+ "flate2",
+ "indexmap 2.14.2",
+ "memchr",
+ "nix 0.31.3",
+ "typed-path",
+ "zopfli",
+]
+
+[[package]]
 name = "zlib-rs"
 version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5568,3 +5615,15 @@ name = "zmij"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
+
+[[package]]
+name = "zopfli"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aaf7fc5d30c28483d93805c4a5e12b05bbb52407fa67c5f8bd552374cd01fb11"
+dependencies = [
+ "bumpalo",
+ "crc32fast",
+ "log",
+ "simd-adler32",
+]

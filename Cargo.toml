@@ -9,6 +9,7 @@ members = [
     "crates/e2e",
     "crates/lookout",
     "crates/threads",
+    "crates/os",
     "app/src-tauri",
 ]
 
@@ -42,6 +43,7 @@ harnes-crew = { path = "crates/crew" }
 harnes-e2e = { path = "crates/e2e" }
 harnes-lookout = { path = "crates/lookout" }
 harnes-threads = { path = "crates/threads" }
+harnes-os = { path = "crates/os" }
 
 [profile.release]
 lto = "thin"
