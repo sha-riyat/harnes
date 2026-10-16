@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod attention;
 mod commands;
 mod crew_ctl;
 mod host;
@@ -22,6 +23,8 @@ fn main() {
             pump::start(st.clone());
             lookout::start(st.clone());
             crew_ctl::install_control(&st);
+            attention::install(&st);
+            app.manage(attention::Prompts::default());
             app.manage(st.clone());
             // Restore the last session, then keep it saved.
             tauri::async_runtime::spawn(async move {
@@ -48,6 +51,11 @@ fn main() {
             commands::crew_cancel,
             projects::stats,
             commands::lookout,
+            attention::permissions_pending,
+            attention::permission_answer,
+            attention::screen_prompts,
+            attention::screen_answer,
+            attention::conversation,
             crew_ctl::orchestrator_say,
             crew_ctl::threads_list,
             crew_ctl::thread_read,

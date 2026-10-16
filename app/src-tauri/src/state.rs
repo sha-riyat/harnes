@@ -106,6 +106,10 @@ impl AppState {
                     }
                 }
                 let _ = app_h.emit("agent-state", serde_json::json!({ "key": key, "state": st }));
+                // The orchestrator's transcript changes with each of its hook events.
+                if let Some(project) = key.strip_prefix("orch-") {
+                    let _ = app_h.emit("conversation-changed", project);
+                }
             }))
             .await?,
         );
