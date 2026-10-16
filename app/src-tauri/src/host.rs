@@ -14,6 +14,7 @@ pub fn agent_env(p: &Project, key: &str) -> Vec<(String, String)> {
         ("HARNES_AGENT".into(), key.into()),
         ("HARNES_PROJECT".into(), p.id.clone()),
         ("ANTHROPIC_BASE_URL".into(), p.proxy.url()),
+        ("HARNES_OS_DIR".into(), harnes_os::default_dir().display().to_string()),
     ]
 }
 

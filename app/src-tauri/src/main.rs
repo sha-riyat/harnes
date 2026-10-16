@@ -5,6 +5,7 @@ mod commands;
 mod crew_ctl;
 mod host;
 mod lookout;
+mod methods;
 mod persist;
 mod projects;
 mod pump;
@@ -18,6 +19,10 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // OS packs ship inside harnes: install them before projects are equipped.
+            if let Err(e) = harnes_os::install_bundled(&harnes_os::Library::open_default()) {
+                tracing::warn!("OS packs not installed: {e:#}");
+            }
             let handle = app.handle().clone();
             let st = tauri::async_runtime::block_on(state::AppState::new(handle))?;
             pump::start(st.clone());
@@ -51,6 +56,10 @@ fn main() {
             commands::crew_cancel,
             projects::stats,
             commands::lookout,
+            methods::os_list,
+            methods::os_pack,
+            methods::os_read,
+            methods::os_import,
             attention::permissions_pending,
             attention::permission_answer,
             attention::screen_prompts,

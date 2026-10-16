@@ -21,6 +21,7 @@ harnes-ctx.workspace = true
 harnes-crew.workspace = true
 harnes-lookout.workspace = true
 harnes-threads.workspace = true
+harnes-os.workspace = true
 tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true
