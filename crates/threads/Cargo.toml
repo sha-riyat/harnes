@@ -1,0 +1,13 @@
+[package]
+name = "harnes-threads"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Threads for agent-to-agent communication (SQLite, shared across processes)"
+
+[dependencies]
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+parking_lot.workspace = true
