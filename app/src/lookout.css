@@ -1,0 +1,29 @@
+/* "Tous les agents" view. */
+.lookout { flex: 1; overflow-y: auto; padding: 14px 16px 20px; display: flex; flex-direction: column; gap: 18px; }
+.lookout h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.needs { border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent); border-radius: var(--radius); background: var(--warn-soft); padding: 10px 12px; }
+.needs h3 { color: var(--warn); }
+.need { display: grid; grid-template-columns: auto auto 1fr auto; gap: 4px 10px; align-items: center; width: 100%; text-align: left; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; }
+.need:hover { border-color: var(--warn); }
+.need .why { grid-column: 2 / 4; color: var(--warn); font-family: var(--mono); font-size: 12px; }
+.overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.overview > div { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 12px; }
+.spark { width: 100%; height: 56px; }
+.sources { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
+.sources h3 { width: 100%; }
+.src { padding: 4px 9px; border-radius: 99px; background: var(--surface-2); font-size: 12px; }
+.src.error { color: var(--danger); }
+.src.not-set-up { opacity: 0.5; }
+.sessions { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+.sessions th { text-align: left; font-weight: 500; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.sessions td { padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.sessions tr:last-child td { border-bottom: none; }
+.sessions tr.harnes { cursor: pointer; }
+.sessions tbody tr:hover td { background: var(--surface-2); }
+.sessions .badge { margin-left: 6px; background: var(--accent-soft); color: var(--accent); }
+.prov { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px; background: var(--surface-3); }
+.prov.claude { color: #e0895a; }
+.prov.codex { color: var(--blue); }
+.prov.gemini { color: var(--violet); }
+.events { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+@media (max-width: 1100px) { .overview { grid-template-columns: 1fr; } }

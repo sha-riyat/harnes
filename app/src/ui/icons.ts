@@ -1,0 +1,35 @@
+// The icons harnes uses. Imported one by one so only these end up in the bundle.
+
+export { default as Activity } from "@hugeicons/core-free-icons/Activity01Icon";
+export { default as Add } from "@hugeicons/core-free-icons/Add01Icon";
+export { default as Alert } from "@hugeicons/core-free-icons/Alert02Icon";
+export { default as ArrowRight } from "@hugeicons/core-free-icons/ArrowRight01Icon";
+export { default as Brain } from "@hugeicons/core-free-icons/AiBrain01Icon";
+export { default as Cancel } from "@hugeicons/core-free-icons/Cancel01Icon";
+export { default as Check } from "@hugeicons/core-free-icons/CheckmarkCircle02Icon";
+export { default as Clock } from "@hugeicons/core-free-icons/Clock01Icon";
+export { default as Coins } from "@hugeicons/core-free-icons/Coins01Icon";
+export { default as Command } from "@hugeicons/core-free-icons/CommandIcon";
+export { default as Commit } from "@hugeicons/core-free-icons/GitCommitIcon";
+export { default as Dashboard } from "@hugeicons/core-free-icons/DashboardSquare01Icon";
+export { default as Flash } from "@hugeicons/core-free-icons/FlashIcon";
+export { default as Folder } from "@hugeicons/core-free-icons/FolderOpenIcon";
+export { default as Grid } from "@hugeicons/core-free-icons/LayoutGridIcon";
+export { default as Keyboard } from "@hugeicons/core-free-icons/KeyboardIcon";
+export { default as Loading } from "@hugeicons/core-free-icons/Loading03Icon";
+export { default as Maximize } from "@hugeicons/core-free-icons/Maximize02Icon";
+export { default as Moon } from "@hugeicons/core-free-icons/Moon02Icon";
+export { default as Bell } from "@hugeicons/core-free-icons/Notification01Icon";
+export { default as Robot } from "@hugeicons/core-free-icons/Robot01Icon";
+export { default as Search } from "@hugeicons/core-free-icons/Search01Icon";
+export { default as Send } from "@hugeicons/core-free-icons/ArrowUp02Icon";
+export { default as Settings } from "@hugeicons/core-free-icons/Settings02Icon";
+export { default as SidebarLeft } from "@hugeicons/core-free-icons/SidebarLeftIcon";
+export { default as SidebarRight } from "@hugeicons/core-free-icons/SidebarRightIcon";
+export { default as Sparkles } from "@hugeicons/core-free-icons/SparklesIcon";
+export { default as Stop } from "@hugeicons/core-free-icons/StopIcon";
+export { default as Sun } from "@hugeicons/core-free-icons/Sun03Icon";
+export { default as Team } from "@hugeicons/core-free-icons/UserGroupIcon";
+export { default as Terminal } from "@hugeicons/core-free-icons/ComputerTerminal01Icon";
+export { default as TestTube } from "@hugeicons/core-free-icons/TestTube01Icon";
+export { default as Tick } from "@hugeicons/core-free-icons/Tick02Icon";
