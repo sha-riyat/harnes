@@ -9,6 +9,7 @@ pub mod permissions;
 pub mod plan;
 pub mod prompts;
 pub mod providers;
+pub mod screen;
 pub mod setup;
 pub mod threading;
 
