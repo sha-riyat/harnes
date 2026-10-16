@@ -1,132 +1,162 @@
-# harnes
+<p align="center">
+  <img src="docs/field.svg" width="100%" alt="harnes: a field of ASCII characters drifting from clouds to a turning torus, a vortex and a network">
+</p>
 
-harnes is a desktop cockpit for running a crew of coding agents. It is built with Rust and Tauri 2, with a SolidJS front end. The terminal panes are rendered by **libghostty-vt**, Ghostty's VT engine.
+<p align="center">
+  A desktop cockpit for a crew of coding agents.<br>
+  <sub>Rust · Tauri 2 · SolidJS · libghostty-vt · black and white · MIT</sub>
+</p>
 
-Claude Code is the default runtime. Each role can also run on Codex, Gemini CLI or OpenCode.
+<p align="center">
+  <a href="#the-crew">crew</a> ·
+  <a href="#interface">interface</a> ·
+  <a href="#threads">threads</a> ·
+  <a href="#methods">methods</a> ·
+  <a href="#harnes-e2e">e2e</a> ·
+  <a href="#build-windows">build</a>
+</p>
 
-## Components
+---
 
-| Need | harnes component | Crate |
+You talk to one agent, the **orchestrator**. It plans, starts a crew, follows every hand-off and comes back when the work meets a bar set before it started. Terminals stay out of sight; what needs you comes to you as a card.
+
+Claude Code is the default runtime. Each role can also run on Codex, Gemini CLI or OpenCode. Terminal panes are rendered by **libghostty-vt**, Ghostty's VT engine.
+
+| | | |
 |---|---|---|
-| Agent terminals (replaces Herdr) | ConPTY panes rendered by libghostty-vt, with agent state from Claude Code hooks | `harnes-vt`, `harnes-pty` |
-| Token savings (replaces Headroom) | Local Anthropic proxy: deterministic `tool_result` compression and usage stats | `harnes-proxy` |
-| Context sandbox (replaces Context Mode) | MCP server `harnes-ctx`: command runs, SQLite FTS5 index, retrieval | `harnes-ctx` |
-| End-to-end tests (inspired by TesterArmy e2e) | `harnes-e2e`: YAML specs, natural-language `act` steps resolved by the agents themselves, model-free replay | `harnes-e2e` |
-| Seeing every agent (inspired by agent-lookout) | Machine-wide view of Claude Code, Codex, Gemini CLI and status-file sessions | `harnes-lookout` |
-| Crew orchestration | Planner → Teacher → Workers → Reviewer → Teacher gate | `harnes-crew` |
-| Methods for agents | 24 OS packs (doctrine, oracle, skills, routing) shipped inside harnes and loaded by role | `harnes-os` |
+| **Terminals** | ConPTY panes rendered by libghostty-vt, agent state from Claude Code hooks | `harnes-vt` `harnes-pty` |
+| **Tokens** | Local Anthropic proxy: deterministic `tool_result` compression and usage stats | `harnes-proxy` |
+| **Context** | MCP server `harnes-ctx`: command runs, SQLite FTS5 index, retrieval | `harnes-ctx` |
+| **e2e tests** | YAML specs, natural-language `act` steps resolved by the agents, model-free replay | `harnes-e2e` |
+| **Every agent** | Machine-wide view of Claude Code, Codex, Gemini CLI and status-file sessions | `harnes-lookout` |
+| **Crew** | Planner → Teacher → Workers → Reviewer → Teacher gate | `harnes-crew` |
+| **Methods** | 24 OS packs (doctrine, oracle, skills, routing) shipped inside harnes, loaded by role | `harnes-os` |
 
 Ponytail, Caveman and TasteSkill v2 (`design-taste-frontend`) remain Claude Code skills.
 
 ## The crew
 
-| Role | Default model | Job | Output |
+<p align="center"><img src="docs/crew.svg" width="100%" alt="Agents drawn as one character each: breathing while they work, blinking when they need you, with the run's progress and a message travelling to a thread"></p>
+
+| Role | Model | Job | Output |
 |---|---|---|---|
-| Orchestrator | Opus, medium | Your only interlocutor. Turns your messages into crew runs (`crew_start`), follows every hand-off in the threads, checks that sub-agents' results were integrated, and reports back. | its replies |
-| Planner | Opus, medium | Splits the task into lots and waves. Lots in the same wave never share files. | `plan.json` |
-| Teacher | Opus, medium | Sets the validation bar before any work starts: criteria, the evidence each one needs, and when to involve you. | `bar.json` |
-| Worker × N | Sonnet, high | Implements one lot, then writes and runs its own e2e test. | `reports/<lot>-r<n>.json` |
-| Reviewer | Opus, medium | Reviews the diff against the plan and the real e2e results. | `review-<n>.json` |
-| Teacher (gate) | Opus, medium | Checks the bar against the tester's results, then either sends the work back or tells you it is ready. | `gate-<n>.json` |
-| scout | Haiku, low | Subagent any role can start for short parallel tasks: finding code, summarising files, running a command. | its reply |
+| Orchestrator | Opus · medium | Your only interlocutor. Turns your messages into runs (`crew_start`), follows the threads, checks results were integrated, reports back. | its replies |
+| Planner | Opus · medium | Splits the task into lots and waves. Lots in one wave never share files. | `plan.json` |
+| Teacher | Opus · medium | Sets the bar before work starts: criteria, the evidence each needs, when to involve you. | `bar.json` |
+| Worker × N | Sonnet · high | Implements one lot, then writes and runs its own e2e test. | `reports/<lot>-r<n>.json` |
+| Reviewer | Opus · medium | Reviews the diff against the plan and the real e2e results. | `review-<n>.json` |
+| Teacher (gate) | Opus · medium | Checks the bar against the results, then sends the work back or tells you it is ready. | `gate-<n>.json` |
+| scout | Haiku · high | Subagent any role starts for short parallel tasks: finding code, summarising files, running a command. | its reply |
+
+### The loop
 
 ```
-plan ─► bar ─► waves of workers ─► [e2e suite] ─► review ─┬─ CHANGES ─► fix workers ─┐
-                                                          └─ PASS ─► teacher gate ──┤
-                                                               ready ─► you   not ready ─► fix workers
+you ─ chat ─► orchestrator      scout · os_route · os_brief · crew_start · crew_status
+                  │
+                  ▼
+              planner           Read · Grep · ctx_search · os_brief    ─► plan.json, lot threads
+                  │
+                  ▼
+              teacher · bar     os_brief                               ─► bar.json
+                  │
+                  ▼
+        ┌───► workers × N       thread_read · thread_post · ctx_execute
+        │         │             e2e_observe ─► click / fill ─► check ─► save
+        │         │                                                    ─► reports/<lot>-r<n>.json
+        │         ▼
+        │     e2e suite         harnes-e2e run: cached replay, no model
+        │         │
+        │         ▼
+        ├──── reviewer          diff + plan + real e2e results         ─► review-<n>.json
+        │ CHANGES │ PASS
+        │         ▼
+        └──── teacher · gate    bar against the results                ─► gate-<n>.json
+        not ready │ ready
+                  ▼
+you ◄── ready for you: the Teacher's summary and the proposed commits
+
+all along: proxy (tool_result compression, usage) · hooks (agent state)
+           Ghostty screen reading (menus → cards) · SQLite threads (questions, summaries)
 ```
 
-- You are only interrupted once the Teacher's bar is met. The Teacher fixed that bar before the work started, and the test results back it up.
-- Commits are proposed and never created automatically.
-- Each agent runs in a visible pane. The agents hand work to each other through JSON files in `.harnes/runs/<id>/`.
-- Claude Code agents report their lifecycle through hooks. Agents from other providers are tracked by watching their output file.
-
-## Threads
-
-The agents, their sub-agents, the orchestrator and you communicate through threads stored in SQLite (`.harnes/threads.db`). The file is shared by every agent process, and nothing runs in the cloud.
-
-- **Thread layout**: each run gets a `run-<id>` thread, and each lot gets a `lot-<id>-<lot>` thread, seeded with the lot's brief.
-- **What the engine posts**: every step of the run, plus the Reviewer's requested fixes in the matching lot thread.
-- **What the agents do**: Workers read their lot thread before starting, ask their questions there, and summarise their work there before finishing.
-- **Tools and signatures**: agents use `thread_list`, `thread_read`, `thread_post`, `thread_create` and `thread_close` (in the `harnes-ctx` MCP server). Messages are signed automatically (`HARNES_AGENT`). Sub-agents add `as`, which shows as `worker-L1/scout`.
-- **History**: threads are closed when the Teacher's gate opens, but stay readable. Posting again reopens a thread.
-- **UI**: the **Threads** tab lists the open and closed threads and shows each conversation. You can write in any thread. An ASCII strip shows the latest messages travelling between agents.
-
-Why SQLite rather than a hosted backend such as Convex: everything runs on one machine and works offline, there is no extra service, and your conversations never leave your computer.
+- You are interrupted only once the Teacher's bar is met, and the test results back it up.
+- Commits are proposed, never created automatically.
+- Agents hand work to each other through JSON files in `.harnes/runs/<id>/`.
+- Claude Code agents report their lifecycle through hooks; other providers are tracked through their output file.
 
 ## Interface
 
-The interface is black and white only. Shape, fill and motion carry state, never colour. Icons are [Phosphor](https://phosphoricons.com/) (light weight, MIT), imported as raw SVG so only the icons used are bundled. Everything that lives (moves, flows or works) is drawn in animated ASCII.
+Black and white, square corners, no shadows. Shape, fill and motion carry state, never colour. A row under the pointer gets a thin rule on its left, the current one a solid rule. Buttons answer with their outline. Overlays are flat sheets with a heavy top rule over a dark veil. Icons are [Phosphor](https://phosphoricons.com/) (light, MIT).
 
-- **Living ASCII**: one shared animation loop that runs only while an element is on screen and the window is visible. With reduced motion, each animation shows a still frame. The pieces:
-  - an agent's state as one character: it breathes while working and blinks `!` when it needs you;
-  - a shimmering strand while the orchestrator thinks;
-  - run progress as one line of text (`plan --- barre :=+= travail ··· revue`): the current step decodes and its wire flows;
-  - a message travelling from an agent to its thread;
-  - the empty conversation filled with a field of characters that moves through clouds, currents, ripples, contours, a vortex, rain and halftone. Each motif dissolves into the next along a noisy front, and the field scrambles under the pointer.
-- **Conversation first**: the main view is the conversation with the project's orchestrator. Its terminal stays hidden, and its Claude transcript is shown as a chat: your messages, its replies, and one short mono line per tool call. A thin bar shows the run's state and progress. The Teacher's summary and the proposed commits close the run.
-- **Three views**: conversation, methods (the OS packs) and machine (every agent on the computer). The terminal grid is in the palette (Ctrl K).
-- **Terminals hidden**: clicking an agent opens its terminal in a drawer.
-- **Permissions in the UI**: each agent gets a blocking Claude Code `PermissionRequest` hook. The request appears as a card (*Allow · Always · Deny*), and your answer is returned as the hook's decision. If you do not answer within about 10 minutes, Claude Code falls back to its own prompt.
-- **Questions read from the screen**: like a computer-use agent reading an accessibility tree, harnes reads each agent's Ghostty grid and detects numbered menus and `(y/n)` prompts. It shows them as cards, then sends your choice as keystrokes. This runs on the frames the pump already produces, so it costs nothing extra.
-- **Side panel**: threads, the run journal and costs.
-- `?mock` (dev only) fakes the backend so the UI can be worked on in a browser.
+Everything that lives is drawn in animated ASCII, on one shared loop that runs only while an element is on screen. With reduced motion, each piece holds a still frame.
 
-## Methods (OS packs)
+```
+ +  orchestrator     working      plan --- bar --- w#rk ·:=+· review ··· gate ··· ready
+ !  worker-L1      needs you      worker-L1 ····#=-:···· lot-1-L1
+ =  worker-L2        working      ·:=+*#*+=:·:-=+*#  thinking
+```
 
-harnes ships 24 OS packs inside its binary (`crates/os/packs`). At launch, it installs them into `%APPDATA%\dev.harnes.app\os`, once per build. Each pack is a method for agents: a doctrine (`OS.md`), an oracle of non-negotiable defaults and refusals, first principles, skills with input and output schemas, playbooks, workflows, intent routing and evals.
+- **Chat first.** The main view is the chat with the orchestrator. Its terminal stays hidden; its Claude transcript becomes messages with real Markdown (bold, lists, code, quotes), and one mono line per tool call.
+- **The field.** An empty view fills with a field of characters that takes the whole centre and widens when the side panels close. It moves through 23 motifs, organic and geometric in turn: clouds, a blueprint being drawn, typing messages, halftone, currents, a turning torus, a node network, Truchet tiles, ripples, type specimens, oscilloscope signals, moiré, contours, a pen plotter, a murmuration, Bauhaus shapes, a vortex, a layout grid, aurora, phyllotaxis, rain, swatches and tides. Each dissolves into the next along a noisy front, and the field scrambles under the pointer.
+- **Views.** `chat`, `methods` (the OS packs) and `machine` (every agent on the computer). The terminal grid is in the palette (`Ctrl K`).
+- **Docked terminals.** A terminal opens only when you ask, in a dock under the main view: one tab per terminal, resizable, folded away in one click. Terminal colours follow the light or dark theme.
+- **Permissions as cards.** Each agent gets a blocking Claude Code `PermissionRequest` hook. The request shows as *Allow · Always · Deny*; your answer is the hook's decision. Without an answer within about 10 minutes, Claude Code falls back to its own prompt.
+- **Questions read from the screen.** Like a computer-use agent reading an accessibility tree, harnes reads each agent's Ghostty grid, finds numbered menus and `(y/n)` prompts, and shows them as cards. Your choice goes back as arrow keys and Enter, one key at a time.
+- **Side panel.** Three icons: threads, the run log, usage.
+- `?mock` (dev only) fakes the backend so the UI can be worked on in a browser. `npm run readme:art` redraws the animations on this page from the app's own scenes.
 
-- **By role**: each crew role loads its own packs. Its first prompt names them, and the project's `HARNESS.md` lists them.
+## Threads
 
-  | Role | Packs |
-  |---|---|
-  | orchestrator | orchestration, agent, team-delegation, decision |
-  | planner | project, stepper, blueprint, execution |
-  | workers | builder, tool-integration, documentation |
-  | reviewer | quality-evaluation, security, builder |
-  | teacher | validation, quality-evaluation |
-  | scouts | market-research, customer-discovery, documentation |
+Agents, sub-agents, the orchestrator and you talk through threads stored in SQLite (`.harnes/threads.db`), shared by every agent process. Nothing runs in the cloud.
 
-  The product packs (brand, pricing, offer, positioning, design…) are reached on demand.
-- **MCP tools** (in `harnes-ctx`):
-  - `os_list`: list the installed packs;
-  - `os_brief(id)`: load a pack's doctrine, oracle, first principles and skills, following the packs' own context-packing order;
-  - `os_route(text)`: find the pack and skill that fit a request;
-  - `os_read(id, path)`: read one file of a pack.
-- **More packs**: import a zip, a folder of zips or pack folders from the methods view, or with:
+- Each run gets a `run-<id>` thread and each lot a `lot-<id>-<lot>` thread, seeded with the lot's brief.
+- The engine posts every step of the run, and the Reviewer's fixes in the matching lot thread.
+- Workers read their lot thread before starting, ask their questions there, and sum up there before finishing.
+- Tools in `harnes-ctx`: `thread_list`, `thread_read`, `thread_post`, `thread_create`, `thread_close`. Messages are signed (`HARNES_AGENT`); sub-agents add `as`, shown as `worker-L1/scout`.
+- Threads close when the gate opens but stay readable. Posting again reopens one.
 
-  ```
-  harnes-ctx os-import PATH
-  ```
+SQLite rather than a hosted backend such as Convex: one machine, offline, no extra service, and your conversations never leave your computer.
 
-  Open projects are re-equipped straight away.
+## Methods
+
+harnes ships 24 OS packs inside its binary (`crates/os/packs`) and installs them into `%APPDATA%\dev.harnes.app\os` once per build. Each pack is a method: a doctrine (`OS.md`), an oracle of non-negotiable defaults and refusals, first principles, skills with schemas, playbooks, workflows, intent routing and evals.
+
+| Role | Packs |
+|---|---|
+| orchestrator | orchestration, agent, team-delegation, decision |
+| planner | project, stepper, blueprint, execution |
+| workers | builder, tool-integration, documentation |
+| reviewer | quality-evaluation, security, builder |
+| teacher | validation, quality-evaluation |
+| scouts | market-research, customer-discovery, documentation |
+
+Product packs (brand, pricing, offer, positioning, design…) are reached on demand.
+
+<details>
+<summary>Tools and import</summary>
+
+- `os_list`: the installed packs.
+- `os_brief(id)`: a pack's doctrine, oracle, first principles and skills, in the packs' own context-packing order.
+- `os_route(text)`: the pack and skill that fit a request.
+- `os_read(id, path)`: one file of a pack.
+
+Import a zip, a folder of zips or pack folders from the methods view, or:
+
+```
+harnes-ctx os-import PATH
+```
+
+Open projects are re-equipped straight away.
+</details>
 
 ## Projects
 
-harnes works project by project, like Herdr workspaces or the projects in Claude Desktop and ChatGPT.
+harnes works project by project, like Herdr workspaces or projects in Claude Desktop.
 
-- **Sidebar**: lists every open project.
-  - The active project is expanded and shows its orchestrator, its run's agents and its sessions.
-  - A spinner means a run is in progress; a badge counts the agents waiting for you.
-  - Hovering a project shows three buttons: new terminal, new Claude session, and close.
-- **Adding a project**: **+** opens the native Windows folder picker. The project is then equipped automatically.
-- **Several projects at once**: each project has its own proxy, context store, threads and crew run, so runs in different projects can proceed in parallel.
-- **Switching**: the centre area and the right-hand panel show only the active project. Switch with a click in the sidebar, the project menu in the top bar, or `Ctrl K`.
-- **Restore**: every open project comes back at the next launch, with its sessions and unfinished run, and the active project is restored too.
-
-## Restore and provider switching
-
-- **Automatic restore**: harnes saves the workspace continuously to `%APPDATA%\dev.harnes.app\session.json`. On the next launch it restores:
-  - the project;
-  - the terminals;
-  - the Claude sessions, through `claude --resume <session id>`, with the id captured by the hooks;
-  - the run in progress.
-- **Resumable runs**: an agent whose output file already exists is skipped, so an interrupted run continues where it stopped.
-- **Provider switching without losing context**: the provider badge in a session pane's header switches the session to Claude, Codex, Gemini or OpenCode. harnes then:
-  - turns the old session's transcript into a hand-off file in `.harnes/context/<session>-<ts>.md`, along with the recent thread messages;
-  - starts the new provider with the instruction to read that file first.
-
-  The chain continues across successive switches, and non-Claude sessions are restored from their last hand-off.
+- **Sidebar.** Every open project. The active one shows its orchestrator, its run's agents and its sessions. A badge counts the agents waiting for you. Hovering a project shows: new terminal, new Claude session, close.
+- **Several at once.** Each project has its own proxy, context store, threads and run, so runs proceed in parallel.
+- **Restore.** harnes saves the workspace to `%APPDATA%\dev.harnes.app\session.json` and brings back projects, terminals, Claude sessions (`claude --resume <id>`) and the run in progress. An agent whose output file exists is skipped, so an interrupted run continues where it stopped.
+- **Switching provider.** The provider badge on a session pane moves it to Claude, Codex, Gemini or OpenCode. harnes writes the old transcript and recent thread messages to `.harnes/context/<session>-<ts>.md` and starts the new provider on that file.
 
 ## harnes-e2e
 
@@ -139,40 +169,28 @@ steps:
   - expect: { target: { role: status }, contains: Pro }  # exact check
 ```
 
-- **Step types**:
-  - exact steps: `open`, `click`, `fill`, `press`, `wait`, `expect`;
-  - natural-language steps: `act`.
-- **Locators**: `role`, `name`, `label`, `text`, `placeholder`, `testid`, `css`, `exact`, `nth`.
-- **Resolving an `act` step**:
-  - the first time, a Worker resolves it through the `harnes-e2e` MCP server: `e2e_prepare`, then `e2e_click` / `e2e_fill` / `e2e_press`, then `e2e_check` and `e2e_save`;
-  - the agent drives the real browser, so the model is the Claude Code session itself, signed in normally;
-  - the recorded actions go to `.harnes/e2e/cache/`, which you can commit, and later runs replay them with no model call;
-  - if the app changes and the replay breaks, the step goes back to "to resolve".
-- **Exit codes**: 0 pass, 1 failure, 2 invalid spec or config, 3 app or browser unavailable, 5 `act` steps still to resolve.
-- **Browser**: harnes-e2e drives Chrome or Edge (or any Chromium) over CDP. It starts the app from `app.command` when needed and stops it, process tree included.
-- **CLI**: `harnes-e2e run [files] [--json]`, `harnes-e2e init --url … --command …`, `harnes-e2e mcp`.
+- Exact steps `open` `click` `fill` `press` `wait` `expect`; natural-language steps `act`.
+- Locators: `role`, `name`, `label`, `text`, `placeholder`, `testid`, `css`, `exact`, `nth`.
+- The first time, a Worker resolves an `act` step through the `harnes-e2e` MCP server (`e2e_prepare`, `e2e_click` / `e2e_fill` / `e2e_press`, `e2e_check`, `e2e_save`), driving the real browser. The actions go to `.harnes/e2e/cache/`; later runs replay them with no model call. If the app changes and replay breaks, the step goes back to "to resolve".
+- Exit codes: 0 pass, 1 failure, 2 invalid spec or config, 3 app or browser unavailable, 5 `act` steps to resolve.
+- Drives Chrome or Edge over CDP; starts the app from `app.command` when needed and stops its process tree.
+- `harnes-e2e run [files] [--json]` · `harnes-e2e init --url … --command …` · `harnes-e2e mcp`
 
-## Seeing every agent (harnes-lookout)
+## Machine
 
-The **Tous les agents** tab polls every 2 s the files each tool already writes. It never starts, stops or messages a session.
+The `machine` view polls every 2 s the files each tool already writes. It never starts, stops or messages a session.
 
-| Source | What it reads |
+| Source | Reads |
 |---|---|
-| Claude Code | `~/.claude/sessions/<pid>.json` (status, waiting reason); dead PIDs are filtered out |
+| Claude Code | `~/.claude/sessions/<pid>.json` (status, waiting reason); dead PIDs filtered out |
 | Codex | `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` (turns, token counts) |
-| Gemini CLI | `~/.gemini/tmp/<project>/chats/session-*.jsonl` (status inferred from write activity) |
-| Status files | `~/.harnes/sessions/*.json` and `~/.agent-lookout/sessions/*.json`: `{"agent","status","name"?,"cwd"?,"pid"?}` |
+| Gemini CLI | `~/.gemini/tmp/<project>/chats/session-*.jsonl` (status from write activity) |
+| Status files | `~/.harnes/sessions/*.json`, `~/.agent-lookout/sessions/*.json`: `{"agent","status","name"?,"cwd"?,"pid"?}` |
 
-The tab shows:
-- a **Te concernent** panel, with the longest-waiting session first and a click to jump to its pane;
-- a chart of the last hour;
-- the session list with provider badges;
-- an event log;
-- the health of each source.
+It shows who needs you (longest wait first, one click to its pane), the last hour, every session with its provider, an event log and the health of each source. harnes' own agents are tagged.
 
-harnes' own agents are tagged in the list.
-
-## Providers
+<details>
+<summary>Providers</summary>
 
 `.harnes/providers.json` (optional):
 
@@ -183,11 +201,13 @@ harnes' own agents are tagged in the list.
 }
 ```
 
-- Built-in providers: `claude` (default, with hooks), `codex`, `gemini`, `opencode`.
-- Placeholders: `{agent}`, `{settings}`, `{prompt}`, `{prompt_with_role}`. The last one adds an instruction to follow `.claude/agents/<role>.md`.
-- The non-Claude defaults are best-effort. Override their flags if a CLI changes.
+- Built in: `claude` (default, with hooks), `codex`, `gemini`, `opencode`.
+- Placeholders: `{agent}`, `{settings}`, `{prompt}`, `{prompt_with_role}` (adds an instruction to follow `.claude/agents/<role>.md`).
+- Non-Claude defaults are best-effort. Override their flags if a CLI changes.
+</details>
 
-## Layout
+<details>
+<summary>Layout</summary>
 
 ```
 crates/vt       libghostty-vt FFI (C shim) → frames of cells
@@ -201,50 +221,36 @@ crates/os       OS packs: bundled zips, import, index, routing by role
 crates/crew     setup, hooks, providers, crew engine, context hand-offs, JSON contracts
 app/            Tauri 2 app (src-tauri) + SolidJS UI
 template/       agents (orchestrator, planner, teacher, worker, reviewer, scout), settings, CLAUDE.md
+docs/           the animations on this page
 ```
+</details>
 
 ## Build (Windows)
 
-Prerequisites:
-- Rust (MSVC) and Visual Studio Build Tools 2022
-- Zig 0.16.0
-- Node.js via `nvm`
-- Chrome or Edge
-- Claude Code CLI, signed in
+Rust (MSVC) with Visual Studio Build Tools 2022, Zig 0.16.0, Node.js via `nvm`, Chrome or Edge, and the Claude Code CLI signed in.
 
-1. Build libghostty-vt once:
+```powershell
+# libghostty-vt, once (set GHOSTTY_VT_DIR if it lives elsewhere)
+git clone --depth 1 https://github.com/ghostty-org/ghostty.git $HOME\tools\ghostty
+cd $HOME\tools\ghostty; zig build -Demit-lib-vt -Doptimize=ReleaseFast -Dsimd=false
 
-   ```powershell
-   git clone --depth 1 https://github.com/ghostty-org/ghostty.git $HOME\tools\ghostty
-   cd $HOME\tools\ghostty; zig build -Demit-lib-vt -Doptimize=ReleaseFast -Dsimd=false
-   ```
+cargo test --workspace
 
-   Set `GHOSTTY_VT_DIR` if it lives elsewhere.
-
-2. Run the tests:
-
-   ```powershell
-   cargo test --workspace
-   ```
-
-3. Start the app:
-
-   ```powershell
-   cd app; npm install
-   npm run app        # builds harnes-ctx + harnes-e2e, then tauri dev
-   npm run app:build  # release + NSIS installer
-   ```
+cd app; npm install
+npm run app        # builds harnes-ctx + harnes-e2e, then tauri dev
+npm run app:build  # release + NSIS installer
+```
 
 ## Using it
 
-1. Click **+** next to *Projets* and pick a folder. This writes the agents, settings and `.mcp.json` (`harnes-ctx`, `harnes-e2e`), and starts the proxy.
-2. The first time, open a **+ Claude** pane and accept the folder trust prompt.
-3. Talk to the orchestrator in the bottom box. It starts and supervises the crew. Follow the work in **Panes**, **Tous les agents** and the **Threads** tab.
-4. When the Teacher's gate opens, read **Prêt pour toi** and the proposed commits. Test the result yourself, then approve.
+1. **+** next to *projects*, pick a folder. harnes writes the agents, settings and `.mcp.json` (`harnes-ctx`, `harnes-e2e`) and starts the proxy.
+2. The first time, open a Claude session and accept the folder trust prompt.
+3. Talk to the orchestrator in the chat. Follow the work in the sidebar, the `machine` view and the threads.
+4. When the gate opens, read *ready for you* and the proposed commits. Test the result, then approve.
 
 ## Notes
 
-- `harnes-ctx` isolates output from the model context. It is not a security sandbox.
+- `harnes-ctx` keeps output out of the model context. It is not a security sandbox.
 - Proxy compression is deterministic, so prompt caching keeps working.
-- harnes-e2e and harnes-lookout are independent implementations inspired by TesterArmy e2e (Apache-2.0) and agent-lookout (MIT). No code from either project is included.
-- libghostty-vt's API is still evolving. `crates/vt/shim/hv.c` is the only file to adapt when you update it.
+- harnes-e2e and harnes-lookout are independent implementations inspired by TesterArmy e2e (Apache-2.0) and agent-lookout (MIT). No code from either is included.
+- libghostty-vt's API still moves. `crates/vt/shim/hv.c` is the only file to adapt.
