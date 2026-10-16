@@ -147,9 +147,16 @@ impl<H: AgentHost> Engine<H> {
                 bail!("barre non atteinte après {} tours : voir {}", self.max_rounds, self.rel(&run.dir));
             }
             let mut by_lot: BTreeMap<String, Vec<Fix>> = BTreeMap::new();
+            let mut unrouted = Vec::new();
             for f in fixes {
-                let lot = if plan.lot(&f.lot).is_some() { f.lot.clone() } else { plan.lots[0].id.clone() };
-                by_lot.entry(lot).or_default().push(f);
+                match plan.route_fix(&f) {
+                    Some(lot) => by_lot.entry(lot.to_string()).or_default().push(f),
+                    None => unrouted.push(f),
+                }
+            }
+            if !unrouted.is_empty() {
+                let list = unrouted.iter().map(|f| format!("[{}] {} : {}", f.lot, f.r#where, f.problem)).collect::<Vec<_>>().join(" ; ");
+                self.say(run, Phase::Fixing, round, format!("Corrections sans lot identifiable, non envoyées : {list}"));
             }
             if by_lot.is_empty() {
                 bail!("renvoi sans correction exploitable");
@@ -157,7 +164,10 @@ impl<H: AgentHost> Engine<H> {
             self.say(run, Phase::Fixing, round, format!("Corrections : {}", by_lot.keys().cloned().collect::<Vec<_>>().join(", ")));
             let jobs: Vec<(String, Vec<Fix>)> = by_lot.into_iter().collect();
             self.threads.fixes(&run.id, "reviewer", &jobs);
-            reports.extend(self.workers(run, &plan, &jobs, round + 1).await?);
+            // Same waves as the first pass: lots of different waves may share files.
+            for wave in plan.fix_waves(&jobs) {
+                reports.extend(self.workers(run, &plan, &wave, round + 1).await?);
+            }
         }
         unreachable!("loop returns or bails")
     }
