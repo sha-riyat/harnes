@@ -1,0 +1,23 @@
+[package]
+name = "harnes-e2e"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Agentic end-to-end test runner for harnes: declarative specs, natural-language steps resolved by Claude Code agents, deterministic replay"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "harnes-e2e"
+path = "src/main.rs"
+
+[dependencies]
+chromiumoxide = { version = "0.9", default-features = false }
+tokio.workspace = true
+futures-util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml = "0.9"
+anyhow.workspace = true
+sha2.workspace = true
