@@ -1,0 +1,49 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/vt",
+    "crates/pty",
+    "crates/proxy",
+    "crates/ctx",
+    "crates/crew",
+    "crates/e2e",
+    "crates/lookout",
+    "crates/threads",
+    "app/src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+anyhow = "1"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+parking_lot = "0.12"
+uuid = { version = "1", features = ["v4", "serde"] }
+bytes = "1"
+futures-util = "0.3"
+axum = "0.8"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "json"] }
+rusqlite = { version = "0.37", features = ["bundled"] }
+portable-pty = "0.9"
+sha2 = "0.10"
+harnes-vt = { path = "crates/vt" }
+harnes-pty = { path = "crates/pty" }
+harnes-proxy = { path = "crates/proxy" }
+harnes-ctx = { path = "crates/ctx" }
+harnes-crew = { path = "crates/crew" }
+harnes-e2e = { path = "crates/e2e" }
+harnes-lookout = { path = "crates/lookout" }
+harnes-threads = { path = "crates/threads" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

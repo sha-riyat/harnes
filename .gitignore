@@ -1,0 +1,12 @@
+# Build output
+/target/
+/app/dist/
+/app/node_modules/
+/app/src-tauri/gen/
+
+# Local harnes state (run files, context stores, threads)
+.harnes/
+
+# Local tooling
+/.claude/
+*.tmp
