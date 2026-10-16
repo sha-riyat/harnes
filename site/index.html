@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>harnes — one chat, a whole crew</title>
+<meta name="description" content="harnes is a desktop cockpit for a crew of coding agents. You talk to one orchestrator; it plans, staffs, tests and comes back when the bar is met.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="main.js"></script>
+</head>
+<body>
+<header class="bar">
+  <a class="mark" href="#top">harnes</a>
+  <nav aria-label="Sections">
+    <a href="#interface">Interface</a>
+    <a href="#start">Start</a>
+    <a href="#crew">Crew</a>
+    <a href="#chat">Chat</a>
+  </nav>
+  <a class="btn" href="https://github.com/sha-riyat/harnes">GitHub</a>
+</header>
+
+<main id="top">
+<section class="hero">
+  <canvas class="field hero-field" data-field="scenes" data-seed="3" data-cell="15" aria-hidden="true"></canvas>
+  <div class="hero-copy">
+    <h1>One chat.<br>A whole crew.</h1>
+    <p class="lede">harnes is a desktop cockpit for coding agents. You talk to one orchestrator; it plans, staffs, tests, and comes back only when the bar is met.</p>
+    <div class="actions">
+      <a class="btn solid" href="https://github.com/sha-riyat/harnes">Get it on GitHub</a>
+      <a class="link" href="#crew">See who does what</a>
+    </div>
+  </div>
+
+  <div class="sim" data-ui data-run aria-label="A crew run, played in the page">
+    <div class="sim-bar">
+      <span class="sim-proj">calculator</span>
+      <span class="track" data-track>plan --- bar --- work --- review --- gate --- ready</span>
+    </div>
+    <div class="sim-body">
+      <ul class="sim-crew">
+        <li data-agent="orchestrator" data-state="done"><span class="mk">*</span><span>orchestrator</span><span class="st"></span></li>
+        <li data-agent="planner" data-state="done"><span class="mk">*</span><span>planner</span><span class="st"></span></li>
+        <li data-agent="teacher" data-state="done"><span class="mk">*</span><span>teacher</span><span class="st"></span></li>
+        <li data-agent="worker-L1" data-state="done"><span class="mk">*</span><span>worker-L1</span><span class="st"></span></li>
+        <li data-agent="worker-L2" data-state="done"><span class="mk">*</span><span>worker-L2</span><span class="st"></span></li>
+        <li data-agent="reviewer" data-state="done"><span class="mk">*</span><span>reviewer</span><span class="st"></span></li>
+      </ul>
+      <ol class="sim-log" data-log>
+        <li><span class="who">orchestrator</span><span class="tool">crew_start</span><span class="what">Add a contact page that sends an email</span></li>
+        <li><span class="who">planner</span><span class="tool">plan.json</span><span class="what">2 lots, 1 wave, no shared files</span></li>
+        <li><span class="who">teacher</span><span class="tool">bar.json</span><span class="what">4 criteria, each with its evidence</span></li>
+        <li><span class="who">worker-L1</span><span class="tool">e2e_save</span><span class="what">reports/L1-r0.json</span></li>
+        <li><span class="who">reviewer</span><span class="tool">review-1.json</span><span class="what">PASS</span></li>
+        <li><span class="who">teacher</span><span class="tool">gate-1.json</span><span class="what">bar met</span></li>
+      </ol>
+    </div>
+    <div class="sim-ask" data-ask hidden>
+      <p class="ask-head"><span>Permission · worker-L1</span><span>Bash</span></p>
+      <code class="ask-what">npm install nodemailer</code>
+      <div class="ask-actions">
+        <button class="u-btn solid" data-allow>Allow</button>
+        <button class="u-btn" data-allow>Always</button>
+        <button class="u-btn ghost">Deny</button>
+      </div>
+    </div>
+    <div class="sim-ready" data-ready>
+      <p class="ready-head">ready for you · teacher bar met</p>
+      <p><span data-task-echo>Add a contact page that sends an email</span>: 2 lots, e2e passed, review PASS.</p>
+      <p class="commit"><code>Add contact page with form</code><span>L1 · 3 files</span></p>
+      <p class="commit"><code>Send contact emails with nodemailer</code><span>L2 · 2 files</span></p>
+      <p class="faint">nothing is committed without you</p>
+    </div>
+    <div class="sim-composer">
+      <span class="think" data-think aria-hidden="true"></span>
+      <label class="sr" for="task">Task for the crew</label>
+      <input id="task" data-task placeholder="Add a contact page that sends an email" autocomplete="off">
+      <button class="u-btn solid" data-go>Run</button>
+    </div>
+  </div>
+</section>
+
+<section class="show" id="interface" data-reveal>
+  <div class="show-row" data-row>
+    <figure data-panel data-name="The chat" data-text="The orchestrator's transcript as a chat: real Markdown, one line per tool call, the run on one line of text.">
+      <img src="shots/chat.png" width="2880" height="1800" alt="The harnes chat view: the orchestrator's replies, tool calls, a permission card and a question card" loading="lazy">
+    </figure>
+    <figure data-panel class="crop crop-cards" data-name="Cards, not prompts" data-text="Permission requests and on-screen menus become cards. Your answer goes straight back to the agent.">
+      <img src="shots/chat.png" width="2880" height="1800" alt="Close-up of a permission card for npm install nodemailer and a question card" loading="lazy">
+    </figure>
+    <figure data-panel class="crop crop-side" data-name="One character per agent" data-text="Every project and agent in the sidebar. A mark breathes while it works and blinks when it needs you.">
+      <img src="shots/chat.png" width="2880" height="1800" alt="Close-up of the sidebar: orchestrator working, worker-L1 needs you" loading="lazy">
+    </figure>
+    <figure data-panel data-name="Methods by role" data-text="24 OS packs ship inside the binary. Each role loads its own; the rest are a call away.">
+      <img src="shots/methods.png" width="2880" height="1800" alt="The methods view listing OS packs grouped by role" loading="lazy">
+    </figure>
+    <figure data-panel data-name="Black and white, both ways" data-text="The light theme keeps the same shapes. Terminals follow it too.">
+      <img src="shots/chat-light.png" width="2880" height="1800" alt="The harnes chat view in its light theme" loading="lazy">
+    </figure>
+  </div>
+  <div class="show-say">
+    <h2 data-panel-name>The chat</h2>
+    <p data-panel-text>The orchestrator's transcript as a chat: real Markdown, one line per tool call, the run on one line of text.</p>
+    <div class="show-nav">
+      <button class="btn" data-step="-1" aria-label="Previous view">Previous</button>
+      <button class="btn" data-step="1" aria-label="Next view">Next</button>
+    </div>
+  </div>
+</section>
+
+<div class="dither" aria-hidden="true"><canvas class="field" data-field="ramp" data-seed="7" data-cell="13"></canvas></div>
+
+<div class="paper">
+<section class="calls" id="start" data-reveal>
+  <h2 data-in>Three steps in</h2>
+  <div class="call" data-in>
+    <p class="say">First, build it.</p>
+    <div class="code"><pre id="c1"><code>git clone https://github.com/sha-riyat/harnes
+cd harnes/app; npm install
+npm run app</code></pre><button class="copy" data-copy="c1">Copy</button></div>
+    <div class="resp" data-ui>
+      <p><b>harnes-ctx</b> built · <b>harnes-e2e</b> built</p>
+      <p>tauri dev · harnes opens on an empty chat</p>
+    </div>
+  </div>
+  <div class="call" data-in>
+    <p class="say">Then add a project folder.</p>
+    <div class="code"><pre><code>+ projects   C:\work\calculator</code></pre></div>
+    <div class="resp" data-ui>
+      <p><b>.claude/agents/</b> orchestrator, planner, teacher, worker, reviewer, scout</p>
+      <p><b>.mcp.json</b> harnes-ctx, harnes-e2e</p>
+      <p><b>proxy</b> listening on 62346 · 24 OS packs indexed</p>
+    </div>
+  </div>
+  <div class="call" data-in>
+    <p class="say">Then say what to build.</p>
+    <div class="code"><pre><code>Add a contact page that sends an email.</code></pre></div>
+    <div class="resp wide" data-ui>
+      <p class="ready-head">ready for you · teacher bar met</p>
+      <p>Contact page with a validated form; emails go through nodemailer. 2 lots in one wave, both e2e tests pass, review PASS.</p>
+      <p class="commit"><code>Add contact page with form</code><span>L1 · 3 files</span></p>
+      <p class="commit"><code>Send contact emails with nodemailer</code><span>L2 · 2 files</span></p>
+      <p class="faint">Test it yourself, then approve. Nothing is committed without you.</p>
+    </div>
+  </div>
+</section>
+
+<section class="crew" id="crew" data-reveal>
+  <div class="crew-head" data-in>
+    <h2><span class="soft">Six roles.</span><br>One talks to you.</h2>
+    <a class="btn solid" href="https://github.com/sha-riyat/harnes#the-crew">Read the crew</a>
+  </div>
+  <div class="crew-body" data-in>
+    <div class="tabs" role="tablist" aria-label="Roles" aria-orientation="vertical" data-tabs>
+      <button role="tab" aria-selected="true" aria-controls="r-orch"><b>Orchestrator</b><span>Opus · medium</span></button>
+      <button role="tab" aria-selected="false" aria-controls="r-plan"><b>Planner</b><span>Opus · medium</span></button>
+      <button role="tab" aria-selected="false" aria-controls="r-teach"><b>Teacher</b><span>Opus · medium</span></button>
+      <button role="tab" aria-selected="false" aria-controls="r-work"><b>Workers × N</b><span>Sonnet · high</span></button>
+      <button role="tab" aria-selected="false" aria-controls="r-rev"><b>Reviewer</b><span>Opus · medium</span></button>
+      <button role="tab" aria-selected="false" aria-controls="r-scout"><b>Scouts</b><span>Haiku · high</span></button>
+    </div>
+    <div class="bands">
+      <ol role="tabpanel" id="r-orch">
+        <li><code>chat</code><div><b>Your only interlocutor</b><span>Answers quick questions itself, with a scout when it must look.</span></div><code>its replies</code></li>
+        <li><code>crew_start</code><div><b>Turns a task into a run</b><span>Rewrites your message as one complete brief.</span></div><code>.harnes/runs/&lt;id&gt;/</code></li>
+        <li><code>crew_status</code><div><b>Follows every hand-off</b><span>Checks each result was integrated before it reports.</span></div><code>run-&lt;id&gt;</code></li>
+      </ol>
+      <ol role="tabpanel" id="r-plan" hidden>
+        <li><code>os_brief</code><div><b>Loads its methods first</b><span>project, stepper, blueprint and execution packs.</span></div><code>OS packs</code></li>
+        <li><code>plan</code><div><b>Splits the task into lots and waves</b><span>Lots in one wave never share a file.</span></div><code>plan.json</code></li>
+        <li><code>threads</code><div><b>Seeds one thread per lot</b><span>The lot's brief is its first message.</span></div><code>lot-&lt;id&gt;-&lt;lot&gt;</code></li>
+      </ol>
+      <ol role="tabpanel" id="r-teach" hidden>
+        <li><code>bar</code><div><b>Sets the bar before any work</b><span>Criteria, the evidence each needs, when to involve you.</span></div><code>bar.json</code></li>
+        <li><code>gate</code><div><b>Checks the bar against the results</b><span>Sends the work back, or tells you it is ready.</span></div><code>gate-&lt;n&gt;.json</code></li>
+      </ol>
+      <ol role="tabpanel" id="r-work" hidden>
+        <li><code>thread_read</code><div><b>Reads its lot thread first</b><span>Touches only the files of its lot; asks in the thread.</span></div><code>lot thread</code></li>
+        <li><code>ctx_execute</code><div><b>Builds and tests out of context</b><span>Heavy output is stored and searched, not read whole.</span></div><code>harnes-ctx</code></li>
+        <li><code>e2e_*</code><div><b>Writes and runs its own e2e test</b><span>Observe, click, fill, check, then save it for replay.</span></div><code>reports/&lt;lot&gt;.json</code></li>
+      </ol>
+      <ol role="tabpanel" id="r-rev" hidden>
+        <li><code>diff</code><div><b>Reviews the diff against the plan</b><span>With the real e2e results, not the reports' claims.</span></div><code>review-&lt;n&gt;.json</code></li>
+        <li><code>CHANGES</code><div><b>Posts fixes in each lot thread</b><span>Fix workers pick them up as a new round.</span></div><code>lot threads</code></li>
+      </ol>
+      <ol role="tabpanel" id="r-scout" hidden>
+        <li><code>scout</code><div><b>Short errands in parallel</b><span>Find code, summarise files, run one command. Never edits.</span></div><code>its reply</code></li>
+      </ol>
+    </div>
+  </div>
+  <pre class="loop" data-in aria-label="The run loop">plan ─► bar ─► workers × N ─► e2e suite ─► review ─┬─ CHANGES ─► fix workers ─┐
+                                                   └─ PASS ─► teacher gate ───┤
+                                                        ready ─► you   not ready ─► fix workers</pre>
+</section>
+
+<section class="plate-wrap" id="chat" data-reveal>
+  <h2 class="plate-title" data-in>Nothing to babysit</h2>
+  <div class="plate" data-plate>
+    <div class="notes left">
+      <button class="note" data-note="track"><b>The run, on one line</b><span>The current step decodes and its wire flows.</span></button>
+      <button class="note" data-note="reply"><b>Real Markdown</b><span>Bold, lists, code and quotes, rendered.</span></button>
+      <button class="note" data-note="tools"><b>One line per tool call</b><span>What the orchestrator did, without the noise.</span></button>
+    </div>
+    <div class="chatcol" data-ui>
+      <p class="p-track" data-part="track">idle · 3 sessions <span>plan --- bar --- w#rk ·:=+· review</span></p>
+      <div class="p-reply" data-part="reply">
+        <p class="who">orchestrator</p>
+        <p><b>Calculator, 6 commits.</b></p>
+        <p>– <code>index.html</code> + <code>styles.css</code>: the page<br>– <code>app.js</code>: operations, reset after <code>=</code></p>
+      </div>
+      <div class="p-tools" data-part="tools">
+        <p><code>crew_start</code> Contact page with form and email</p>
+        <p><code>thread_read</code> lot-1-L1</p>
+      </div>
+      <div class="p-card" data-part="ask">
+        <p class="who">permission · worker-L1-r0 <span>bash</span></p>
+        <code class="ask-what">npm install nodemailer</code>
+        <p class="ask-actions"><span class="u-btn solid">Allow</span><span class="u-btn">Always</span><span class="u-btn ghost">Deny</span></p>
+      </div>
+      <div class="p-card" data-part="question">
+        <p class="who">question · worker-L2-r0</p>
+        <p>contact.html already exists. What now?</p>
+        <p class="ask-actions"><span class="u-btn solid">Replace</span><span class="u-btn">Keep both</span></p>
+      </div>
+      <p class="p-composer" data-part="composer">Write to the orchestrator… <span>↑</span></p>
+    </div>
+    <div class="notes right">
+      <button class="note" data-note="ask"><b>Permissions as cards</b><span>A blocking hook waits for Allow, Always or Deny.</span></button>
+      <button class="note" data-note="question"><b>Questions read from the screen</b><span>Menus on an agent's grid become buttons.</span></button>
+      <button class="note" data-note="composer"><b>One place to talk</b><span>Your message goes to the orchestrator only.</span></button>
+    </div>
+  </div>
+</section>
+</div>
+
+<div class="dither up" aria-hidden="true"><canvas class="field" data-field="ramp" data-seed="11" data-cell="13"></canvas></div>
+
+<section class="close" id="get" data-reveal>
+  <div class="tile side"><canvas class="field" data-field="scenes" data-seed="9" data-cell="12" aria-hidden="true"></canvas></div>
+  <div class="tile main" data-in>
+    <h2>Run your first crew.</h2>
+    <p>Open source, MIT. Windows 11 with Rust, Zig, Node via nvm and Claude Code signed in. Codex, Gemini CLI and OpenCode can take any role.</p>
+    <a class="btn ink" href="https://github.com/sha-riyat/harnes">Clone it on GitHub</a>
+  </div>
+  <div class="tile side grad" aria-hidden="true"></div>
+</section>
+</main>
+
+<footer class="foot">
+  <span>A cockpit for coding agents</span>
+  <span class="foot-links"><a href="https://github.com/sha-riyat/harnes">GitHub</a><a href="https://github.com/sha-riyat/harnes#readme">README</a><a href="https://github.com/sha-riyat/harnes/blob/main/LICENSE">MIT licence</a></span>
+  <span>2026</span>
+</footer>
+</body>
+</html>

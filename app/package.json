@@ -11,7 +11,8 @@
     "ctx:release": "cargo build -p harnes-ctx -p harnes-e2e --release",
     "app": "npm run ctx && tauri dev",
     "app:build": "npm run ctx:release && tauri build",
-    "readme:art": "esbuild scripts/readme-art.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/readme-art.mjs && node node_modules/.cache/readme-art.mjs"
+    "readme:art": "esbuild scripts/readme-art.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/readme-art.mjs && node node_modules/.cache/readme-art.mjs",
+    "site": "esbuild ../site/src/main.ts --bundle --format=esm --minify --log-level=warning --outfile=../site/main.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
