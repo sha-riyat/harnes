@@ -8,7 +8,7 @@ import Palette from "./components/Palette";
 import PaneGrid from "./components/PaneGrid";
 import RightPanel from "./components/RightPanel";
 import Sidebar from "./components/Sidebar";
-import TermDrawer from "./components/TermDrawer";
+import TermDock from "./components/TermDock";
 import TopBar from "./components/TopBar";
 import { activeProject, addPane, markExited, pushCrew, pushFrame, removePane, setAgentState, setPermissions, setScreenPrompts, setStats, view } from "./store";
 import { refreshProjects } from "./ui/projects";
@@ -65,6 +65,7 @@ export default function App() {
         <Sidebar />
       </Show>
       <main class="center">
+        <div class="view">
         <Switch>
           <Match when={view() === "chat"}>
             <Conversation />
@@ -79,11 +80,12 @@ export default function App() {
             <LookoutView />
           </Match>
         </Switch>
+        </div>
+        <TermDock />
       </main>
       <Show when={panelOpen()}>
         <RightPanel />
       </Show>
-      <TermDrawer />
       <Palette />
       <ProjectDialog />
       <Toasts />

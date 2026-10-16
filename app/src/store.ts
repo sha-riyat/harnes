@@ -21,8 +21,15 @@ export const [focused, setFocused] = createSignal<string | null>(null);
 export const [maximized, setMaximized] = createSignal<string | null>(null);
 /** Main area: conversation with the orchestrator, terminals grid, or every agent on the machine. */
 export const [view, setView] = createSignal<"chat" | "panes" | "agents" | "os">("chat");
-/** Terminal opened on demand in the drawer (terminals stay hidden otherwise). */
-export const [drawerPane, setDrawerPane] = createSignal<string | null>(null);
+/** Terminals docked under the main view, opened on demand (they stay hidden otherwise). */
+export const [dockTabs, setDockTabs] = createSignal<string[]>([]);
+/** The docked terminal shown; null folds the dock away. */
+export const [drawerPane, showDocked] = createSignal<string | null>(null);
+/** Opens a terminal in the dock (adds its tab), or folds the dock with null. */
+export function setDrawerPane(id: string | null) {
+  if (id) setDockTabs((t) => (t.includes(id) ? t : [...t, id]));
+  showDocked(id);
+}
 export const [permissions, setPermissions] = createSignal<PermissionAsk[]>([]);
 export const [screenPrompts, setScreenPrompts] = createSignal<ScreenPrompt[]>([]);
 

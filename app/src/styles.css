@@ -42,6 +42,9 @@
 
 /* Center */
 .center { grid-area: center; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+/* The view above the dock. Empty views fill all of it with a living field,
+   which widens when the side panels close. */
+.view { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
 
 /* Conversation */
 .chat { flex: 1; display: flex; flex-direction: column; min-height: 0; width: 100%; max-width: 820px; margin: 0 auto; padding: 0 28px; }
@@ -89,11 +92,22 @@
 .att-actions { display: flex; gap: 8px; }
 .att-actions.wrap { flex-wrap: wrap; }
 
-/* Terminal drawer and grid */
-.overlay { position: fixed; inset: 0; z-index: 50; display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; background: rgb(0 0 0 / 0.55); }
-.drawer-wrap { align-items: stretch; padding: 5vh 5vw; }
-.drawer { flex: 1; display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--line-strong); border-radius: var(--radius); overflow: hidden; background: var(--term-bg); box-shadow: var(--shadow); }
-.drawer header, .pane header { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--line); background: var(--surface); }
+/* Terminal dock, under the main view */
+.dock { position: relative; flex: none; display: flex; flex-direction: column; min-height: 0; border-top: 1px solid var(--line-strong); background: var(--term-bg); }
+.dock-grip { position: absolute; top: -3px; left: 0; right: 0; height: 6px; cursor: ns-resize; z-index: 2; }
+.dock-grip:hover { background: var(--line-strong); }
+.dock-tabs { display: flex; align-items: stretch; height: 32px; padding-right: 6px; border-bottom: 1px solid var(--line); background: var(--bg); }
+.dock-tab { display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; border-right: 1px solid var(--line); font-size: 12px; color: var(--text-2); cursor: pointer; }
+.dock-tab:hover { color: var(--text); background: var(--surface); }
+.dock-tab.on { color: var(--text); background: var(--term-bg); }
+.dock-x { display: grid; place-items: center; width: 18px; height: 18px; border: none; background: none; color: var(--muted); cursor: pointer; }
+.dock-x:hover { color: var(--text); }
+.dock-tabs .icon-btn { align-self: center; }
+.dock .term { padding: 6px 10px; }
+
+/* Terminal grid */
+.overlay { position: fixed; inset: 0; z-index: 50; display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }
+.pane header { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .grid { flex: 1; display: grid; grid-auto-rows: minmax(0, 1fr); gap: 8px; padding: 12px; min-width: 0; min-height: 0; }
 .pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; border: 1px solid var(--line); border-radius: 0; overflow: hidden; background: var(--term-bg); }
 .pane.focused { border-color: var(--text-2); }
