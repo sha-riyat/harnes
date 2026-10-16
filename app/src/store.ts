@@ -2,7 +2,7 @@
 
 import { createMemo, createSignal } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-import type { AgentState, AppInfo, CrewEvent, Gate, PaneInfo, Phase, ProjectSummary, Review, Stats } from "./api";
+import type { AgentState, AppInfo, CrewEvent, Gate, PaneInfo, PermissionAsk, Phase, ProjectSummary, Review, ScreenPrompt, Stats } from "./api";
 
 export interface PaneView extends PaneInfo {
   key?: string;
@@ -19,7 +19,12 @@ export const [info, setInfo] = createSignal<AppInfo | null>(null);
 export const [stats, setStats] = createSignal<Stats | null>(null);
 export const [focused, setFocused] = createSignal<string | null>(null);
 export const [maximized, setMaximized] = createSignal<string | null>(null);
-export const [view, setView] = createSignal<"panes" | "agents">("panes");
+/** Main area: conversation with the orchestrator, terminals grid, or every agent on the machine. */
+export const [view, setView] = createSignal<"chat" | "panes" | "agents" | "os">("chat");
+/** Terminal opened on demand in the drawer (terminals stay hidden otherwise). */
+export const [drawerPane, setDrawerPane] = createSignal<string | null>(null);
+export const [permissions, setPermissions] = createSignal<PermissionAsk[]>([]);
+export const [screenPrompts, setScreenPrompts] = createSignal<ScreenPrompt[]>([]);
 
 /** Panes of the active project (the workspace shows only these). */
 export const projectPanes = createMemo(() => panes.filter((p) => !p.project || p.project === activeProject()));

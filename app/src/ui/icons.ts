@@ -1,35 +1,38 @@
-// The icons harnes uses. Imported one by one so only these end up in the bundle.
+// Phosphor icons (MIT), light weight. Imported as raw SVG so only the
+// icons listed here end up in the bundle.
 
-export { default as Activity } from "@hugeicons/core-free-icons/Activity01Icon";
-export { default as Add } from "@hugeicons/core-free-icons/Add01Icon";
-export { default as Alert } from "@hugeicons/core-free-icons/Alert02Icon";
-export { default as ArrowRight } from "@hugeicons/core-free-icons/ArrowRight01Icon";
-export { default as Brain } from "@hugeicons/core-free-icons/AiBrain01Icon";
-export { default as Cancel } from "@hugeicons/core-free-icons/Cancel01Icon";
-export { default as Check } from "@hugeicons/core-free-icons/CheckmarkCircle02Icon";
-export { default as Clock } from "@hugeicons/core-free-icons/Clock01Icon";
-export { default as Coins } from "@hugeicons/core-free-icons/Coins01Icon";
-export { default as Command } from "@hugeicons/core-free-icons/CommandIcon";
-export { default as Commit } from "@hugeicons/core-free-icons/GitCommitIcon";
-export { default as Dashboard } from "@hugeicons/core-free-icons/DashboardSquare01Icon";
-export { default as Flash } from "@hugeicons/core-free-icons/FlashIcon";
-export { default as Folder } from "@hugeicons/core-free-icons/FolderOpenIcon";
-export { default as Grid } from "@hugeicons/core-free-icons/LayoutGridIcon";
-export { default as Keyboard } from "@hugeicons/core-free-icons/KeyboardIcon";
-export { default as Loading } from "@hugeicons/core-free-icons/Loading03Icon";
-export { default as Maximize } from "@hugeicons/core-free-icons/Maximize02Icon";
-export { default as Moon } from "@hugeicons/core-free-icons/Moon02Icon";
-export { default as Bell } from "@hugeicons/core-free-icons/Notification01Icon";
-export { default as Robot } from "@hugeicons/core-free-icons/Robot01Icon";
-export { default as Search } from "@hugeicons/core-free-icons/Search01Icon";
-export { default as Send } from "@hugeicons/core-free-icons/ArrowUp02Icon";
-export { default as Settings } from "@hugeicons/core-free-icons/Settings02Icon";
-export { default as SidebarLeft } from "@hugeicons/core-free-icons/SidebarLeftIcon";
-export { default as SidebarRight } from "@hugeicons/core-free-icons/SidebarRightIcon";
-export { default as Sparkles } from "@hugeicons/core-free-icons/SparklesIcon";
-export { default as Stop } from "@hugeicons/core-free-icons/StopIcon";
-export { default as Sun } from "@hugeicons/core-free-icons/Sun03Icon";
-export { default as Team } from "@hugeicons/core-free-icons/UserGroupIcon";
-export { default as Terminal } from "@hugeicons/core-free-icons/ComputerTerminal01Icon";
-export { default as TestTube } from "@hugeicons/core-free-icons/TestTube01Icon";
-export { default as Tick } from "@hugeicons/core-free-icons/Tick02Icon";
+import agent from "@phosphor-icons/core/assets/light/robot-light.svg?raw";
+import alert from "@phosphor-icons/core/assets/light/warning-light.svg?raw";
+import arrowLeft from "@phosphor-icons/core/assets/light/arrow-left-light.svg?raw";
+import check from "@phosphor-icons/core/assets/light/check-light.svg?raw";
+import chevron from "@phosphor-icons/core/assets/light/caret-down-light.svg?raw";
+import close from "@phosphor-icons/core/assets/light/x-light.svg?raw";
+import expand from "@phosphor-icons/core/assets/light/arrows-out-simple-light.svg?raw";
+import folder from "@phosphor-icons/core/assets/light/folder-simple-light.svg?raw";
+import grid from "@phosphor-icons/core/assets/light/squares-four-light.svg?raw";
+import lock from "@phosphor-icons/core/assets/light/lock-simple-light.svg?raw";
+import machine from "@phosphor-icons/core/assets/light/binoculars-light.svg?raw";
+import moon from "@phosphor-icons/core/assets/light/moon-light.svg?raw";
+import orchestrator from "@phosphor-icons/core/assets/light/chat-circle-text-light.svg?raw";
+import plus from "@phosphor-icons/core/assets/light/plus-light.svg?raw";
+import question from "@phosphor-icons/core/assets/light/question-light.svg?raw";
+import search from "@phosphor-icons/core/assets/light/magnifying-glass-light.svg?raw";
+import send from "@phosphor-icons/core/assets/light/arrow-up-light.svg?raw";
+import sidebar from "@phosphor-icons/core/assets/light/sidebar-simple-light.svg?raw";
+import stop from "@phosphor-icons/core/assets/light/stop-light.svg?raw";
+import sun from "@phosphor-icons/core/assets/light/sun-light.svg?raw";
+import terminal from "@phosphor-icons/core/assets/light/terminal-window-light.svg?raw";
+import thread from "@phosphor-icons/core/assets/light/hash-light.svg?raw";
+import usage from "@phosphor-icons/core/assets/light/chart-line-light.svg?raw";
+
+/** The inner markup of a 256x256 Phosphor icon. */
+export type IconData = string;
+
+const inner = (svg: string): IconData => svg.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+
+export const I = {
+  agent, alert, arrowLeft, check, chevron, close, expand, folder, grid, lock, machine, moon,
+  orchestrator, plus, question, search, send, sidebar, stop, sun, terminal, thread, usage,
+} as const;
+
+export const icons = Object.fromEntries(Object.entries(I).map(([k, v]) => [k, inner(v)])) as Record<keyof typeof I, IconData>;

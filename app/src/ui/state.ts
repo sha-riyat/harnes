@@ -30,7 +30,7 @@ export type PanelTab = "crew" | "threads" | "usage" | "sources";
 
 export const [sidebarOpen, setSidebarOpen] = persisted("harnes.sidebar", true);
 export const [panelOpen, setPanelOpen] = persisted("harnes.panel", true);
-export const [panelTab, setPanelTab] = persisted<PanelTab>("harnes.panelTab", "crew");
+export const [panelTab, setPanelTab] = persisted<PanelTab>("harnes.panelTab.v2", "threads");
 export const [theme, setThemeRaw] = persisted<Theme>("harnes.theme", "system");
 export const [paletteOpen, setPaletteOpen] = createSignal(false);
 export const [projectDialog, setProjectDialog] = createSignal(false);

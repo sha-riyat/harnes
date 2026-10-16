@@ -1,66 +1,67 @@
 import { For, Show, createSignal } from "solid-js";
-import { activeProject, currentProject, projectPanes, projects, setView, view } from "../store";
-import { addProject, switchProject } from "../ui/projects";
+import { activeProject, currentProject, projects, setView, view } from "../store";
 import Icon from "../ui/Icon";
-import * as I from "../ui/icons";
+import { icons as D } from "../ui/icons";
+import { addProject, switchProject } from "../ui/projects";
 import { cycleTheme, panelOpen, setPaletteOpen, setPanelOpen, setSidebarOpen, sidebarOpen, theme } from "../ui/state";
+
+// Terminals stay out of the way: the grid is reached from the palette.
+const VIEWS = [
+  { id: "chat", label: "conversation" },
+  { id: "agents", label: "machine" },
+] as const;
 
 export default function TopBar() {
   const [menu, setMenu] = createSignal(false);
   return (
     <header class="topbar">
-      <div class="tb-left">
-        <button class="icon-btn" classList={{ on: sidebarOpen() }} title="Barre latérale" onClick={() => setSidebarOpen(!sidebarOpen())}>
-          <Icon icon={I.SidebarLeft} size={17} />
+      <button class="icon-btn" classList={{ on: sidebarOpen() }} title="Barre latérale" onClick={() => setSidebarOpen(!sidebarOpen())}>
+        <Icon icon={D.sidebar} size={17} />
+      </button>
+      <span class="brand">harnes</span>
+      <span class="sep">/</span>
+      <div class="pop">
+        <button class="crumb" onClick={() => (projects().length ? setMenu(!menu()) : addProject())} title={currentProject()?.root}>
+          {currentProject()?.name ?? "ajouter un projet"}
+          <Icon icon={D.chevron} size={12} />
         </button>
-        <div class="prov-menu">
-          <button class="project-switch" onClick={() => (projects().length ? setMenu(!menu()) : addProject())} title={currentProject()?.root ?? "Ajouter un projet"}>
-            <Icon icon={I.Folder} size={15} />
-            <span>{currentProject()?.name ?? "Ajouter un projet"}</span>
-            <Show when={projects().length > 1}>
-              <span class="count">{projects().length}</span>
-            </Show>
-          </button>
-          <Show when={menu()}>
-            <ul class="menu left" onMouseLeave={() => setMenu(false)}>
-              <For each={projects()}>
-                {(p) => (
-                  <li classList={{ on: p.id === activeProject() }} onClick={() => { setMenu(false); switchProject(p.id); }}>
-                    {p.name} <span class="muted small">{p.running ? "· run en cours" : ""}</span>
-                  </li>
-                )}
-              </For>
-              <li class="sep" onClick={() => { setMenu(false); addProject(); }}>+ Ajouter un projet</li>
-            </ul>
-          </Show>
-        </div>
+        <Show when={menu()}>
+          <ul class="menu" onMouseLeave={() => setMenu(false)}>
+            <For each={projects()}>
+              {(p) => (
+                <li classList={{ on: p.id === activeProject() }} onClick={() => { setMenu(false); switchProject(p.id); }}>
+                  <span>{p.name}</span>
+                  <Show when={p.running}><span class="label">run</span></Show>
+                </li>
+              )}
+            </For>
+            <li class="menu-sep" onClick={() => { setMenu(false); addProject(); }}>
+              <Icon icon={D.plus} size={13} /> ajouter un projet
+            </li>
+          </ul>
+        </Show>
       </div>
 
-      <nav class="seg" aria-label="Vue">
-        <button classList={{ on: view() === "panes" }} onClick={() => setView("panes")}>
-          <Icon icon={I.Grid} size={14} /> Panes
-          <Show when={projectPanes().length}>
-            <span class="count">{projectPanes().length}</span>
-          </Show>
-        </button>
-        <button classList={{ on: view() === "agents" }} onClick={() => setView("agents")}>
-          <Icon icon={I.Dashboard} size={14} /> Tous les agents
-        </button>
+      <span class="spacer" />
+
+      <nav class="views" aria-label="Vue">
+        <For each={VIEWS}>
+          {(v) => (
+            <button classList={{ on: view() === v.id }} onClick={() => setView(v.id)}>
+              {v.label}
+            </button>
+          )}
+        </For>
       </nav>
-
-      <div class="tb-right">
-        <button class="search" onClick={() => setPaletteOpen(true)}>
-          <Icon icon={I.Search} size={14} />
-          <span>Rechercher une action</span>
-          <kbd>Ctrl K</kbd>
-        </button>
-        <button class="icon-btn" title={`Thème : ${theme()}`} onClick={cycleTheme}>
-          <Icon icon={theme() === "light" ? I.Sun : theme() === "dark" ? I.Moon : I.Settings} size={16} />
-        </button>
-        <button class="icon-btn" classList={{ on: panelOpen() }} title="Panneau de l'équipage" onClick={() => setPanelOpen(!panelOpen())}>
-          <Icon icon={I.SidebarRight} size={17} />
-        </button>
-      </div>
+      <button class="icon-btn" title="Rechercher ou aller à (Ctrl K)" onClick={() => setPaletteOpen(true)}>
+        <Icon icon={D.search} size={16} />
+      </button>
+      <button class="icon-btn" title={`Thème : ${theme()}`} onClick={cycleTheme}>
+        <Icon icon={theme() === "light" ? D.sun : D.moon} size={16} />
+      </button>
+      <button class="icon-btn" classList={{ on: panelOpen() }} title="Panneau" onClick={() => setPanelOpen(!panelOpen())}>
+        <Icon icon={D.sidebar} size={17} class="flip" />
+      </button>
     </header>
   );
 }

@@ -3,10 +3,12 @@ import { api } from "../api";
 import { focused, info, maximized, projectPanes, removePane, setFocused, setMaximized, type PaneView } from "../store";
 import TermView from "../term/TermView";
 import Icon from "../ui/Icon";
-import * as I from "../ui/icons";
+import Ascii, { StateMark } from "../ui/ascii/Ascii";
+import { thinking } from "../ui/ascii/pieces";
+import { icons as D } from "../ui/icons";
 import { toast } from "../ui/state";
 import { addProject } from "../ui/projects";
-import { AsciiField, Spinner } from "../ui/Ascii";
+import AsciiField from "../ui/ascii/AsciiField";
 
 function cols(n: number): number {
   if (n <= 1) return 1;
@@ -57,10 +59,10 @@ function Pane(props: { pane: PaneView }) {
   return (
     <section class="pane" classList={{ focused: focused() === p().id, exited: !!p().exited, waiting: state() === "blocked" }} onMouseDown={() => setFocused(p().id)}>
       <header onDblClick={toggleMax}>
-        <Show when={state() === "working" || state() === "starting"} fallback={<span class={`dot ${state()}`} />}>
-          <Spinner class="accent" />
+        <Show when={state() === "working" || state() === "starting"} fallback={<StateMark state={state()} id={p().id} />}>
+          <Ascii frame={thinking(4)} />
         </Show>
-        <Icon icon={isOrch() ? I.Brain : p().key ? I.Robot : I.Terminal} size={14} class="muted" />
+        <Icon icon={isOrch() ? D.orchestrator : p().key ? D.agent : D.terminal} size={14} />
         <span class="title">{isOrch() ? "orchestrateur" : p().title}</span>
         <Show when={p().role && !isOrch() && p().role !== "claude"}>
           <span class={`role ${p().role}`}>{p().role}</span>
@@ -73,10 +75,10 @@ function Pane(props: { pane: PaneView }) {
           <ProviderMenu pane={p()} />
         </Show>
         <button class="icon-btn sm" title={maximized() === p().id ? "Réduire" : "Agrandir"} onClick={toggleMax}>
-          <Icon icon={I.Maximize} size={14} />
+          <Icon icon={D.expand} size={14} />
         </button>
         <button class="icon-btn sm" title="Fermer" onClick={() => api.close(p().id).finally(() => removePane(p().id))}>
-          <Icon icon={I.Cancel} size={14} />
+          <Icon icon={D.close} size={14} />
         </button>
       </header>
       <TermView id={p().id} />
@@ -87,10 +89,7 @@ function Pane(props: { pane: PaneView }) {
 function Empty() {
   return (
     <div class="empty">
-      <AsciiField cols={52} rows={8} />
-      <div class="empty-icon">
-        <Icon icon={info()?.project ? I.Sparkles : I.Folder} size={28} />
-      </div>
+      <AsciiField height={120} />
       <Show
         when={info()?.project}
         fallback={
@@ -98,7 +97,7 @@ function Empty() {
             <h2>Ouvre un projet pour commencer</h2>
             <p class="muted">harnes y installe l'équipage, ses outils et ses tests.</p>
             <button class="btn primary" onClick={addProject}>
-              <Icon icon={I.Folder} size={15} /> Ouvrir un projet
+              <Icon icon={D.folder} size={15} /> Ouvrir un projet
             </button>
           </>
         }

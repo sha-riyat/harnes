@@ -3,8 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { on } from "../api";
 import { activeProject } from "../store";
 import Icon from "../ui/Icon";
-import * as I from "../ui/icons";
-import { FlowLine } from "../ui/Ascii";
+import { icons as D } from "../ui/icons";
+import Ascii from "../ui/ascii/Ascii";
+import { flow } from "../ui/ascii/pieces";
 
 interface Thread {
   id: string;
@@ -26,30 +27,15 @@ interface Message {
   body: string;
 }
 
-const roleOf = (author: string) => {
-  const a = author.toLowerCase();
-  for (const r of ["orchestrator", "planner", "teacher", "reviewer", "worker", "scout", "user", "harnes"]) if (a.includes(r)) return r;
-  return "other";
-};
-const short = (author: string) => author.replace(/^\d+-/, "");
+const who = (a: string) => a.replace(/^\d+-/, "").replace(/^orch-\w+/, "orchestrateur").replace(/-r\d+/, "");
+const where = (t: string) => t.replace(/^lot-\d+-/, "").replace(/^run-\d+/, "run");
 const time = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-/** Live activity: the last messages travelling between agents and threads. */
-function Activity(props: { items: Message[] }) {
-  return (
-    <div class="activity">
-      <For each={props.items.slice(-4)} fallback={<span class="muted small">Aucun échange pour l'instant.</span>}>
-        {(m) => <FlowLine from={short(m.author)} to={m.thread.replace(/^lot-\d+-/, "").replace(/^run-\d+/, "run")} born={m.at} />}
-      </For>
-    </div>
-  );
-}
 
 export default function ThreadsTab() {
   const [filter, setFilter] = createSignal<"open" | "closed" | "all">("all");
   const [current, setCurrent] = createSignal<string | null>(null);
   const [draft, setDraft] = createSignal("");
-  const [recent, setRecent] = createSignal<Message[]>([]);
+  const [recent, setRecent] = createSignal<(Message & { seen: number })[]>([]);
 
   const [threads, { refetch }] = createResource(() => [filter(), activeProject()] as const, ([f]) => invoke<Thread[]>("threads_list", { status: f }).catch(() => []));
   const [detail, { refetch: refetchDetail }] = createResource(current, (id) =>
@@ -59,11 +45,9 @@ export default function ThreadsTab() {
   let lastId = 0;
   const pullRecent = async () => {
     const list = await invoke<Message[]>("threads_recent", { since: lastId }).catch(() => []);
-    if (list.length) {
-      lastId = list[list.length - 1].id;
-      // Only animate messages younger than a few seconds.
-      setRecent((r) => [...r, ...list.map((m) => ({ ...m, at: Math.max(m.at, Date.now() - 2000) }))].slice(-12));
-    }
+    if (!list.length) return;
+    lastId = list[list.length - 1].id;
+    setRecent((r) => [...r, ...list.map((m) => ({ ...m, seen: Date.now() }))].slice(-3));
   };
 
   onMount(async () => {
@@ -86,29 +70,43 @@ export default function ThreadsTab() {
 
   return (
     <div class="rp-body threads">
-      <Activity items={recent()} />
+      <Show when={recent().length}>
+        <div class="flows">
+          <For each={recent()}>
+            {(m) => (
+              <span class="flow">
+                <span class="flow-from">{who(m.author)}</span>
+                <Ascii class="flow-track" frame={flow(14)} fps={20} />
+                <span class="flow-to">{where(m.thread)}</span>
+              </span>
+            )}
+          </For>
+        </div>
+      </Show>
+
       <Show
         when={current()}
         fallback={
           <>
-            <div class="th-filter">
-              <For each={[["all", "Tous"], ["open", "Ouverts"], ["closed", "Clos"]] as const}>
+            <div class="seg">
+              <For each={[["all", "tous"], ["open", "ouverts"], ["closed", "clos"]] as const}>
                 {([v, l]) => (
                   <button classList={{ on: filter() === v }} onClick={() => setFilter(v)}>{l}</button>
                 )}
               </For>
             </div>
             <ul class="th-list">
-              <For each={threads() ?? []} fallback={<li class="muted small">Aucun fil. Les agents en ouvrent pendant un run.</li>}>
+              <For each={threads() ?? []} fallback={<li class="side-empty">Aucun fil. Les agents en ouvrent pendant un run.</li>}>
                 {(t) => (
                   <li classList={{ closed: t.status === "closed" }} onClick={() => setCurrent(t.id)}>
                     <div class="th-top">
-                      <Icon icon={t.status === "closed" ? I.Check : I.Activity} size={13} />
-                      <b>{t.title}</b>
-                      <span class="muted small">{time(t.last_at)}</span>
+                      <span class={`th-mark ${t.status}`} />
+                      <span class="row-name">{t.title}</span>
+                      <span class="label faint">{time(t.last_at)}</span>
                     </div>
-                    <div class="th-last muted small">
-                      <span class={`who ${roleOf(t.last_author ?? "")}`}>{short(t.last_author ?? "")}</span> {t.summary ?? t.last_body}
+                    <div class="th-last">
+                      <span class="label">{who(t.last_author ?? "")}</span>
+                      <span class="dim">{t.summary ?? t.last_body}</span>
                     </div>
                   </li>
                 )}
@@ -118,24 +116,21 @@ export default function ThreadsTab() {
         }
       >
         <div class="th-head">
-          <button class="icon-btn" title="Retour" onClick={() => setCurrent(null)}>
-            <Icon icon={I.ArrowRight} size={15} style={{ transform: "rotate(180deg)" }} />
+          <button class="icon-btn sm" title="Retour" onClick={() => setCurrent(null)}>
+            <Icon icon={D.arrowLeft} size={14} />
           </button>
-          <b>{detail()?.thread?.title}</b>
-          <span class={`badge ${detail()?.thread?.status === "closed" ? "" : "accent"}`}>{detail()?.thread?.status === "closed" ? "clos" : "ouvert"}</span>
+          <span class="row-name">{detail()?.thread?.title}</span>
+          <span class="label">{detail()?.thread?.status === "closed" ? "clos" : "ouvert"}</span>
         </div>
         <ol class="th-msgs">
           <For each={detail()?.messages ?? []}>
             {(m) => (
-              <li class={`msg ${m.kind}`}>
-                <span class={`avatar ${roleOf(m.author)}`}>{short(m.author).slice(0, 1).toUpperCase()}</span>
-                <div>
-                  <div class="msg-meta">
-                    <b class={`who ${roleOf(m.author)}`}>{short(m.author)}</b>
-                    <span class="muted small">{time(m.at)}</span>
-                  </div>
-                  <div class="msg-body">{m.body}</div>
+              <li classList={{ event: m.kind === "event" }}>
+                <div class="msg-meta">
+                  <span class="label">{who(m.author)}</span>
+                  <span class="label faint">{time(m.at)}</span>
                 </div>
+                <div class="th-body">{m.body}</div>
               </li>
             )}
           </For>
@@ -143,7 +138,7 @@ export default function ThreadsTab() {
         <div class="th-input">
           <textarea class="field" rows={2} value={draft()} placeholder="Écrire dans ce fil…" onInput={(e) => setDraft(e.currentTarget.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} />
           <button class="send" disabled={!draft().trim()} onClick={send} title="Envoyer">
-            <Icon icon={I.Send} size={16} stroke={2} />
+            <Icon icon={D.send} size={16} />
           </button>
         </div>
       </Show>

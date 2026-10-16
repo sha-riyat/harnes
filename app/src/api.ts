@@ -115,7 +115,65 @@ export interface Lookout {
   history: { at: number; needs_you: number; working: number; idle: number; total: number }[];
 }
 
+export interface PermissionAsk {
+  id: string;
+  agent: string;
+  tool: string;
+  summary: string;
+  input: unknown;
+  can_remember: boolean;
+  at: number;
+}
+
+export interface ScreenPrompt {
+  pane: string;
+  agent: string;
+  project: string;
+  prompt: { question: string; choices: { keys: string; label: string }[] } | null;
+}
+
+export interface ConvItem {
+  role: "user" | "assistant" | "tool";
+  text: string;
+  tool?: string;
+  at?: string;
+}
+
+export interface Conversation {
+  started: boolean;
+  state: AgentState | null;
+  pane: string | null;
+  items: ConvItem[];
+}
+
+export interface OsPack {
+  id: string;
+  title: string;
+  version: string;
+  purpose: string;
+  provides: string[];
+  depends_on: string[];
+  confidence: string;
+  skills: string[];
+  agents: string[];
+  roles: string[];
+}
+export interface OsDetail {
+  pack: OsPack;
+  os: string;
+  oracle: string;
+}
+
 export const api = {
+  osList: () => invoke<{ dir: string; packs: OsPack[] }>("os_list"),
+  osPack: (id: string) => invoke<OsDetail>("os_pack", { id }),
+  osRead: (id: string, path: string) => invoke<string>("os_read", { id, path }),
+  osImport: (path: string) => invoke<string[]>("os_import", { path }),
+  permissions: () => invoke<PermissionAsk[]>("permissions_pending"),
+  answerPermission: (id: string, decision: "allow" | "always" | "deny") => invoke<void>("permission_answer", { id, decision }),
+  screenPrompts: () => invoke<ScreenPrompt[]>("screen_prompts"),
+  answerScreen: (pane: string, keys: string) => invoke<void>("screen_answer", { pane, keys }),
+  conversation: (project?: string) => invoke<Conversation>("conversation", { project }),
   lookout: () => invoke<Lookout>("lookout"),
   info: () => invoke<AppInfo>("app_info"),
   openProject: (path: string, force = false) =>

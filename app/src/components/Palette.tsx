@@ -2,10 +2,11 @@ import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-j
 import { api } from "../api";
 import { activeProject, addPane, info, projectPanes, projects, setFocused, setView } from "../store";
 import { addProject, switchProject } from "../ui/projects";
-import Icon, { type IconData } from "../ui/Icon";
-import * as I from "../ui/icons";
+import Icon from "../ui/Icon";
+import { icons as D, type IconData } from "../ui/icons";
 import { cycleTheme, paletteOpen, panelOpen, setPaletteOpen, setPanelOpen, setProjectDialog, setSidebarOpen, sidebarOpen } from "../ui/state";
-import { isRunning } from "./Composer";
+import { crew } from "../store";
+const isRunning = () => ["planning", "calibrating", "working", "reviewing", "gating", "fixing"].includes(crew.phase);
 
 interface Action {
   label: string;
@@ -21,19 +22,20 @@ export default function Palette() {
   const [sel, setSel] = createSignal(0);
 
   const actions = createMemo<Action[]>(() => [
-    { label: "Nouvelle tâche pour l'équipage", icon: I.Sparkles, run: () => document.getElementById("composer-input")?.focus(), enabled: () => !!info()?.project },
-    { label: "Ajouter un projet", icon: I.Folder, run: addProject },
-    { label: "Ouvrir un projet par son chemin", icon: I.Folder, run: () => setProjectDialog(true) },
-    { label: "Nouveau shell", icon: I.Terminal, run: () => api.spawn("shell").then((p) => { addPane(p); setFocused(p.id); setView("panes"); }) },
-    { label: "Nouvelle session Claude", icon: I.Robot, run: () => api.spawn("claude").then((p) => { addPane(p); setFocused(p.id); setView("panes"); }), enabled: () => !!info()?.project },
-    { label: "Arrêter le run", icon: I.Stop, run: () => api.crewCancel(), enabled: isRunning },
-    { label: "Voir les panes", icon: I.Grid, run: () => setView("panes") },
-    { label: "Voir tous les agents", icon: I.Dashboard, run: () => setView("agents") },
-    { label: sidebarOpen() ? "Masquer la barre latérale" : "Afficher la barre latérale", icon: I.SidebarLeft, run: () => setSidebarOpen(!sidebarOpen()) },
-    { label: panelOpen() ? "Masquer le panneau" : "Afficher le panneau", icon: I.SidebarRight, run: () => setPanelOpen(!panelOpen()) },
-    { label: "Changer de thème", icon: I.Moon, run: cycleTheme },
-    ...projects().filter((p) => p.id !== activeProject()).map((p) => ({ label: `Projet : ${p.name}`, hint: p.running ? "run en cours" : undefined, icon: I.Folder, run: () => switchProject(p.id) })),
-    ...projectPanes().map((p) => ({ label: `Aller à ${p.title}`, hint: p.role ?? p.program, icon: p.key ? I.Robot : I.Terminal, run: () => { setFocused(p.id); setView("panes"); } })),
+    { label: "Nouvelle tâche pour l'équipage", icon: D.orchestrator, run: () => document.getElementById("composer-input")?.focus(), enabled: () => !!info()?.project },
+    { label: "Ajouter un projet", icon: D.folder, run: addProject },
+    { label: "Ouvrir un projet par son chemin", icon: D.folder, run: () => setProjectDialog(true) },
+    { label: "Nouveau shell", icon: D.terminal, run: () => api.spawn("shell").then((p) => { addPane(p); setFocused(p.id); setView("panes"); }) },
+    { label: "Nouvelle session Claude", icon: D.agent, run: () => api.spawn("claude").then((p) => { addPane(p); setFocused(p.id); setView("panes"); }), enabled: () => !!info()?.project },
+    { label: "Arrêter le run", icon: D.stop, run: () => api.crewCancel(), enabled: isRunning },
+    { label: "Conversation avec l'orchestrateur", icon: D.orchestrator, run: () => setView("chat") },
+    { label: "Voir les terminaux", icon: D.grid, run: () => setView("panes") },
+    { label: "Voir tous les agents de la machine", icon: D.machine, run: () => setView("agents") },
+    { label: sidebarOpen() ? "Masquer la barre latérale" : "Afficher la barre latérale", icon: D.sidebar, run: () => setSidebarOpen(!sidebarOpen()) },
+    { label: panelOpen() ? "Masquer le panneau" : "Afficher le panneau", icon: D.sidebar, run: () => setPanelOpen(!panelOpen()) },
+    { label: "Changer de thème", icon: D.moon, run: cycleTheme },
+    ...projects().filter((p) => p.id !== activeProject()).map((p) => ({ label: `Projet : ${p.name}`, hint: p.running ? "run en cours" : undefined, icon: D.folder, run: () => switchProject(p.id) })),
+    ...projectPanes().map((p) => ({ label: `Aller à ${p.title}`, hint: p.role ?? p.program, icon: p.key ? D.agent : D.terminal, run: () => { setFocused(p.id); setView("panes"); } })),
   ]);
 
   const shown = createMemo(() => {
@@ -68,7 +70,7 @@ export default function Palette() {
       <div class="overlay" onMouseDown={close}>
         <div class="palette" role="dialog" aria-label="Actions" onMouseDown={(e) => e.stopPropagation()}>
           <div class="pal-input">
-            <Icon icon={I.Search} size={16} class="muted" />
+            <Icon icon={D.search} size={16} />
             <input
               autofocus
               ref={(el) => setTimeout(() => el.focus())}

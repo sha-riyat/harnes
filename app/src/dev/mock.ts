@@ -19,7 +19,21 @@ const threads = [
   { id: "lot-0-L1", title: "L1 · Header", kind: "lot", status: "closed", messages: 4, last_at: now - 900000, last_author: "teacher", last_body: "Fil clos : lot terminé", summary: "lot terminé" },
 ];
 
+const pack = (id: string, purpose: string, roles: string[], skills: string[]) => ({ id, title: id, version: "0.1.0", purpose, provides: skills, depends_on: [], confidence: "A", skills, agents: [], roles });
+const packs = [
+  pack("orchestration-os", "Compile goals into workflows: DAGs, sagas, fanout/join, routing, compensation, and timeouts.", ["orchestrator"], ["compile-workflow", "route-intent", "run-saga", "compensate"]),
+  pack("agent-os", "Define agent lifecycle, roles, bounds, budgets, handoff, and stop conditions.", ["orchestrator"], ["define-agent", "handoff"]),
+  pack("project-os", "Bound work as a project: outcomes, constraints, risks, and honest status.", ["planner"], ["charter", "status"]),
+  pack("builder-os", "Construct working software carefully: construction plans, reviews, safe refactors, legacy seams.", ["worker", "reviewer"], ["construction-plan", "review-diff", "refactor-plan", "legacy-seam"]),
+  pack("quality-evaluation-os", "Argue whether a product is good enough to ship.", ["reviewer", "teacher"], ["risk-charter", "test-design", "grade-build", "ship-readiness"]),
+  pack("validation-os", "Turn hypotheses into experiments with kill rules.", ["teacher"], ["experiment", "kill-rule"]),
+  pack("design-os", "Shape usable, ethical product experiences: flows, interaction specs, cheap usability.", [], ["job-frame", "critique-flow", "interaction-spec", "usability-lite"]),
+  pack("pricing-os", "Design value-based price architecture: metrics, fences, versions, and ethics.", [], ["price-metric", "fences"]),
+];
+
 const responses: Record<string, unknown> = {
+  os_list: { dir: "C:/Users/me/AppData/Roaming/dev.harnes.app/os", packs },
+  os_pack: { pack: packs[3], os: ["# Builder OS", "", "## Purpose", "Construct working software carefully.", "", "## Runtime loop", "1. Bind oracle/ORACLE.md as non-overridable policy.", "2. Route via routing/intents.yaml."].join(String.fromCharCode(10)), oracle: ["# Oracle — builder-os", "", "## Defaults", "- Small reversible steps.", "- Tests before refactor.", "", "## Refuse", "- Hero rewrites without seams."].join(String.fromCharCode(10)) },
   projects_list: projects,
   app_info: { project: "C:/work/harness-test", project_id: "p1", proxy_port: 62346, hook_port: 51743, ctx_bin: "", ctx_bin_found: true, crew_running: true },
   pane_list: panes,
@@ -27,6 +41,15 @@ const responses: Record<string, unknown> = {
   threads_list: threads,
   threads_recent: [{ id: 9, thread: "lot-1-L1", author: "1-worker-L1-r0/scout", at: now, kind: "message", body: "Endpoint trouvé" }],
   thread_read: { thread: threads[1], messages: [{ id: 1, thread: "lot-1-L1", author: "planner", at: now - 60000, kind: "handoff", body: "Lot L1 (feature). Fichiers : contact.html" }, { id: 2, thread: "lot-1-L1", author: "1-worker-L1-r0", at: now - 30000, kind: "message", body: "Quel endpoint pour l'envoi ?" }, { id: 3, thread: "lot-1-L1", author: "1-worker-L1-r0/scout", at: now - 5000, kind: "message", body: "Endpoint trouvé : POST /api/contact" }] },
+  conversation: { started: true, state: "working", pane: "a1", items: [
+    { role: "user", text: "Ajoute une page contact avec un formulaire qui envoie un e-mail.", at: new Date(now - 300000).toISOString() },
+    { role: "assistant", text: "Je lance l'équipage : le planner découpe, le teacher fixe la barre, puis les workers construisent et testent.", at: new Date(now - 290000).toISOString() },
+    { role: "tool", tool: "crew_start", text: "Page contact avec formulaire et envoi d'e-mail", at: new Date(now - 285000).toISOString() },
+    { role: "tool", tool: "thread_read", text: "lot-1-L1", at: new Date(now - 60000).toISOString() },
+    { role: "assistant", text: "Le plan compte 2 lots en une vague. worker-L1 a une question sur l'endpoint : un scout l'a trouvé (POST /api/contact), c'est intégré.", at: new Date(now - 50000).toISOString() },
+  ] },
+  permissions_pending: [{ id: "x1", agent: "1-worker-L1-r0", tool: "Bash", summary: "npm install nodemailer", input: {}, can_remember: true, at: now }],
+  screen_prompts: [{ pane: "a2", agent: "1-worker-L2-r0", project: "p1", prompt: { question: "Le fichier contact.html existe déjà. Que faire ?", choices: [{ keys: "1", label: "Remplacer" }, { keys: "2", label: "Garder les deux" }, { keys: "3", label: "Annuler" }] } }],
   providers_list: ["claude", "codex", "gemini", "opencode"],
   lookout: { snapshot: { generated_at: now, sessions: [], sources: [] }, events: [], history: [] },
 };
