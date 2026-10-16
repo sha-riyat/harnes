@@ -7,10 +7,10 @@ import ThreadsTab from "./ThreadsTab";
 
 const fmt = (n?: number) => (n === undefined ? "–" : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : `${n}`);
 
-const TABS: { id: PanelTab; label: string }[] = [
-  { id: "threads", label: "fils" },
-  { id: "crew", label: "journal" },
-  { id: "usage", label: "coûts" },
+const TABS: { id: PanelTab; label: string; icon: string }[] = [
+  { id: "threads", label: "Threads", icon: D.threads },
+  { id: "crew", label: "Log", icon: D.journal },
+  { id: "usage", label: "Usage", icon: D.cost },
 ];
 
 /** What the run did, newest first. Agents themselves live in the sidebar. */
@@ -63,8 +63,8 @@ export default function RightPanel() {
       <div class="rp-tabs" role="tablist">
         <For each={TABS}>
           {(t) => (
-            <button role="tab" aria-selected={panelTab() === t.id} classList={{ on: panelTab() === t.id }} onClick={() => setPanelTab(t.id)}>
-              {t.label}
+            <button role="tab" aria-selected={panelTab() === t.id} aria-label={t.label} title={t.label} classList={{ on: panelTab() === t.id }} onClick={() => setPanelTab(t.id)}>
+              <Icon icon={t.icon} size={16} />
             </button>
           )}
         </For>
