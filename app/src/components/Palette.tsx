@@ -30,6 +30,7 @@ export default function Palette() {
     { label: "Arrêter le run", icon: D.stop, run: () => api.crewCancel(), enabled: isRunning },
     { label: "Conversation avec l'orchestrateur", icon: D.orchestrator, run: () => setView("chat") },
     { label: "Voir les terminaux", icon: D.grid, run: () => setView("panes") },
+    { label: "Méthodes de l'équipage (packs OS)", icon: D.thread, run: () => setView("os") },
     { label: "Voir tous les agents de la machine", icon: D.machine, run: () => setView("agents") },
     { label: sidebarOpen() ? "Masquer la barre latérale" : "Afficher la barre latérale", icon: D.sidebar, run: () => setSidebarOpen(!sidebarOpen()) },
     { label: panelOpen() ? "Masquer le panneau" : "Afficher le panneau", icon: D.sidebar, run: () => setPanelOpen(!panelOpen()) },

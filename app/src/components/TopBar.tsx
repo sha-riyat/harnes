@@ -8,6 +8,7 @@ import { cycleTheme, panelOpen, setPaletteOpen, setPanelOpen, setSidebarOpen, si
 // Terminals stay out of the way: the grid is reached from the palette.
 const VIEWS = [
   { id: "chat", label: "conversation" },
+  { id: "os", label: "méthodes" },
   { id: "agents", label: "machine" },
 ] as const;
 

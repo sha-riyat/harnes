@@ -2,6 +2,7 @@ import { render } from "solid-js/web";
 import "./theme.css";
 import "./styles.css";
 import "./lookout.css";
+import "./methods.css";
 import "./threads.css";
 
 async function main() {

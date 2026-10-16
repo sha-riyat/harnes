@@ -2,6 +2,7 @@ import { Match, Show, Switch, onCleanup, onMount } from "solid-js";
 import { api, on, subscribeFrames, type AgentState, type CrewEvent, type PaneInfo, type PermissionAsk, type ScreenPrompt } from "./api";
 import Conversation from "./components/Conversation";
 import LookoutView from "./components/LookoutView";
+import MethodsView from "./components/MethodsView";
 import { ProjectDialog, Toasts } from "./components/Overlays";
 import Palette from "./components/Palette";
 import PaneGrid from "./components/PaneGrid";
@@ -70,6 +71,9 @@ export default function App() {
           </Match>
           <Match when={view() === "panes"}>
             <PaneGrid />
+          </Match>
+          <Match when={view() === "os"}>
+            <MethodsView />
           </Match>
           <Match when={view() === "agents"}>
             <LookoutView />
