@@ -1,0 +1,18 @@
+[package]
+name = "harnes-proxy"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Local Anthropic API proxy that compresses tool output before it reaches the model"
+
+[dependencies]
+harnes-ctx.workspace = true
+axum.workspace = true
+reqwest.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+bytes.workspace = true
+futures-util.workspace = true
+tracing.workspace = true
