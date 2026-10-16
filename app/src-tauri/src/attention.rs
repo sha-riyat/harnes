@@ -9,9 +9,11 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use tauri::{Emitter, State};
 
-/// Last prompt seen on each agent pane, to emit only changes.
+/// Last prompt seen on each agent pane, to emit only changes, and whether
+/// it was answered: the menu stays on screen a moment after the keys go in,
+/// and must not come back as a new card.
 #[derive(Default)]
-pub struct Prompts(Mutex<HashMap<String, Option<screen::ScreenPrompt>>>);
+pub struct Prompts(Mutex<HashMap<String, (Option<screen::ScreenPrompt>, bool)>>);
 
 /// Forwards new permission requests to the UI.
 pub fn install(st: &Shared) {
@@ -28,10 +30,10 @@ pub fn on_frame(st: &Shared, prompts: &Prompts, pane: &str, text: &str) {
     };
     let found = screen::detect(text);
     let mut seen = prompts.0.lock();
-    if seen.get(pane) == Some(&found) {
+    if seen.get(pane).map(|(p, _)| p) == Some(&found) {
         return;
     }
-    seen.insert(pane.to_string(), found.clone());
+    seen.insert(pane.to_string(), (found.clone(), false));
     drop(seen);
     let _ = st.app.emit("screen-prompt", json!({ "pane": pane, "agent": key, "project": project, "prompt": found }));
 }
@@ -58,8 +60,8 @@ pub fn screen_prompts(st: State<'_, Shared>, prompts: State<'_, Prompts>) -> Val
         .0
         .lock()
         .iter()
-        .filter_map(|(pane, p)| {
-            let p = p.as_ref()?;
+        .filter_map(|(pane, (p, answered))| {
+            let p = p.as_ref().filter(|_| !answered)?;
             let a = agents.values().find(|a| a.pane.as_deref() == Some(pane.as_str()))?;
             Some(json!({ "pane": pane, "agent": a.key, "project": a.project, "prompt": p }))
         })
@@ -70,8 +72,25 @@ pub fn screen_prompts(st: State<'_, Shared>, prompts: State<'_, Prompts>) -> Val
 /// Sends the chosen answer's keys to the agent's terminal.
 #[tauri::command]
 pub fn screen_answer(st: State<'_, Shared>, prompts: State<'_, Prompts>, pane: String, keys: String) -> Result<(), String> {
-    st.panes.write(&pane, keys.as_bytes()).map_err(|e| e.to_string())?;
-    prompts.0.lock().insert(pane, None);
+    // One key per write, a beat apart: terminal UIs (Ink) read a burst of
+    // escape sequences as one unknown key.
+    let mut tokens = vec![];
+    let mut rest = keys.as_str();
+    while let Some(c) = rest.chars().next() {
+        let n = if rest.starts_with("\u{1b}[") { 3.min(rest.len()) } else { c.len_utf8() };
+        tokens.push(rest[..n].to_string());
+        rest = &rest[n..];
+    }
+    let (panes, target) = (st.panes.clone(), pane.clone());
+    std::thread::spawn(move || {
+        for t in tokens {
+            let _ = panes.write(&target, t.as_bytes());
+            std::thread::sleep(std::time::Duration::from_millis(60));
+        }
+    });
+    if let Some(slot) = prompts.0.lock().get_mut(&pane) {
+        slot.1 = true;
+    }
     Ok(())
 }
 

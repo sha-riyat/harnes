@@ -23,9 +23,24 @@ fn clean(line: &str) -> &str {
     line.trim_matches(FRAME).trim()
 }
 
+const POINTERS: [char; 5] = ['❯', '>', '›', '●', '○'];
+
+/// The option under the menu's cursor (`❯ 2. …`).
+fn pointed(line: &str) -> bool {
+    clean(line).starts_with(['❯', '>', '›'])
+}
+
+/// Keys that move a menu's cursor from `from` to `to`, then confirm.
+/// Menus (Claude Code's included) follow the arrows; digits alone are not
+/// enough everywhere, so the answer always ends with Enter.
+fn choose(from: usize, to: usize) -> String {
+    let step = if to > from { "\u{1b}[B" } else { "\u{1b}[A" };
+    format!("{}\r", step.repeat(from.abs_diff(to)))
+}
+
 /// `❯ 1. Yes` / `  2. No` -> (number, label)
 fn option(line: &str) -> Option<(u32, String)> {
-    let l = clean(line).trim_start_matches(['❯', '>', '›', '●', '○']).trim_start();
+    let l = clean(line).trim_start_matches(POINTERS).trim_start();
     let (num, rest) = l.split_once('.')?;
     let n: u32 = num.trim().parse().ok()?;
     let label = rest.trim();
@@ -64,9 +79,10 @@ pub fn detect(screen: &str) -> Option<ScreenPrompt> {
                 .find(|l| !l.is_empty())
                 .unwrap_or("Question de l'agent")
                 .to_string();
+            let at = (start..=end).position(|k| pointed(lines[k])).unwrap_or(0);
             return Some(ScreenPrompt {
                 question,
-                choices: opts.into_iter().map(|(n, label)| Choice { keys: n.to_string(), label }).collect(),
+                choices: opts.into_iter().enumerate().map(|(j, (_, label))| Choice { keys: choose(at, j), label }).collect(),
             });
         }
         i = start;
@@ -92,7 +108,15 @@ mod tests {
         let p = detect(screen).expect("menu");
         assert_eq!(p.question, "Do you want to proceed?");
         assert_eq!(p.choices.len(), 3);
-        assert_eq!(p.choices[1], Choice { keys: "2".into(), label: "Yes, and don't ask again".into() });
+        assert_eq!(p.choices[1], Choice { keys: "\u{1b}[B\r".into(), label: "Yes, and don't ask again".into() });
+        assert_eq!(p.choices[0].keys, "\r", "the pointed option only needs Enter");
+    }
+
+    #[test]
+    fn moves_from_wherever_the_cursor_is() {
+        let p = detect("Pick one\n  1. a\n  2. b\n❯ 3. c\n  4. d").expect("menu");
+        assert_eq!(p.choices[0].keys, "\u{1b}[A\u{1b}[A\r");
+        assert_eq!(p.choices[3].keys, "\u{1b}[B\r");
     }
 
     #[test]
