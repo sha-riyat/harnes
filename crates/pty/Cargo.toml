@@ -1,0 +1,15 @@
+[package]
+name = "harnes-pty"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "ConPTY panes rendered through libghostty-vt"
+
+[dependencies]
+harnes-vt.workspace = true
+portable-pty.workspace = true
+parking_lot.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+uuid.workspace = true
+tracing.workspace = true
