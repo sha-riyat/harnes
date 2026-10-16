@@ -5,6 +5,7 @@ pub mod context;
 pub mod e2e;
 pub mod engine;
 pub mod hooks;
+pub mod permissions;
 pub mod plan;
 pub mod prompts;
 pub mod providers;

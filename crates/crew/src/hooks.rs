@@ -93,6 +93,8 @@ pub type ControlFn = Arc<dyn Fn(String, Value) -> std::pin::Pin<Box<dyn std::fut
 pub struct HookServer {
     pub port: u16,
     pub registry: Arc<Registry>,
+    /// Permission requests waiting for the user (answered from the UI).
+    pub permissions: Arc<crate::permissions::Broker>,
     control: Arc<std::sync::OnceLock<ControlFn>>,
 }
 
@@ -103,7 +105,22 @@ impl HookServer {
         let port = listener.local_addr()?.port();
         let control: Arc<std::sync::OnceLock<ControlFn>> = Arc::default();
         let ctl = control.clone();
+        let permissions: Arc<crate::permissions::Broker> = Arc::default();
+        let (perm, reg2) = (permissions.clone(), registry.clone());
         let app = Router::new()
+            .route(
+                "/permission/{key}",
+                post(move |Path(key): Path<String>, body: Bytes| {
+                    let (perm, reg) = (perm.clone(), reg2.clone());
+                    async move {
+                        let v: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
+                        reg.set(&key, AgentState::Blocked, false);
+                        let out = perm.request(&key, v).await;
+                        reg.set(&key, AgentState::Working, false);
+                        out
+                    }
+                }),
+            )
             .route("/hook/{key}", post(receive))
             .with_state(registry.clone())
             .route(
@@ -122,7 +139,7 @@ impl HookServer {
         tokio::spawn(async move {
             let _ = axum::serve(listener, app).await;
         });
-        Ok(Self { port, registry, control })
+        Ok(Self { port, registry, permissions, control })
     }
 
     /// Installs the crew control handler (once).
@@ -146,6 +163,12 @@ impl HookServer {
         for ev in ["SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "Notification", "Stop", "SessionEnd"] {
             hooks.insert(ev.into(), hook.clone());
         }
+        // Blocking: the hook's stdout is the user's decision taken in the harnes UI.
+        let ask = format!(
+            "curl -s -m 590 -X POST -H \"Content-Type: application/json\" --data-binary @- http://127.0.0.1:{}/permission/{key}",
+            self.port
+        );
+        hooks.insert("PermissionRequest".into(), json!([{ "hooks": [{ "type": "command", "command": ask, "timeout": 600 }] }]));
         json!({ "hooks": hooks })
     }
 }
