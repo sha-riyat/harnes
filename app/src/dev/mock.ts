@@ -47,6 +47,7 @@ const responses: Record<string, unknown> = {
     { role: "tool", tool: "crew_start", text: "Page contact avec formulaire et envoi d'e-mail", at: new Date(now - 285000).toISOString() },
     { role: "tool", tool: "thread_read", text: "lot-1-L1", at: new Date(now - 60000).toISOString() },
     { role: "assistant", text: "Le plan compte 2 lots en une vague. worker-L1 a une question sur l'endpoint : un scout l'a trouvé (POST /api/contact), c'est intégré.", at: new Date(now - 50000).toISOString() },
+    { role: "assistant", text: ["**Calculatrice web vanilla, 6 commits.**", "", "- `index.html` + `styles.css` : page calculatrice", "- `app.js` : logique (opérations, reset après `=`)", "", "Pas lancé les tests — *état réel non vérifié*."].join(String.fromCharCode(10)), at: new Date(now - 40000).toISOString() },
   ] },
   permissions_pending: [{ id: "x1", agent: "1-worker-L1-r0", tool: "Bash", summary: "npm install nodemailer", input: {}, can_remember: true, at: now }],
   screen_prompts: [{ pane: "a2", agent: "1-worker-L2-r0", project: "p1", prompt: { question: "Le fichier contact.html existe déjà. Que faire ?", choices: [{ keys: "1", label: "Remplacer" }, { keys: "2", label: "Garder les deux" }, { keys: "3", label: "Annuler" }] } }],

@@ -9,6 +9,7 @@ import Ascii from "../ui/ascii/Ascii";
 import { thinking } from "../ui/ascii/pieces";
 import { icons as D } from "../ui/icons";
 import AsciiField from "../ui/ascii/AsciiField";
+import Markdown from "../ui/Markdown";
 import RunTrack from "../ui/ascii/RunTrack";
 import { addProject } from "../ui/projects";
 import { toast } from "../ui/state";
@@ -33,7 +34,9 @@ function Message(props: { item: ConvItem }) {
           <span class="label">{props.item.role === "user" ? "toi" : "orchestrateur"}</span>
           <span class="label faint">{time(props.item.at)}</span>
         </div>
-        <div class="msg-text">{props.item.text}</div>
+        <Show when={props.item.role === "user"} fallback={<div class="msg-text"><Markdown text={props.item.text} /></div>}>
+          <div class="msg-text plain">{props.item.text}</div>
+        </Show>
       </li>
     </Show>
   );
@@ -117,7 +120,7 @@ export default function Conversation() {
         <Show when={pending()}>
           <li class="msg user">
             <div class="msg-meta"><span class="label">toi</span></div>
-            <div class="msg-text">{pending()}</div>
+            <div class="msg-text plain">{pending()}</div>
           </li>
         </Show>
         <Show when={working()}>
