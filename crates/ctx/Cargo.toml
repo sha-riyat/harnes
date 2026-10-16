@@ -1,0 +1,22 @@
+[package]
+name = "harnes-ctx"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Context sandbox: keeps large outputs out of the model context (MCP server + SQLite FTS5 store)"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "harnes-ctx"
+path = "src/main.rs"
+
+[dependencies]
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+sha2.workspace = true
+parking_lot.workspace = true
+harnes-threads.workspace = true
