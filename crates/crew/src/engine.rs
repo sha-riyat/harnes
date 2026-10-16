@@ -203,7 +203,9 @@ impl<H: AgentHost> Engine<H> {
         let settings = run.dir.join("agents").join(format!("{name}.settings.json"));
         std::fs::write(&settings, serde_json::to_string_pretty(&self.hooks.settings_for(&key))?)?;
         let mut rx = self.hooks.registry.register(&key);
-        let pane = self.host.spawn(&key, role, prompt, &settings)?;
+        // Each role gets its method packs (OS) named in its first prompt.
+        let prompt = format!("{prompt}{}", harnes_os::role_note(&harnes_os::Library::open_default(), role.agent()));
+        let pane = self.host.spawn(&key, role, &prompt, &settings)?;
         if !self.host.has_hooks(role) {
             self.hooks.registry.set(&key, AgentState::Working, false);
         }

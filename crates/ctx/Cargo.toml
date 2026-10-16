@@ -20,3 +20,4 @@ anyhow.workspace = true
 sha2.workspace = true
 parking_lot.workspace = true
 harnes-threads.workspace = true
+harnes-os.workspace = true

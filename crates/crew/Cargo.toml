@@ -16,6 +16,7 @@ tracing.workspace = true
 futures-util.workspace = true
 harnes-e2e.workspace = true
 harnes-threads.workspace = true
+harnes-os.workspace = true
 
 [dev-dependencies]
 harnes-threads.workspace = true

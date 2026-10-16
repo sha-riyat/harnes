@@ -75,7 +75,9 @@ pub fn equip(root: &Path, ctx_bin: &Path, force: bool) -> Result<SetupReport> {
     write_if(&agents.join("scout.md"), SCOUT, force, &mut rep, root)?;
     write_if(&agents.join("orchestrator.md"), ORCHESTRATOR, force, &mut rep, root)?;
     write_if(&root.join(".claude").join("settings.json"), SETTINGS, force, &mut rep, root)?;
-    write_if(&root.join(".claude").join("HARNESS.md"), HARNESS_MD, true, &mut rep, root)?;
+    // HARNESS.md is ours: rewritten each time, with the installed OS packs.
+    let harness = format!("{HARNESS_MD}{}", harnes_os::Library::open_default().index_md());
+    write_if(&root.join(".claude").join("HARNESS.md"), &harness, true, &mut rep, root)?;
     register_mcp(root, ctx_bin, &mut rep)?;
 
     let claude_md = root.join("CLAUDE.md");

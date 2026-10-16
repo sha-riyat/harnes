@@ -64,7 +64,7 @@ mod tests {
     use crate::store::Store;
 
     fn ctx() -> Ctx {
-        Ctx { store: Store::in_memory().unwrap(), root: std::env::temp_dir(), threads: Some(harnes_threads::Threads::in_memory().unwrap()) }
+        Ctx { store: Store::in_memory().unwrap(), root: std::env::temp_dir(), threads: Some(harnes_threads::Threads::in_memory().unwrap()), os: harnes_os::Library::new(std::env::temp_dir().join("harnes-no-os")) }
     }
 
     #[test]
@@ -72,7 +72,7 @@ mod tests {
         let c = ctx();
         assert!(handle(&c, &json!({"jsonrpc":"2.0","method":"notifications/initialized"})).is_none());
         let r = handle(&c, &json!({"jsonrpc":"2.0","id":1,"method":"tools/list"})).unwrap();
-        assert_eq!(r["result"]["tools"].as_array().unwrap().len(), 11);
+        assert_eq!(r["result"]["tools"].as_array().unwrap().len(), 15);
     }
 
     #[test]
@@ -97,7 +97,7 @@ mod thread_tests {
 
     #[test]
     fn agents_post_and_read_threads() {
-        let c = Ctx { store: Store::in_memory().unwrap(), root: std::env::temp_dir(), threads: Some(harnes_threads::Threads::in_memory().unwrap()) };
+        let c = Ctx { store: Store::in_memory().unwrap(), root: std::env::temp_dir(), threads: Some(harnes_threads::Threads::in_memory().unwrap()), os: harnes_os::Library::new(std::env::temp_dir().join("harnes-no-os")) };
         let call = |name: &str, args: Value| tools::call(&c, name, &args).unwrap();
         let created = call("thread_create", json!({"title": "Question API", "body": "Quel endpoint ?"}));
         let id = created.trim_start_matches("thread créé : ").to_string();

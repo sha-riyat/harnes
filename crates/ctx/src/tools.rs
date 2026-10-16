@@ -9,6 +9,7 @@ pub struct Ctx {
     pub store: Store,
     pub root: PathBuf,
     pub threads: Option<harnes_threads::Threads>,
+    pub os: harnes_os::Library,
 }
 
 /// All tools offered by this server: context sandbox + threads (+ crew control for the orchestrator).
@@ -18,6 +19,7 @@ pub fn all_definitions(ctx: &Ctx) -> Value {
         let orchestrator = std::env::var("HARNES_ROLE").map(|r| r == "orchestrator").unwrap_or(false);
         v.extend(crate::threads::definitions(orchestrator));
     }
+    v.extend(crate::os::definitions());
     Value::Array(v)
 }
 
@@ -87,6 +89,9 @@ pub fn call(ctx: &Ctx, name: &str, args: &Value) -> Result<String> {
         if let Some(out) = crate::threads::call(t, name, args)? {
             return Ok(out);
         }
+    }
+    if let Some(out) = crate::os::call(&ctx.os, name, args)? {
+        return Ok(out);
     }
     match name {
         "ctx_execute" => {
