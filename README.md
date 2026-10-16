@@ -14,6 +14,7 @@ Claude Code is the default runtime. Each role can also run on Codex, Gemini CLI 
 | End-to-end tests (inspired by TesterArmy e2e) | `harnes-e2e`: YAML specs, natural-language `act` steps resolved by the agents themselves, model-free replay | `harnes-e2e` |
 | Seeing every agent (inspired by agent-lookout) | Machine-wide view of Claude Code, Codex, Gemini CLI and status-file sessions | `harnes-lookout` |
 | Crew orchestration | Planner → Teacher → Workers → Reviewer → Teacher gate | `harnes-crew` |
+| Methods for agents | 24 OS packs (doctrine, oracle, skills, routing) shipped inside harnes and loaded by role | `harnes-os` |
 
 Ponytail, Caveman and TasteSkill v2 (`design-taste-frontend`) remain Claude Code skills.
 
@@ -52,6 +53,53 @@ The agents, their sub-agents, the orchestrator and you communicate through threa
 - **UI**: the **Threads** tab lists the open and closed threads and shows each conversation. You can write in any thread. An ASCII strip shows the latest messages travelling between agents.
 
 Why SQLite rather than a hosted backend such as Convex: everything runs on one machine and works offline, there is no extra service, and your conversations never leave your computer.
+
+## Interface
+
+The interface is black and white only. Shape, fill and motion carry state, never colour. Icons are [Phosphor](https://phosphoricons.com/) (light weight, MIT), imported as raw SVG so only the icons used are bundled. Everything that lives (moves, flows or works) is drawn in animated ASCII.
+
+- **Living ASCII**: one shared animation loop that runs only while an element is on screen and the window is visible. With reduced motion, each animation shows a still frame. The pieces:
+  - an agent's state as one character: it breathes while working and blinks `!` when it needs you;
+  - a shimmering strand while the orchestrator thinks;
+  - run progress as one line of text (`plan --- barre :=+= travail ··· revue`): the current step decodes and its wire flows;
+  - a message travelling from an agent to its thread;
+  - the empty conversation filled with a field of characters that moves through clouds, currents, ripples, contours, a vortex, rain and halftone. Each motif dissolves into the next along a noisy front, and the field scrambles under the pointer.
+- **Conversation first**: the main view is the conversation with the project's orchestrator. Its terminal stays hidden, and its Claude transcript is shown as a chat: your messages, its replies, and one short mono line per tool call. A thin bar shows the run's state and progress. The Teacher's summary and the proposed commits close the run.
+- **Three views**: conversation, methods (the OS packs) and machine (every agent on the computer). The terminal grid is in the palette (Ctrl K).
+- **Terminals hidden**: clicking an agent opens its terminal in a drawer.
+- **Permissions in the UI**: each agent gets a blocking Claude Code `PermissionRequest` hook. The request appears as a card (*Allow · Always · Deny*), and your answer is returned as the hook's decision. If you do not answer within about 10 minutes, Claude Code falls back to its own prompt.
+- **Questions read from the screen**: like a computer-use agent reading an accessibility tree, harnes reads each agent's Ghostty grid and detects numbered menus and `(y/n)` prompts. It shows them as cards, then sends your choice as keystrokes. This runs on the frames the pump already produces, so it costs nothing extra.
+- **Side panel**: threads, the run journal and costs.
+- `?mock` (dev only) fakes the backend so the UI can be worked on in a browser.
+
+## Methods (OS packs)
+
+harnes ships 24 OS packs inside its binary (`crates/os/packs`). At launch, it installs them into `%APPDATA%\dev.harnes.app\os`, once per build. Each pack is a method for agents: a doctrine (`OS.md`), an oracle of non-negotiable defaults and refusals, first principles, skills with input and output schemas, playbooks, workflows, intent routing and evals.
+
+- **By role**: each crew role loads its own packs. Its first prompt names them, and the project's `HARNESS.md` lists them.
+
+  | Role | Packs |
+  |---|---|
+  | orchestrator | orchestration, agent, team-delegation, decision |
+  | planner | project, stepper, blueprint, execution |
+  | workers | builder, tool-integration, documentation |
+  | reviewer | quality-evaluation, security, builder |
+  | teacher | validation, quality-evaluation |
+  | scouts | market-research, customer-discovery, documentation |
+
+  The product packs (brand, pricing, offer, positioning, design…) are reached on demand.
+- **MCP tools** (in `harnes-ctx`):
+  - `os_list`: list the installed packs;
+  - `os_brief(id)`: load a pack's doctrine, oracle, first principles and skills, following the packs' own context-packing order;
+  - `os_route(text)`: find the pack and skill that fit a request;
+  - `os_read(id, path)`: read one file of a pack.
+- **More packs**: import a zip, a folder of zips or pack folders from the methods view, or with:
+
+  ```
+  harnes-ctx os-import PATH
+  ```
+
+  Open projects are re-equipped straight away.
 
 ## Projects
 
@@ -149,6 +197,7 @@ crates/proxy    Anthropic proxy: compression, SSE pass-through, usage
 crates/e2e      harnes-e2e: specs, CDP browser, replay cache, runner, MCP
 crates/lookout  machine-wide agent sessions: adapters, events, history
 crates/threads  agent threads (SQLite): runs, lots, questions, history
+crates/os       OS packs: bundled zips, import, index, routing by role
 crates/crew     setup, hooks, providers, crew engine, context hand-offs, JSON contracts
 app/            Tauri 2 app (src-tauri) + SolidJS UI
 template/       agents (orchestrator, planner, teacher, worker, reviewer, scout), settings, CLAUDE.md
