@@ -69,6 +69,67 @@ pub fn export_claude(path: &Path) -> Result<String> {
     Ok(tail(out))
 }
 
+/// One item of a conversation, for the UI (orchestrator chat).
+#[derive(Debug, Clone, serde::Serialize, PartialEq)]
+pub struct ConvItem {
+    /// user | assistant | tool
+    pub role: String,
+    pub text: String,
+    /// Tool name for `role = tool`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool: Option<String>,
+    /// ISO timestamp from the transcript.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub at: Option<String>,
+}
+
+/// Turns a Claude Code transcript into chat items: user prompts, assistant
+/// text and one short line per tool call (results and thinking omitted).
+pub fn conversation_claude(path: &Path, limit: usize) -> Result<Vec<ConvItem>> {
+    let mut items = Vec::new();
+    for line in std::fs::read_to_string(path)?.lines() {
+        let Ok(v) = serde_json::from_str::<Value>(line) else { continue };
+        if v["isSidechain"].as_bool() == Some(true) {
+            continue;
+        }
+        let role = v["type"].as_str().unwrap_or("");
+        if role != "user" && role != "assistant" {
+            continue;
+        }
+        let at = v["timestamp"].as_str().map(String::from);
+        let content = &v["message"]["content"];
+        if let Some(text) = content.as_str() {
+            // Skip injected command/system wrappers.
+            if !text.trim_start().starts_with('<') && !text.trim().is_empty() {
+                items.push(ConvItem { role: role.into(), text: text.trim().into(), tool: None, at });
+            }
+            continue;
+        }
+        for b in content.as_array().into_iter().flatten() {
+            match b["type"].as_str() {
+                Some("text") => {
+                    let t = b["text"].as_str().unwrap_or("").trim();
+                    if !t.is_empty() && !t.starts_with('<') {
+                        items.push(ConvItem { role: role.into(), text: t.into(), tool: None, at: at.clone() });
+                    }
+                }
+                Some("tool_use") => {
+                    let name = b["name"].as_str().unwrap_or("?").replace("mcp__harnes-ctx__", "").replace("mcp__harnes-e2e__", "");
+                    let input = &b["input"];
+                    let hint = ["task", "body", "title", "thread", "command", "file_path", "pattern", "description", "prompt"]
+                        .iter()
+                        .find_map(|k| input[*k].as_str())
+                        .unwrap_or("");
+                    items.push(ConvItem { role: "tool".into(), text: clip(hint, 140), tool: Some(name), at: at.clone() });
+                }
+                _ => {}
+            }
+        }
+    }
+    let skip = items.len().saturating_sub(limit);
+    Ok(items.into_iter().skip(skip).collect())
+}
+
 /// Codex rollout: user / assistant messages.
 pub fn export_codex(path: &Path) -> Result<String> {
     let mut out = Vec::new();
@@ -148,6 +209,10 @@ mod tests {
         let md = export_claude(&t).unwrap();
         assert!(md.contains("Ajoute une page contact") && md.contains("outil `Write`") && md.contains("File created") && md.contains("Page créée."));
         assert!(!md.contains("secret") && !md.contains("sub-agent noise"));
+        let conv = conversation_claude(&t, 50).unwrap();
+        assert_eq!(conv.iter().map(|c| c.role.as_str()).collect::<Vec<_>>(), ["user", "tool", "assistant"]);
+        assert_eq!(conv[1].tool.as_deref(), Some("Write"));
+        assert_eq!(conv[1].text, "contact.html");
         let rel = write_handoff(&dir, "claude-1", "claude", "codex", &md, "").unwrap();
         assert!(std::fs::read_to_string(dir.join(&rel)).unwrap().contains("reprise par **codex**"));
         let _ = std::fs::remove_dir_all(&dir);
