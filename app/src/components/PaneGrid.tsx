@@ -1,13 +1,12 @@
 import { For, Show, createMemo, createResource, createSignal } from "solid-js";
 import { api } from "../api";
-import { focused, info, maximized, projectPanes, removePane, setFocused, setMaximized, type PaneView } from "../store";
+import { focused, maximized, projectPanes, removePane, setFocused, setMaximized, type PaneView } from "../store";
 import TermView from "../term/TermView";
 import Icon from "../ui/Icon";
 import Ascii, { StateMark } from "../ui/ascii/Ascii";
 import { thinking } from "../ui/ascii/pieces";
 import { icons as D } from "../ui/icons";
 import { toast } from "../ui/state";
-import { addProject } from "../ui/projects";
 import AsciiField from "../ui/ascii/AsciiField";
 
 function cols(n: number): number {
@@ -89,22 +88,7 @@ function Pane(props: { pane: PaneView }) {
 function Empty() {
   return (
     <div class="empty">
-      <AsciiField height={120} />
-      <Show
-        when={info()?.project}
-        fallback={
-          <>
-            <h2>Ouvre un projet pour commencer</h2>
-            <p class="muted">harnes y installe l'équipage, ses outils et ses tests.</p>
-            <button class="btn primary" onClick={addProject}>
-              <Icon icon={D.folder} size={15} /> Ouvrir un projet
-            </button>
-          </>
-        }
-      >
-        <h2>Que doit construire l'équipage ?</h2>
-        <p class="muted">Parle à l'orchestrateur en bas. Il lance l'équipage ; chaque agent apparaît ici dans son terminal.</p>
-      </Show>
+      <AsciiField fill seed={5} />
     </div>
   );
 }

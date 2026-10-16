@@ -111,11 +111,6 @@ export default function Conversation() {
         <Show when={!(conv()?.items.length) && !pending()}>
           <li class="chat-empty">
             <AsciiField fill />
-            <p class="chat-hint">
-              {info()?.project
-                ? "Dis à l'orchestrateur ce que l'équipage doit construire. Il planifie, répartit, teste et ne revient vers toi que quand c'est prêt."
-                : "Ajoute un dossier de projet depuis la barre latérale : harnes y installe l'équipage, ses outils et ses méthodes."}
-            </p>
           </li>
         </Show>
         <For each={conv()?.items ?? []}>{(it) => <Message item={it} />}</For>

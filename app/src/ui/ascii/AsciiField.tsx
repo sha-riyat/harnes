@@ -1,6 +1,5 @@
-// A living field of characters on a canvas. It moves through several motifs
-// (clouds, currents, ripples, contours, a vortex, rain, halftone), holding
-// each for a while, then dissolving into the next along a noisy front.
+// A living field of characters on a canvas. It moves through its motifs,
+// holding each for a while, then dissolving into the next along a noisy front.
 // It decodes in on arrival and scrambles under the pointer. Monochrome: it
 // takes the canvas' text colour. Glyphs come from a small atlas and only
 // changed cells are redrawn.
@@ -30,7 +29,9 @@ export default function AsciiField(props: { height?: number; fill?: boolean; cel
     const cellH = props.cell ?? 12;
     const atlas = document.createElement("canvas");
     // The default field opens on clouds; a seeded one starts elsewhere.
-    const first = props.seed ? Math.floor(hash(seed, 9) * SCENES.length) : 0;
+    // Each field makes its own scenes (some keep buffers between frames).
+    const scenes = SCENES.map((make) => make());
+    const first = props.seed ? Math.floor(hash(seed, 9) * scenes.length) : 0;
     let cols = 0, rows = 0, cw = 0, ch = 0, dpr = 1;
     let prev = new Int16Array(0);
     const trail: { x: number; y: number; at: number }[] = [];
@@ -60,12 +61,13 @@ export default function AsciiField(props: { height?: number; fill?: boolean; cel
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = canvas.clientWidth;
-      const h = props.fill ? canvas.parentElement?.clientHeight ?? 200 : props.height ?? 160;
+      // A filling field takes the size CSS gives it; others have a set height.
+      const h = props.fill ? canvas.clientHeight || 200 : props.height ?? 160;
       cols = Math.max(8, Math.floor(w / (cellH * 0.6)));
       rows = Math.max(3, Math.floor(h / cellH));
       canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(rows * cellH * dpr);
-      canvas.style.height = `${rows * cellH}px`;
+      canvas.height = Math.round((props.fill ? h : rows * cellH) * dpr);
+      if (!props.fill) canvas.style.height = `${rows * cellH}px`;
       cw = canvas.width / cols;
       ch = canvas.height / rows;
       prev = new Int16Array(cols * rows).fill(-1);
@@ -81,10 +83,13 @@ export default function AsciiField(props: { height?: number; fill?: boolean; cel
       const intro = clamp01(t / INTRO);
       const cycle = t / (HOLD + FADE);
       const k = Math.floor(cycle);
-      const sa = SCENES[(first + k) % SCENES.length];
-      const sb = SCENES[(first + k + 1) % SCENES.length];
+      const sa = scenes[(first + k) % scenes.length];
+      const sb = scenes[(first + k + 1) % scenes.length];
       // 0 while holding, then 0..1 across the dissolve.
       const mix = smooth(HOLD / (HOLD + FADE), 1, cycle - k);
+      const grid = { cols, rows, aspect };
+      sa.prepare?.(t, grid);
+      if (mix > 0) sb.prepare?.(t, grid);
       const gw = Math.ceil(cw), gh = Math.ceil(ch);
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
@@ -95,7 +100,7 @@ export default function AsciiField(props: { height?: number; fill?: boolean; cel
           const front = noise(u * 1.3 + k, v * 2.6, seed + 77) * 0.7 + hash(x, y, seed) * 0.3;
           const useB = mix > front;
           const cell = useB ? b : a;
-          (useB ? sb : sa)(u, v, t, x, y, cell);
+          (useB ? sb : sa).cell(u, v, t, x, y, cell);
           const edge = mix > 0 && mix < 1 && Math.abs(mix - front) < 0.06;
           const wobble = (hash(x, y, tick + seed) - 0.5) * 0.14;
           const tone = clamp01(Math.pow(cell.v, 0.9) + wobble);
@@ -136,14 +141,13 @@ export default function AsciiField(props: { height?: number; fill?: boolean; cel
     resize();
     const anim = animate(canvas, 20, frame, INTRO + 4);
     const ro = new ResizeObserver(() => {
-      const h = props.fill ? canvas.parentElement?.clientHeight ?? 0 : 0;
-      if (Math.round(canvas.clientWidth * dpr) !== canvas.width || (props.fill && Math.floor(h / cellH) !== rows)) {
+      const sameHeight = !props.fill || Math.round(canvas.clientHeight * dpr) === canvas.height;
+      if (Math.round(canvas.clientWidth * dpr) !== canvas.width || !sameHeight) {
         resize();
         anim.redraw();
       }
     });
     ro.observe(canvas);
-    if (props.fill && canvas.parentElement) ro.observe(canvas.parentElement);
     // Theme change: redraw the atlas in the new text colour.
     const recolor = () => {
       buildAtlas();
