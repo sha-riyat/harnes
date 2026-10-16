@@ -10,7 +10,7 @@ import { icons as D } from "../ui/icons";
 import { toast } from "../ui/state";
 
 const ROLES: [string, string][] = [
-  ["orchestrator", "orchestrateur"],
+  ["orchestrator", "orchestrator"],
   ["planner", "planner"],
   ["worker", "workers"],
   ["reviewer", "reviewer"],
@@ -62,7 +62,7 @@ function Detail(props: { id: string; back: () => void }) {
             <Show when={skill() && skillText()}>
               <pre class="os-text">{skillText()}</pre>
             </Show>
-            <h3 class="label">oracle · non négociable</h3>
+            <h3 class="label">oracle · non-negotiable</h3>
             <pre class="os-text">{x().oracle}</pre>
             <h3 class="label">doctrine</h3>
             <pre class="os-text">{x().os}</pre>
@@ -90,10 +90,10 @@ export default function MethodsView() {
     <section class="methods">
       <Show when={!current()} fallback={<Detail id={current()!} back={() => setCurrent(null)} />}>
         <header class="chat-bar">
-          <span class="label">{packs().length ? `${packs().length} packs OS · intégrés à harnes · chacun chargé par le rôle qui en a besoin` : (lib() as { offline?: boolean })?.offline ? "backend indisponible · ouvre l'appli harnes" : "aucun pack installé"}</span>
+          <span class="label">{packs().length ? `${packs().length} OS packs · bundled · each loaded by the role that needs it` : (lib() as { offline?: boolean })?.offline ? "backend offline · open the harnes app" : "no packs"}</span>
           <span class="spacer" />
           <button class="btn ghost" onClick={() => importPacks(true, refetch)} title="Ajouter d'autres packs">
-            <Icon icon={D.plus} size={14} /> Importer
+            <Icon icon={D.plus} size={14} /> Import
           </button>
         </header>
 
@@ -128,7 +128,7 @@ export default function MethodsView() {
             </For>
             <Show when={onDemand().length}>
               <div class="os-role">
-                <span class="label">à la demande</span>
+                <span class="label">on demand</span>
                 <div class="os-list">
                   <For each={onDemand()}>{(p) => <Pack pack={p} />}</For>
                 </div>

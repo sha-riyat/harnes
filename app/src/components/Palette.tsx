@@ -28,7 +28,7 @@ export default function Palette() {
     { label: "Nouveau shell", icon: D.terminal, run: () => api.spawn("shell").then((p) => { addPane(p); setFocused(p.id); setView("panes"); }) },
     { label: "Nouvelle session Claude", icon: D.agent, run: () => api.spawn("claude").then((p) => { addPane(p); setFocused(p.id); setView("panes"); }), enabled: () => !!info()?.project },
     { label: "Arrêter le run", icon: D.stop, run: () => api.crewCancel(), enabled: isRunning },
-    { label: "Conversation avec l'orchestrateur", icon: D.orchestrator, run: () => setView("chat") },
+    { label: "Chat with the orchestrator", icon: D.orchestrator, run: () => setView("chat") },
     { label: "Voir les terminaux", icon: D.grid, run: () => setView("panes") },
     { label: "Méthodes de l'équipage (packs OS)", icon: D.thread, run: () => setView("os") },
     { label: "Voir tous les agents de la machine", icon: D.machine, run: () => setView("agents") },

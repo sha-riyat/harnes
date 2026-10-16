@@ -62,12 +62,12 @@ function Pane(props: { pane: PaneView }) {
           <Ascii frame={thinking(4)} />
         </Show>
         <Icon icon={isOrch() ? D.orchestrator : p().key ? D.agent : D.terminal} size={14} />
-        <span class="title">{isOrch() ? "orchestrateur" : p().title}</span>
+        <span class="title">{isOrch() ? "orchestrator" : p().title}</span>
         <Show when={p().role && !isOrch() && p().role !== "claude"}>
           <span class={`role ${p().role}`}>{p().role}</span>
         </Show>
         <Show when={state() === "blocked"}>
-          <span class="badge warn">t'attend</span>
+          <span class="badge warn">needs you</span>
         </Show>
         <span class="spacer" />
         <Show when={switchable()}>

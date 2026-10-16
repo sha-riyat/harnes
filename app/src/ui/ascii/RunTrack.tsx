@@ -1,4 +1,4 @@
-// Run progress as one line of text: `plan --- barre ·:=+· travail ··· revue`.
+// Run progress as one line of text: `plan --- bar ·:=+· work ··· review`.
 // Done steps are plain, the current label decodes and its wire flows.
 
 import { For, Show } from "solid-js";
@@ -7,18 +7,18 @@ import { decode, wire } from "./pieces";
 
 export const STEPS = [
   { phase: "planning", label: "plan" },
-  { phase: "calibrating", label: "barre" },
-  { phase: "working", label: "travail" },
-  { phase: "reviewing", label: "revue" },
-  { phase: "gating", label: "porte" },
-  { phase: "done", label: "prêt" },
+  { phase: "calibrating", label: "bar" },
+  { phase: "working", label: "work" },
+  { phase: "reviewing", label: "review" },
+  { phase: "gating", label: "gate" },
+  { phase: "done", label: "ready" },
 ] as const;
 
 const order = (p: string) => (p === "fixing" ? 2 : STEPS.findIndex((s) => s.phase === p));
 
 export default function RunTrack(props: { phase: string }) {
   const cur = () => (props.phase === "done" ? STEPS.length : order(props.phase));
-  const label = (i: number) => (i === 2 && props.phase === "fixing" ? "corrections" : STEPS[i].label);
+  const label = (i: number) => (i === 2 && props.phase === "fixing" ? "fixing" : STEPS[i].label);
   return (
     <p class="run-track" aria-label={`Run : ${props.phase}`}>
       <For each={STEPS}>

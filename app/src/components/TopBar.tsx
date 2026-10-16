@@ -7,8 +7,8 @@ import { cycleTheme, panelOpen, setPaletteOpen, setPanelOpen, setSidebarOpen, si
 
 // Terminals stay out of the way: the grid is reached from the palette.
 const VIEWS = [
-  { id: "chat", label: "conversation" },
-  { id: "os", label: "méthodes" },
+  { id: "chat", label: "chat" },
+  { id: "os", label: "methods" },
   { id: "agents", label: "machine" },
 ] as const;
 
@@ -23,7 +23,7 @@ export default function TopBar() {
       <span class="sep">/</span>
       <div class="pop">
         <button class="crumb" onClick={() => (projects().length ? setMenu(!menu()) : addProject())} title={currentProject()?.root}>
-          {currentProject()?.name ?? "ajouter un projet"}
+          {currentProject()?.name ?? "add project"}
           <Icon icon={D.chevron} size={12} />
         </button>
         <Show when={menu()}>
@@ -37,7 +37,7 @@ export default function TopBar() {
               )}
             </For>
             <li class="menu-sep" onClick={() => { setMenu(false); addProject(); }}>
-              <Icon icon={D.plus} size={13} /> ajouter un projet
+              <Icon icon={D.plus} size={13} /> add project
             </li>
           </ul>
         </Show>

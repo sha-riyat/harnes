@@ -18,7 +18,7 @@ function JournalTab() {
   return (
     <div class="rp-body">
       <ol class="log">
-        <For each={[...crew.log].reverse().slice(0, 60)} fallback={<li class="side-empty">Le journal se remplit pendant un run.</li>}>
+        <For each={[...crew.log].reverse().slice(0, 60)} fallback={<li class="side-empty">empty until a run starts</li>}>
           {(e) => (
             <li>
               <span class="label">{e.phase}</span>
@@ -34,12 +34,12 @@ function JournalTab() {
 function UsageTab() {
   const p = () => stats()?.proxy;
   const rows = () => [
-    ["tokens compressés", p()?.est_tokens_saved],
-    ["lus en cache", p()?.cache_read_tokens],
-    ["entrée", p()?.input_tokens],
-    ["sortie", p()?.output_tokens],
-    ["sorties isolées", stats()?.ctx?.blobs],
-    ["requêtes", p()?.requests],
+    ["tokens saved", p()?.est_tokens_saved],
+    ["cache reads", p()?.cache_read_tokens],
+    ["input", p()?.input_tokens],
+    ["output", p()?.output_tokens],
+    ["stored outputs", stats()?.ctx?.blobs],
+    ["requests", p()?.requests],
   ] as const;
   return (
     <div class="rp-body">
@@ -69,7 +69,7 @@ export default function RightPanel() {
           )}
         </For>
         <span class="spacer" />
-        <button class="icon-btn sm" title="Fermer" onClick={() => setPanelOpen(false)}>
+        <button class="icon-btn sm" title="Close" onClick={() => setPanelOpen(false)}>
           <Icon icon={D.close} size={14} />
         </button>
       </div>

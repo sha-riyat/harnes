@@ -31,7 +31,7 @@ function Message(props: { item: ConvItem }) {
     >
       <li class={`msg ${props.item.role}`}>
         <div class="msg-meta">
-          <span class="label">{props.item.role === "user" ? "toi" : "orchestrateur"}</span>
+          <span class="label">{props.item.role === "user" ? "you" : "orchestrator"}</span>
           <span class="label faint">{time(props.item.at)}</span>
         </div>
         <Show when={props.item.role === "user"} fallback={<div class="msg-text"><Markdown text={props.item.text} /></div>}>
@@ -96,7 +96,7 @@ export default function Conversation() {
       <Show when={info()?.project}>
         <header class="chat-bar">
           <span class="label">
-            {RUNNING.includes(crew.phase) ? "run en cours" : crew.phase === "done" ? "prêt pour toi" : "au repos"} · {currentProject()?.panes ?? 0} session(s)
+            {RUNNING.includes(crew.phase) ? "running" : crew.phase === "done" ? "ready for you" : "idle"} · {currentProject()?.panes ?? 0} sessions
           </span>
           <Show when={crew.phase !== "idle"}>
             <RunTrack phase={crew.phase} />
@@ -119,25 +119,25 @@ export default function Conversation() {
         <For each={conv()?.items ?? []}>{(it) => <Message item={it} />}</For>
         <Show when={pending()}>
           <li class="msg user">
-            <div class="msg-meta"><span class="label">toi</span></div>
+            <div class="msg-meta"><span class="label">you</span></div>
             <div class="msg-text plain">{pending()}</div>
           </li>
         </Show>
         <Show when={working()}>
           <li class="msg-working">
             <Ascii frame={thinking(14)} />
-            <span class="label">l'orchestrateur réfléchit</span>
+            <span class="label">thinking</span>
           </li>
         </Show>
         <Show when={crew.phase === "done" && crew.gate}>
           <li class="ready">
-            <span class="label">prêt pour toi · barre du teacher atteinte</span>
+            <span class="label">ready for you · teacher bar met</span>
             <p>{crew.gate!.summary_for_user}</p>
             <For each={crew.review?.commits ?? []}>
               {(c) => (
                 <div class="commit">
                   <code>{c.message}</code>
-                  <span class="label">{c.lot} · {c.files.length} fichier(s)</span>
+                  <span class="label">{c.lot} · {c.files.length} files</span>
                 </div>
               )}
             </For>

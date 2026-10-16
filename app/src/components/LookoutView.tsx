@@ -6,12 +6,12 @@ import { StateMark } from "../ui/ascii/Ascii";
 import { icons as D } from "../ui/icons";
 
 const LABEL: Record<string, string> = {
-  "needs-you": "te concerne",
-  working: "au travail",
-  idle: "en attente",
-  finished: "terminé",
-  failed: "échec",
-  unknown: "inconnu",
+  "needs-you": "needs you",
+  working: "working",
+  idle: "idle",
+  finished: "done",
+  failed: "failed",
+  unknown: "unknown",
 };
 
 function ago(ms: number): string {
@@ -70,7 +70,7 @@ export default function LookoutView() {
     <main class="lookout">
       <Show when={needsYou().length}>
         <section class="needs">
-          <h3><Icon icon={D.alert} size={13} /> Te concernent ({needsYou().length})</h3>
+          <h3><Icon icon={D.alert} size={13} /> Needs you ({needsYou().length})</h3>
           <For each={needsYou()}>
             {(s) => (
               <button class="need" onClick={() => jump(s)} title={paneOf(s) ? "Aller au pane" : s.cwd}>
@@ -87,10 +87,10 @@ export default function LookoutView() {
 
       <section class="overview">
         <div>
-          <h3><Icon icon={D.usage} size={13} /> Dernière heure</h3>
+          <h3><Icon icon={D.usage} size={13} /> Last hour</h3>
           <Spark points={data()?.history ?? []} />
           <p class="muted small">
-            <span style={{ color: "var(--accent)" }}>■</span> au travail · <span style={{ color: "var(--warn)" }}>■</span> te concernent
+            <span style={{ color: "var(--accent)" }}>■</span> working · <span style={{ color: "var(--warn)" }}>■</span> needs you
           </p>
         </div>
         <div class="sources">
@@ -109,7 +109,7 @@ export default function LookoutView() {
         <h3><Icon icon={D.agent} size={13} /> Sessions ({sessions().length})</h3>
         <table class="sessions">
           <thead>
-            <tr><th /><th>Agent</th><th>Fournisseur</th><th>Projet</th><th>Statut</th><th>Depuis</th><th>Tokens</th></tr>
+            <tr><th /><th>Agent</th><th>Provider</th><th>Project</th><th>Status</th><th>Since</th><th>Tokens</th></tr>
           </thead>
           <tbody>
             <For each={sessions()} fallback={<tr><td colSpan={7} class="muted">Aucune session détectée</td></tr>}>
@@ -130,7 +130,7 @@ export default function LookoutView() {
       </section>
 
       <section>
-        <h3><Icon icon={D.thread} size={13} /> Événements</h3>
+        <h3><Icon icon={D.thread} size={13} /> Events</h3>
         <ol class="events">
           <For each={data()?.events ?? []} fallback={<li class="muted">Rien pour l'instant</li>}>
             {(e) => (

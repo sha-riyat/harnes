@@ -8,7 +8,7 @@ import Icon from "../ui/Icon";
 import { icons as D } from "../ui/icons";
 import { toast } from "../ui/state";
 
-const short = (key: string) => key.replace(/^\d+-/, "").replace(/^orch-.*/, "orchestrateur");
+const short = (key: string) => key.replace(/^\d+-/, "").replace(/^orch-.*/, "orchestrator");
 
 export default function Attention() {
   // Permission requests carry the agent key; keep those of the active project.
@@ -35,17 +35,17 @@ export default function Attention() {
             <div class="att-card">
               <div class="att-head">
                 <Icon icon={D.lock} size={16} />
-                <span class="label">autorisation · {short(a.agent)}</span>
+                <span class="label">permission · {short(a.agent)}</span>
                 <span class="spacer" />
                 <span class="label">{a.tool}</span>
               </div>
               <code class="att-what">{a.summary}</code>
               <div class="att-actions">
-                <button class="btn solid" onClick={() => decide(a.id, "allow")}>Autoriser</button>
+                <button class="btn solid" onClick={() => decide(a.id, "allow")}>Allow</button>
                 <Show when={a.can_remember}>
-                  <button class="btn" onClick={() => decide(a.id, "always")}>Toujours</button>
+                  <button class="btn" onClick={() => decide(a.id, "always")}>Always</button>
                 </Show>
-                <button class="btn ghost" onClick={() => decide(a.id, "deny")}>Refuser</button>
+                <button class="btn ghost" onClick={() => decide(a.id, "deny")}>Deny</button>
               </div>
             </div>
           )}

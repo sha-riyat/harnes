@@ -7,7 +7,7 @@ import { icons as D } from "../ui/icons";
 import { addProject, closeProject, switchProject } from "../ui/projects";
 import { toast } from "../ui/state";
 
-const STATE: Record<string, string> = { starting: "démarre", working: "travaille", blocked: "t'attend", idle: "prêt", done: "prêt", exited: "arrêté" };
+const STATE: Record<string, string> = { starting: "starting", working: "working", blocked: "needs you", idle: "ready", done: "ready", exited: "stopped" };
 const RUNNING = ["planning", "calibrating", "working", "reviewing", "gating", "fixing"];
 
 function Row(props: { p: PaneView }) {
@@ -21,7 +21,7 @@ function Row(props: { p: PaneView }) {
   return (
     <button class="row" classList={{ attn: state() === "blocked" }} onClick={open} title={isOrch() ? "Conversation" : "Voir le terminal"}>
       <StateMark state={state()} id={props.p.id} />
-      <span class="row-name">{isOrch() ? "orchestrateur" : props.p.title.replace(/^\d+-/, "")}</span>
+      <span class="row-name">{isOrch() ? "orchestrator" : props.p.title.replace(/^\d+-/, "")}</span>
       <span class="label">{props.p.key ? STATE[state()] : "shell"}</span>
     </button>
   );
@@ -72,7 +72,7 @@ function ProjectNode(props: { p: ProjectSummary }) {
       </div>
       <Show when={active() || open()}>
         <div class="proj-children">
-          <For each={items()} fallback={<p class="side-empty">rien en cours</p>}>
+          <For each={items()} fallback={<p class="side-empty">idle</p>}>
             {(x) => <Row p={x} />}
           </For>
         </div>
@@ -85,7 +85,7 @@ export default function Sidebar() {
   return (
     <aside class="sidebar">
       <div class="side-head">
-        <span class="label">projets</span>
+        <span class="label">projects</span>
         <span class="spacer" />
         <button class="icon-btn sm" title="Ajouter un projet" onClick={addProject}>
           <Icon icon={D.plus} size={14} />
@@ -97,7 +97,7 @@ export default function Sidebar() {
           fallback={
             <button class="row" onClick={addProject}>
               <Icon icon={D.plus} size={14} />
-              <span class="row-name">ajouter un projet</span>
+              <span class="row-name">add project</span>
             </button>
           }
         >

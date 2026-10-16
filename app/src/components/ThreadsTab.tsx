@@ -27,7 +27,7 @@ interface Message {
   body: string;
 }
 
-const who = (a: string) => a.replace(/^\d+-/, "").replace(/^orch-\w+/, "orchestrateur").replace(/-r\d+/, "");
+const who = (a: string) => a.replace(/^\d+-/, "").replace(/^orch-\w+/, "orchestrator").replace(/-r\d+/, "");
 const where = (t: string) => t.replace(/^lot-\d+-/, "").replace(/^run-\d+/, "run");
 const time = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -89,7 +89,7 @@ export default function ThreadsTab() {
         fallback={
           <>
             <div class="seg">
-              <For each={[["all", "tous"], ["open", "ouverts"], ["closed", "clos"]] as const}>
+              <For each={[["all", "all"], ["open", "open"], ["closed", "closed"]] as const}>
                 {([v, l]) => (
                   <button classList={{ on: filter() === v }} onClick={() => setFilter(v)}>{l}</button>
                 )}
@@ -120,7 +120,7 @@ export default function ThreadsTab() {
             <Icon icon={D.arrowLeft} size={14} />
           </button>
           <span class="row-name">{detail()?.thread?.title}</span>
-          <span class="label">{detail()?.thread?.status === "closed" ? "clos" : "ouvert"}</span>
+          <span class="label">{detail()?.thread?.status === "closed" ? "closed" : "open"}</span>
         </div>
         <ol class="th-msgs">
           <For each={detail()?.messages ?? []}>
