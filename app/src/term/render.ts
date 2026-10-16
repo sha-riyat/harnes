@@ -1,6 +1,7 @@
 // Canvas 2D renderer for Ghostty frames.
 
-import { BOLD, CELL, FAINT, HEADER, INVISIBLE, ITALIC, STRIKE, UNDERLINE, color, header, rgb3 } from "./frame";
+import { BOLD, CELL, FAINT, HEADER, INVISIBLE, ITALIC, STRIKE, UNDERLINE, header, rgb3 } from "./frame";
+import { bgColor, cursorColor, defaultBg, fgColor } from "./theme";
 
 export const FONT_SIZE = 13;
 export const FONT_FAMILY = '"Cascadia Mono", "Cascadia Code", Consolas, "JetBrains Mono", monospace';
@@ -38,7 +39,7 @@ export function draw(canvas: HTMLCanvasElement, v: DataView, focused: boolean) {
   const ctx = canvas.getContext("2d", { alpha: false })!;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = color(hd.bg);
+  ctx.fillStyle = defaultBg(hd.bg);
   ctx.fillRect(0, 0, W, H);
 
   for (let y = 0; y < hd.rows; y++) {
@@ -50,7 +51,7 @@ export function draw(canvas: HTMLCanvasElement, v: DataView, focused: boolean) {
       const bg = x < hd.cols ? rgb3(v, rowOff + x * CELL + 7) : -1;
       if (bg !== runBg) {
         if (runBg !== hd.bg) {
-          ctx.fillStyle = color(runBg);
+          ctx.fillStyle = bgColor(runBg);
           ctx.fillRect(runStart * m.w, y * m.h, (x - runStart) * m.w, m.h);
         }
         runStart = x;
@@ -70,7 +71,7 @@ export function draw(canvas: HTMLCanvasElement, v: DataView, focused: boolean) {
         font = f;
         ctx.font = `${f & ITALIC ? "italic " : ""}${f & BOLD ? "bold " : ""}${FONT_SIZE}px ${FONT_FAMILY}`;
       }
-      const fg = color(rgb3(v, off + 4));
+      const fg = fgColor(rgb3(v, off + 4));
       ctx.fillStyle = fg;
       ctx.globalAlpha = flags & FAINT ? 0.6 : 1;
       const px = x * m.w;
@@ -86,8 +87,8 @@ export function draw(canvas: HTMLCanvasElement, v: DataView, focused: boolean) {
   if (hd.cursorVisible) {
     const px = hd.cx * m.w;
     const py = hd.cy * m.h;
-    ctx.fillStyle = "#5eead4";
-    ctx.strokeStyle = "#5eead4";
+    ctx.fillStyle = cursorColor();
+    ctx.strokeStyle = cursorColor();
     if (!focused || hd.cursorStyle === 3) ctx.strokeRect(px + 0.5, py + 0.5, m.w - 1, m.h - 1);
     else if (hd.cursorStyle === 1) ctx.fillRect(px, py, 2, m.h);
     else if (hd.cursorStyle === 2) ctx.fillRect(px, py + m.h - 2, m.w, 2);

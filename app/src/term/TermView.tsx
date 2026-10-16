@@ -2,6 +2,7 @@ import { createEffect, onCleanup, onMount } from "solid-js";
 import { api } from "../api";
 import { focused, frameOf, setFocused } from "../store";
 import { encodeKey, paste } from "./keys";
+import { themeVersion } from "./theme";
 import { draw, metrics } from "./render";
 
 /** One Ghostty-rendered terminal pane. */
@@ -34,6 +35,7 @@ export default function TermView(props: { id: string }) {
   createEffect(() => {
     const f = frameOf(props.id);
     const isFocused = focused() === props.id;
+    themeVersion(); // the theme changed: repaint with its colours
     if (!f || pending) return;
     pending = true;
     requestAnimationFrame(() => {

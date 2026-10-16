@@ -34,7 +34,7 @@
     --muted: #8a8a8a;
     --faint: #cfcfcf;
     --ink: #fafafa;
-    --term-bg: #0a0a0a;
+    --term-bg: #fafafa;
     --shadow: none;
     color-scheme: light;
   }
@@ -52,7 +52,7 @@
   --muted: #8a8a8a;
   --faint: #cfcfcf;
   --ink: #fafafa;
-  --term-bg: #0a0a0a;
+  --term-bg: #fafafa;
   --shadow: none;
   color-scheme: light;
 }
