@@ -92,6 +92,18 @@ all along: proxy (tool_result compression, usage) · hooks (agent state)
 - Agents hand work to each other through JSON files in `.harnes/runs/<id>/`.
 - Claude Code agents report their lifecycle through hooks; other providers are tracked through their output file.
 
+### Review and the weekly allowance
+
+The review loop is built to land in few rounds and spend Opus only where a miss costs the most.
+
+- **Three modes**, picked by the orchestrator with `crew_start`: `light` (one Sonnet worker and a Sonnet review, no planner, no separate Teacher), `full`, and `deep` (three Sonnet reviewers look independently, then an Opus verifier keeps what at least two agree on or what it confirms itself). A run the Teacher rates `high` risk (CI, auth, payment, migrations, secrets, or paths `REVIEW.md` marks sensitive) gets the deep review and asks you to read the diff.
+- **Severities.** Each finding is `important`, `nit` or `pre-existing`, with a `file:line` as evidence. Only `important` goes back to a worker; nits are dropped, since an agent author fixes every one at the cost of a round; bugs that were there before the run go to the run thread instead.
+- **Convergence.** From the second round the reviewer reads only what the fixes changed, against its earlier verdicts, never repeats a finding and names a whole class of bug once. After three rounds the run stops and the orchestrator proposes another approach rather than starting the same run again.
+- **`REVIEW.md`** (optional, written by you at the project root): what failure means in each area, paths to skip, sensitive paths.
+- **Your limits, read live.** Every response Anthropic sends through a project's proxy carries the account's usage: the 5-hour window and the week, each as a share used, with their reset times. harnes reads them there, so there is nothing to configure, and the usage tab draws both against a straight line to their reset. When the week runs ahead of that line, or the 5-hour window passes 85 %, runs start in eco: planner, Teacher and reviewer move to Sonnet and there is no deep review. Once the 5-hour window is spent, no run starts until it resets.
+- **Measured.** Each run leaves `metrics.json` (mode, rounds, findings by severity, how workers answered each fix: fixed, wrong, intentional, irrelevant). The usage tab shows reviews per run, the share that passes first time, blocking findings and the share of findings that were wrong.
+- Workers no longer preload TasteSkill: they load it only for a public web page.
+
 ## Interface
 
 Black and white, square corners, no shadows. Shape, fill and motion carry state, never colour. A row under the pointer gets a thin rule on its left, the current one a solid rule. Buttons answer with their outline. Overlays are flat sheets with a heavy top rule over a dark veil. Icons are [Phosphor](https://phosphoricons.com/) (light, MIT).

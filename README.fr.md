@@ -92,6 +92,18 @@ en continu : proxy (compression des tool_result, usage) · hooks (état des agen
 - Les agents se passent le travail par des fichiers JSON dans `.harnes/runs/<id>/`.
 - Les agents Claude Code signalent leur cycle de vie par des hooks ; les autres fournisseurs sont suivis via leur fichier de sortie.
 
+### La revue et l'enveloppe de la semaine
+
+La boucle de revue est faite pour aboutir en peu de tours et ne dépenser Opus que là où un oubli coûte le plus.
+
+- **Trois modes**, choisis par l'orchestrateur avec `crew_start` : `light` (un worker Sonnet et une revue Sonnet, sans planner ni Teacher séparé), `full`, et `deep` (trois relecteurs Sonnet cherchent chacun de leur côté, puis un vérificateur Opus garde ce qu'au moins deux signalent ou ce qu'il confirme lui-même). Un run que le Teacher classe à risque `high` (CI, auth, paiement, migrations, secrets, ou chemins marqués sensibles dans `REVIEW.md`) a la revue renforcée et vous demande de relire le diff.
+- **Gravités.** Chaque problème est `important`, `nit` ou `pre-existing`, avec un `fichier:ligne` comme preuve. Seuls les `important` repartent vers un worker ; les nits sont abandonnés, car un agent auteur les corrige tous au prix d'un tour ; les bugs déjà là avant le run vont dans le fil du run.
+- **Convergence.** Dès le deuxième tour, le relecteur ne lit que ce que les corrections ont changé, face à ses verdicts précédents, ne répète aucun problème et nomme une fois toute une classe de bug. Après trois tours, le run s'arrête et l'orchestrateur propose une autre approche au lieu de relancer le même run.
+- **`REVIEW.md`** (facultatif, écrit par vous à la racine du projet) : ce qu'est un échec par zone, les chemins à ignorer, les chemins sensibles.
+- **Vos limites, lues en direct.** Chaque réponse d'Anthropic qui passe par le proxy d'un projet porte l'usage du compte : la fenêtre de 5 h et la semaine, en part utilisée, avec leurs heures de reset. harnes les lit là, donc rien à configurer, et l'onglet usage les dessine face à une ligne droite jusqu'au reset. Quand la semaine va plus vite que cette ligne, ou que la fenêtre de 5 h dépasse 85 %, les runs démarrent en économie : planner, Teacher et relecteur passent en Sonnet, et il n'y a plus de revue renforcée. Une fois la fenêtre de 5 h épuisée, aucun run ne démarre avant son reset.
+- **Mesuré.** Chaque run laisse `metrics.json` (mode, tours, problèmes par gravité, réponse des workers à chaque correction : corrigé, faux, voulu, sans importance). L'onglet usage montre les revues par run, la part qui passe du premier coup, les problèmes bloquants et la part de problèmes faux.
+- Les workers ne préchargent plus TasteSkill : ils ne le chargent que pour une page web publique.
+
 ## Interface
 
 Noir et blanc, angles droits, aucune ombre. La forme, le remplissage et le mouvement portent l'état, jamais la couleur. Une ligne sous le pointeur reçoit un filet fin à gauche, la ligne courante un filet plein. Les boutons répondent par leur contour. Les surcouches sont des feuilles plates avec un filet épais en haut, sur un voile sombre. Les icônes viennent de [Phosphor](https://phosphoricons.com/) (light, MIT).
