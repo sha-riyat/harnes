@@ -27,6 +27,12 @@ img { display: block; max-width: 100%; height: auto; }
 code, pre { font-family: var(--mono); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 :focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+/* The few boxes that scroll get a thin square bar in the page's own greys. */
+* { scrollbar-width: thin; scrollbar-color: #3a3a3a transparent; }
+.paper * { scrollbar-color: #b5b5b0 transparent; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #3a3a3a; }
+::-webkit-scrollbar-track { background: transparent; }
 ::selection { background: var(--ink); color: var(--bg); }
 
 /* Buttons: square, one fill, invert on press. */
@@ -132,7 +138,7 @@ h1 { font-size: clamp(44px, 4.9vw, 96px); line-height: 0.95; letter-spacing: -0.
 .step { display: grid; grid-row: span 3; grid-template-rows: subgrid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .say { font-size: 22px; font-weight: 500; letter-spacing: -0.01em; padding-top: 18px; border-top: 4px solid var(--paper-ink); }
 .code { position: relative; background: var(--paper-2); }
-.code pre { margin: 0; padding: 18px 20px; font-size: 14px; line-height: 1.6; overflow-x: auto; }
+.code pre { margin: 0; padding: 18px 20px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .copy { position: absolute; bottom: 10px; right: 10px; height: 30px; padding: 0 12px; border: 0; background: var(--paper-ink); color: var(--paper); font: 500 13px var(--font); cursor: pointer; }
 .copy:hover { background: var(--paper-muted); }
 .resp { padding: 16px 18px; background: var(--bg); color: var(--ink); font-size: 14px; display: grid; gap: 6px; align-content: start; }
