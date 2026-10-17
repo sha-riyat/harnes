@@ -49,7 +49,7 @@ code, pre { font-family: var(--mono); }
 
 /* Bar */
 .bar { position: absolute; z-index: 5; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 32px; padding: 20px var(--m); }
-.mark { font: 500 18px var(--mono); letter-spacing: 0.02em; text-decoration: none; }
+.mark { display: inline-flex; align-items: center; gap: 10px; font: 500 18px var(--mono); letter-spacing: 0.02em; text-decoration: none; }
 .bar nav { display: flex; gap: 28px; margin-left: auto; font-size: 15px; }
 .bar nav a { text-decoration: none; color: var(--muted); transition: color 0.18s; }
 .bar nav a:hover { color: var(--ink); }

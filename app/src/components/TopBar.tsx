@@ -2,6 +2,7 @@ import { For, Show, createSignal } from "solid-js";
 import { activeProject, currentProject, projects, setView, view } from "../store";
 import Icon from "../ui/Icon";
 import { icons as D } from "../ui/icons";
+import mark from "../ui/mark.svg";
 import { addProject, switchProject } from "../ui/projects";
 import { cycleTheme, panelOpen, setPaletteOpen, setPanelOpen, setSidebarOpen, sidebarOpen, theme } from "../ui/state";
 
@@ -19,7 +20,7 @@ export default function TopBar() {
       <button class="icon-btn" classList={{ on: sidebarOpen() }} title="Barre latérale" onClick={() => setSidebarOpen(!sidebarOpen())}>
         <Icon icon={D.sidebar} size={17} />
       </button>
-      <span class="brand">harnes</span>
+      <span class="brand"><img src={mark} width="18" height="18" alt="" />harnes</span>
       <span class="sep">/</span>
       <div class="pop">
         <button class="crumb" onClick={() => (projects().length ? setMenu(!menu()) : addProject())} title={currentProject()?.root}>
