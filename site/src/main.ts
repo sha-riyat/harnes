@@ -1,7 +1,8 @@
 // The landing page's behaviour: living fields, the crew run, the showcase
 // row, the role tabs, the annotated plate, copy buttons and entrances.
 
-import { field } from "./field";
+import { flow, wire } from "../../app/src/ui/ascii/pieces";
+import { field, still } from "./field";
 import { run } from "./run";
 
 document.documentElement.classList.add("js");
@@ -40,20 +41,40 @@ if (row) {
   light(panels[0]);
 }
 
-// Role tabs: one role's work at a time.
+// Stops of a run: one at a time. The road plays itself until you pick a stop:
+// stops behind are drawn solid, the wire into the current one flows.
 for (const tabs of all<HTMLElement>("[data-tabs]")) {
   const buttons = all<HTMLButtonElement>("[role=tab]", tabs);
+  let at = 0, auto = tabs.hasAttribute("data-cycle"), stepAt = 0;
   const show = (b: HTMLButtonElement) => {
-    buttons.forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+    at = buttons.indexOf(b);
+    stepAt = performance.now();
+    buttons.forEach((x, i) => { x.setAttribute("aria-selected", String(x === b)); x.dataset.past = String(i < at); });
     all<HTMLElement>("[role=tabpanel]").forEach((p) => (p.hidden = p.id !== b.getAttribute("aria-controls")));
   };
+  const pick = (b: HTMLButtonElement) => { auto = false; show(b); };
   buttons.forEach((b, i) => {
-    b.addEventListener("click", () => show(b));
+    b.addEventListener("click", () => pick(b));
     b.addEventListener("keydown", (e) => {
       const d = e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : e.key === "ArrowUp" || e.key === "ArrowLeft" ? -1 : 0;
-      if (d) { e.preventDefault(); const n = buttons[(i + d + buttons.length) % buttons.length]; n.focus(); show(n); }
+      if (d) { e.preventDefault(); const n = buttons[(i + d + buttons.length) % buttons.length]; n.focus(); pick(n); }
     });
   });
+  show(buttons[0]);
+  if (!tabs.hasAttribute("data-cycle")) continue;
+  const wires = all<HTMLElement>("[data-wire]", tabs);
+  const back = document.querySelector<HTMLElement>("[data-back]");
+  let seen = false;
+  new IntersectionObserver(([e]) => (seen = e.isIntersecting)).observe(tabs);
+  const tick = (ms: number) => {
+    const t = ms / 1000;
+    wires.forEach((w, i) => (w.textContent = i === 0 ? "" : i < at ? "-".repeat(6) : i === at ? wire(6, "now")(t) : "·".repeat(6)));
+    // The way back runs right to left, from review and gate to work.
+    if (back) back.textContent = "◄" + [...flow(16, 1e9, 1.8)(t)].reverse().join("").replace(/>/g, "");
+    if (auto && seen && ms - stepAt > 2600) show(buttons[(at + 1) % buttons.length]);
+    if (!still) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 // The annotated plate: a note under the pointer keeps its part lit.

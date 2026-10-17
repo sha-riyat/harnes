@@ -114,86 +114,77 @@
 <div class="dither" aria-hidden="true"><canvas class="field" data-field="ramp" data-seed="7" data-cell="13"></canvas></div>
 
 <div class="paper">
-<section class="calls" id="start" data-reveal>
-  <h2 data-in>Three steps in</h2>
-  <div class="call" data-in>
-    <p class="say">First, build it.</p>
-    <div class="code"><pre id="c1"><code>git clone https://github.com/sha-riyat/harnes
+<section class="steps" id="start" data-reveal>
+  <div class="steps-head" data-in>
+    <h2>Three steps in</h2>
+    <p>Windows 11 with Rust, Zig, Node via nvm and Claude Code signed in. Nothing else to set up.</p>
+  </div>
+  <ol class="steps-row">
+    <li class="step" data-in>
+      <p class="say">Build it</p>
+      <div class="code"><pre id="c1"><code>git clone https://github.com/sha-riyat/harnes
 cd harnes/app; npm install
 npm run app</code></pre><button class="copy" data-copy="c1">Copy</button></div>
-    <div class="resp" data-ui>
-      <p><b>harnes-ctx</b> built · <b>harnes-e2e</b> built</p>
-      <p>tauri dev · harnes opens on an empty chat</p>
-    </div>
-  </div>
-  <div class="call" data-in>
-    <p class="say">Then add a project folder.</p>
-    <div class="code"><pre><code>+ projects   C:\work\calculator</code></pre></div>
-    <div class="resp" data-ui>
-      <p><b>.claude/agents/</b> orchestrator, planner, teacher, worker, reviewer, scout</p>
-      <p><b>.mcp.json</b> harnes-ctx, harnes-e2e</p>
-      <p><b>proxy</b> listening on 62346 · 24 OS packs indexed</p>
-    </div>
-  </div>
-  <div class="call" data-in>
-    <p class="say">Then say what to build.</p>
-    <div class="code"><pre><code>Add a contact page that sends an email.</code></pre></div>
-    <div class="resp wide" data-ui>
-      <p class="ready-head">ready for you · teacher bar met</p>
-      <p>Contact page with a validated form; emails go through nodemailer. 2 lots in one wave, both e2e tests pass, review PASS.</p>
-      <p class="commit"><code>Add contact page with form</code><span>L1 · 3 files</span></p>
-      <p class="commit"><code>Send contact emails with nodemailer</code><span>L2 · 2 files</span></p>
-      <p class="faint">Test it yourself, then approve. Nothing is committed without you.</p>
-    </div>
-  </div>
+      <div class="resp" data-ui>
+        <p><b>harnes-ctx</b> built</p>
+        <p><b>harnes-e2e</b> built</p>
+        <p class="dim">tauri dev · opens on an empty chat</p>
+      </div>
+    </li>
+    <li class="step" data-in>
+      <p class="say">Add a project</p>
+      <div class="code"><pre><code>+ projects
+C:\work\calculator</code></pre></div>
+      <div class="resp" data-ui>
+        <p><b>.claude/agents/</b> 6 roles written</p>
+        <p><b>.mcp.json</b> harnes-ctx, harnes-e2e</p>
+        <p class="dim">proxy on 62346 · 24 OS packs indexed</p>
+      </div>
+    </li>
+    <li class="step" data-in>
+      <p class="say">Say what to build</p>
+      <div class="code"><pre><code>Add a contact page
+that sends an email.</code></pre></div>
+      <div class="resp" data-ui>
+        <p class="ready-head">ready for you · bar met</p>
+        <p class="commit"><code>Add contact page with form</code><span>L1</span></p>
+        <p class="commit"><code>Send contact emails</code><span>L2</span></p>
+        <p class="dim">you test, then approve the commits</p>
+      </div>
+    </li>
+  </ol>
 </section>
 
-<section class="crew" id="crew" data-reveal>
-  <div class="crew-head" data-in>
-    <h2><span class="soft">Six roles.</span><br>One talks to you.</h2>
-    <a class="btn solid" href="https://github.com/sha-riyat/harnes#the-crew">Read the crew</a>
+<section class="loop" id="crew" data-reveal>
+  <div class="loop-head" data-in>
+    <h2><span class="soft">Eight stops.</span><br>One of them is you.</h2>
+    <p>Every run takes the same road. Pick a stop to see who works there, with what, and what it leaves behind.</p>
   </div>
-  <div class="crew-body" data-in>
-    <div class="tabs" role="tablist" aria-label="Roles" aria-orientation="vertical" data-tabs>
-      <button role="tab" aria-selected="true" aria-controls="r-orch"><b>Orchestrator</b><span>Opus · medium</span></button>
-      <button role="tab" aria-selected="false" aria-controls="r-plan"><b>Planner</b><span>Opus · medium</span></button>
-      <button role="tab" aria-selected="false" aria-controls="r-teach"><b>Teacher</b><span>Opus · medium</span></button>
-      <button role="tab" aria-selected="false" aria-controls="r-work"><b>Workers × N</b><span>Sonnet · high</span></button>
-      <button role="tab" aria-selected="false" aria-controls="r-rev"><b>Reviewer</b><span>Opus · medium</span></button>
-      <button role="tab" aria-selected="false" aria-controls="r-scout"><b>Scouts</b><span>Haiku · high</span></button>
-    </div>
-    <div class="bands">
-      <ol role="tabpanel" id="r-orch">
-        <li><code>chat</code><div><b>Your only interlocutor</b><span>Answers quick questions itself, with a scout when it must look.</span></div><code>its replies</code></li>
-        <li><code>crew_start</code><div><b>Turns a task into a run</b><span>Rewrites your message as one complete brief.</span></div><code>.harnes/runs/&lt;id&gt;/</code></li>
-        <li><code>crew_status</code><div><b>Follows every hand-off</b><span>Checks each result was integrated before it reports.</span></div><code>run-&lt;id&gt;</code></li>
-      </ol>
-      <ol role="tabpanel" id="r-plan" hidden>
-        <li><code>os_brief</code><div><b>Loads its methods first</b><span>project, stepper, blueprint and execution packs.</span></div><code>OS packs</code></li>
-        <li><code>plan</code><div><b>Splits the task into lots and waves</b><span>Lots in one wave never share a file.</span></div><code>plan.json</code></li>
-        <li><code>threads</code><div><b>Seeds one thread per lot</b><span>The lot's brief is its first message.</span></div><code>lot-&lt;id&gt;-&lt;lot&gt;</code></li>
-      </ol>
-      <ol role="tabpanel" id="r-teach" hidden>
-        <li><code>bar</code><div><b>Sets the bar before any work</b><span>Criteria, the evidence each needs, when to involve you.</span></div><code>bar.json</code></li>
-        <li><code>gate</code><div><b>Checks the bar against the results</b><span>Sends the work back, or tells you it is ready.</span></div><code>gate-&lt;n&gt;.json</code></li>
-      </ol>
-      <ol role="tabpanel" id="r-work" hidden>
-        <li><code>thread_read</code><div><b>Reads its lot thread first</b><span>Touches only the files of its lot; asks in the thread.</span></div><code>lot thread</code></li>
-        <li><code>ctx_execute</code><div><b>Builds and tests out of context</b><span>Heavy output is stored and searched, not read whole.</span></div><code>harnes-ctx</code></li>
-        <li><code>e2e_*</code><div><b>Writes and runs its own e2e test</b><span>Observe, click, fill, check, then save it for replay.</span></div><code>reports/&lt;lot&gt;.json</code></li>
-      </ol>
-      <ol role="tabpanel" id="r-rev" hidden>
-        <li><code>diff</code><div><b>Reviews the diff against the plan</b><span>With the real e2e results, not the reports' claims.</span></div><code>review-&lt;n&gt;.json</code></li>
-        <li><code>CHANGES</code><div><b>Posts fixes in each lot thread</b><span>Fix workers pick them up as a new round.</span></div><code>lot threads</code></li>
-      </ol>
-      <ol role="tabpanel" id="r-scout" hidden>
-        <li><code>scout</code><div><b>Short errands in parallel</b><span>Find code, summarise files, run one command. Never edits.</span></div><code>its reply</code></li>
-      </ol>
-    </div>
+  <div class="stops" role="tablist" aria-label="Stops of a run" data-tabs data-cycle data-in>
+    <button role="tab" aria-selected="true" aria-controls="s-brief"><span class="w" data-wire></span><b>brief</b><span>orchestrator</span></button>
+    <button role="tab" aria-selected="false" aria-controls="s-plan"><span class="w" data-wire></span><b>plan</b><span>planner</span></button>
+    <button role="tab" aria-selected="false" aria-controls="s-bar"><span class="w" data-wire></span><b>bar</b><span>teacher</span></button>
+    <button role="tab" aria-selected="false" aria-controls="s-work"><span class="w" data-wire></span><b>work</b><span>workers × N</span></button>
+    <button role="tab" aria-selected="false" aria-controls="s-e2e"><span class="w" data-wire></span><b>e2e</b><span>harnes-e2e</span></button>
+    <button role="tab" aria-selected="false" aria-controls="s-review"><span class="w" data-wire></span><b>review</b><span>reviewer</span></button>
+    <button role="tab" aria-selected="false" aria-controls="s-gate"><span class="w" data-wire></span><b>gate</b><span>teacher</span></button>
+    <button role="tab" aria-selected="false" aria-controls="s-you"><span class="w" data-wire></span><b>ready</b><span>you</span></button>
   </div>
-  <pre class="loop" data-in aria-label="The run loop">plan ─► bar ─► workers × N ─► e2e suite ─► review ─┬─ CHANGES ─► fix workers ─┐
-                                                   └─ PASS ─► teacher gate ───┤
-                                                        ready ─► you   not ready ─► fix workers</pre>
+  <p class="back" aria-label="CHANGES from review and not ready from the gate go back to the workers" data-in>
+    <span class="back-flow" data-back aria-hidden="true">◄················</span>
+    <span>CHANGES or not ready: back to the workers, as a new round</span>
+  </p>
+  <div class="stop-detail" data-in>
+    <article role="tabpanel" id="s-brief"><h3>Orchestrator <span>Opus · medium</span></h3><p>Turns your message into one complete brief and starts the run. Quick questions it answers itself.</p><dl><dt>Tools</dt><dd>crew_start · crew_status · scout · os_route</dd><dt>Leaves</dt><dd>.harnes/runs/&lt;id&gt;/</dd></dl></article>
+    <article role="tabpanel" id="s-plan" hidden><h3>Planner <span>Opus · medium</span></h3><p>Splits the task into lots and waves. Lots in the same wave never share a file, so workers never collide.</p><dl><dt>Tools</dt><dd>os_brief · Read · Grep · ctx_search</dd><dt>Leaves</dt><dd>plan.json, one thread per lot</dd></dl></article>
+    <article role="tabpanel" id="s-bar" hidden><h3>Teacher <span>Opus · medium</span></h3><p>Fixes the bar before anyone works: the criteria, the evidence each one needs, and when to involve you.</p><dl><dt>Tools</dt><dd>os_brief · validation pack</dd><dt>Leaves</dt><dd>bar.json</dd></dl></article>
+    <article role="tabpanel" id="s-work" hidden><h3>Workers × N <span>Sonnet · high</span></h3><p>Each reads its lot thread, touches only its own files, then writes and runs its own end-to-end test.</p><dl><dt>Tools</dt><dd>thread_read · thread_post · ctx_execute · e2e_observe · e2e_check · e2e_save</dd><dt>Leaves</dt><dd>reports/&lt;lot&gt;-r&lt;n&gt;.json</dd></dl></article>
+    <article role="tabpanel" id="s-e2e" hidden><h3>e2e suite <span>no model</span></h3><p>Runs every spec in a real browser. Steps already resolved replay from the cache without a model call.</p><dl><dt>Tools</dt><dd>harnes-e2e run · Chrome or Edge over CDP</dd><dt>Leaves</dt><dd>results per spec, .harnes/e2e/cache/</dd></dl></article>
+    <article role="tabpanel" id="s-review" hidden><h3>Reviewer <span>Opus · medium</span></h3><p>Reads the diff against the plan and the real test results. PASS moves on; CHANGES go back to the lots.</p><dl><dt>Tools</dt><dd>diff · thread_post · quality and security packs</dd><dt>Leaves</dt><dd>review-&lt;n&gt;.json</dd></dl></article>
+    <article role="tabpanel" id="s-gate" hidden><h3>Teacher <span>Opus · medium</span></h3><p>Holds the results against its own bar. Ready goes to you; not ready goes back to the workers.</p><dl><dt>Tools</dt><dd>bar.json · the results</dd><dt>Leaves</dt><dd>gate-&lt;n&gt;.json, threads closed</dd></dl></article>
+    <article role="tabpanel" id="s-you" hidden><h3>You <span>the last stop</span></h3><p>Read the summary and the proposed commits, one per lot. Test it yourself, then approve.</p><dl><dt>Tools</dt><dd>the chat</dd><dt>Leaves</dt><dd>commits, only once you say so</dd></dl></article>
+  </div>
+  <p class="scouts" data-in>Any role can send a scout (Haiku · high) for a short errand: find code, sum up a file, run one command.</p>
 </section>
 
 <section class="plate-wrap" id="chat" data-reveal>
