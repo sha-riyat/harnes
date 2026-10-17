@@ -38,7 +38,7 @@ pub fn worker(plan: &Plan, lot: &Lot, report_path: &str, fixes: &[Fix], thread: 
     s
 }
 
-pub fn reviewer(task: &str, plan_path: &str, reports: &[String], review_path: &str, round: u32, e2e: Option<&str>) -> String {
+pub fn reviewer(task: &str, plan_path: &str, reports: &[String], review_path: &str, round: u32, e2e: Option<&str>, previous: &[String]) -> String {
     let list = reports.iter().map(|r| format!("- `{}`", fwd(r))).collect::<Vec<_>>().join("\n");
     let e2e = e2e
         .map(|r| {
@@ -48,12 +48,33 @@ pub fn reviewer(task: &str, plan_path: &str, reports: &[String], review_path: &s
             )
         })
         .unwrap_or_default();
+    // Later rounds look at what the fixes changed, against what was already said.
+    let before = if previous.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "\nTes verdicts précédents : {}. Relis seulement ce que les corrections ont changé et ne répète aucun problème déjà signalé.\n",
+            previous.iter().map(|p| format!("`{}`", fwd(p))).collect::<Vec<_>>().join(", ")
+        )
+    };
     format!(
-        "Tâche d'origine : {task}\nTour de revue : {}\n\nPlan : `{}`\nRapports des Workers :\n{list}\n{e2e}\n\
+        "Tâche d'origine : {task}\nTour de revue : {}\n\nPlan : `{}`\nRapports des Workers :\n{list}\n{e2e}{before}\n\
          Relis le diff contre le plan, lance les tests, puis écris ton verdict JSON dans `{}`. \
          Termine par REVIEW OK.",
         round + 1,
         fwd(plan_path),
+        fwd(review_path)
+    )
+}
+
+/// The last step of a deep review: keep what the finders agree on.
+pub fn verifier(task: &str, found: &[String], review_path: &str) -> String {
+    let list = found.iter().map(|f| format!("- `{}`", fwd(f))).collect::<Vec<_>>().join("\n");
+    format!(
+        "Revue renforcée. Tâche d'origine : {task}\n\nPlusieurs relecteurs ont cherché des problèmes, chacun de son côté :\n{list}\n\n\
+         Garde un problème seulement s'il est signalé par au moins deux relecteurs, ou si tu le confirmes toi-même dans le code \
+         avec une preuve `fichier:ligne`. Fusionne les doublons, garde la gravité la plus juste, et écris le verdict final dans `{}` \
+         avec le même schéma. Termine par REVIEW OK.",
         fwd(review_path)
     )
 }

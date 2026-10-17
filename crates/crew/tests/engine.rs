@@ -1,6 +1,7 @@
 //! Full crew loop against a fake host that plays the agents.
 
 use harnes_crew::{
+    budget::{Mode, Tune},
     engine::{AgentHost, Engine},
     hooks::{HookServer, Registry},
     AgentState, CrewEvent, Phase, Role,
@@ -13,6 +14,7 @@ struct FakeHost {
     registry: Arc<Registry>,
     reviews: Mutex<u32>,
     spawned: Mutex<Vec<String>>,
+    tunes: Mutex<Vec<Option<Tune>>>,
 }
 
 /// First `...json` path between backticks in the prompt.
@@ -21,9 +23,10 @@ fn out_path(prompt: &str) -> String {
 }
 
 impl AgentHost for FakeHost {
-    fn spawn(&self, key: &str, role: Role, prompt: &str, settings: &Path) -> anyhow::Result<String> {
+    fn spawn(&self, key: &str, role: Role, prompt: &str, settings: &Path, tune: Option<Tune>) -> anyhow::Result<String> {
         assert!(settings.exists());
         self.spawned.lock().push(key.to_string());
+        self.tunes.lock().push(tune);
         let out = self.root.join(out_path(prompt));
         let body = match role {
             Role::Planner => r#"{"context":"test","lots":[
@@ -68,7 +71,7 @@ async fn plan_work_review_fix_pass() {
     std::fs::create_dir_all(&root).unwrap();
 
     let hooks = Arc::new(HookServer::start(Arc::new(|_: &str, _| {})).await.unwrap());
-    let host = Arc::new(FakeHost { root: root.clone(), registry: hooks.registry.clone(), reviews: Mutex::new(0), spawned: Mutex::new(vec![]) });
+    let host = Arc::new(FakeHost { root: root.clone(), registry: hooks.registry.clone(), reviews: Mutex::new(0), spawned: Mutex::new(vec![]), tunes: Mutex::new(vec![]) });
     let events: Arc<Mutex<Vec<CrewEvent>>> = Arc::default();
     let ev = events.clone();
     let (_tx, cancel) = tokio::sync::watch::channel(false);
@@ -83,6 +86,8 @@ async fn plan_work_review_fix_pass() {
         agent_timeout: Duration::from_secs(10),
         run_e2e: true,
         threads: harnes_crew::threading::RunThreads(Some(threads.clone())),
+        mode: Mode::Full,
+        eco: false,
     };
 
     let out = engine.run("do the thing").await.expect("run passes");
@@ -113,7 +118,7 @@ async fn resume_skips_finished_steps() {
     std::fs::write(dir.join("bar.json"), r#"{"criteria":[]}"#).unwrap();
 
     let hooks = Arc::new(HookServer::start(Arc::new(|_: &str, _| {})).await.unwrap());
-    let host = Arc::new(FakeHost { root: root.clone(), registry: hooks.registry.clone(), reviews: Mutex::new(1), spawned: Mutex::new(vec![]) });
+    let host = Arc::new(FakeHost { root: root.clone(), registry: hooks.registry.clone(), reviews: Mutex::new(1), spawned: Mutex::new(vec![]), tunes: Mutex::new(vec![]) });
     let (_tx, cancel) = tokio::sync::watch::channel(false);
     let engine = Engine {
         host: host.clone(),
@@ -125,10 +130,67 @@ async fn resume_skips_finished_steps() {
         agent_timeout: Duration::from_secs(10),
         run_e2e: false,
         threads: Default::default(),
+        mode: Mode::Full,
+        eco: false,
     };
     let out = engine.run_resumable("t", Some("42".into())).await.expect("resumed run passes");
     assert!(out.gate.ready);
     let roles: Vec<String> = host.spawned.lock().iter().map(|k| k.split('-').nth(1).unwrap().to_string()).collect();
     assert_eq!(roles, ["worker", "reviewer", "teacher"], "planner and teacher-bar were skipped");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// A crew engine on a fake host, for one mode; the reviewer passes at once.
+async fn quick(name: &str, mode: Mode) -> (Arc<FakeHost>, PathBuf, harnes_crew::engine::Outcome) {
+    let root = std::env::temp_dir().join(format!("harnes-{name}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).unwrap();
+    let hooks = Arc::new(HookServer::start(Arc::new(|_: &str, _| {})).await.unwrap());
+    let host = Arc::new(FakeHost { root: root.clone(), registry: hooks.registry.clone(), reviews: Mutex::new(1), spawned: Mutex::new(vec![]), tunes: Mutex::new(vec![]) });
+    let (_tx, cancel) = tokio::sync::watch::channel(false);
+    let engine = Engine {
+        host: host.clone(),
+        hooks,
+        root: root.clone(),
+        emit: Arc::new(|_| {}),
+        cancel,
+        max_rounds: 3,
+        agent_timeout: Duration::from_secs(10),
+        run_e2e: false,
+        threads: Default::default(),
+        mode,
+        eco: false,
+    };
+    let out = engine.run_resumable("fix the typo", Some("7".into())).await.expect("run passes");
+    (host, root, out)
+}
+
+#[tokio::test]
+async fn light_run_is_one_worker_and_a_sonnet_review() {
+    let (host, root, out) = quick("light", Mode::Light).await;
+    assert!(out.gate.ready);
+    let roles: Vec<String> = host.spawned.lock().iter().map(|k| k.split('-').nth(1).unwrap().to_string()).collect();
+    assert_eq!(roles, ["worker", "reviewer"], "no planner, no Teacher");
+    assert!(host.tunes.lock().iter().all(|t| t.map(|t| t.model) == Some("sonnet")));
+    let metrics: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(root.join(".harnes/runs/7/metrics.json")).unwrap()).unwrap();
+    assert_eq!((metrics["rounds"].as_u64(), metrics["passed"].as_bool()), (Some(1), Some(true)));
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[tokio::test]
+async fn deep_review_has_finders_then_a_verifier() {
+    let (host, root, _) = quick("deep", Mode::Deep).await;
+    let spawned = host.spawned.lock().clone();
+    let reviewers: Vec<&String> = spawned.iter().filter(|k| k.contains("-reviewer-")).collect();
+    assert_eq!(reviewers.len(), 4, "three finders and a verifier: {spawned:?}");
+    assert!(reviewers.last().unwrap().ends_with("reviewer-0-verify"));
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[tokio::test]
+async fn history_sums_the_runs() {
+    let (_, root, _) = quick("history", Mode::Light).await;
+    let h = harnes_crew::review::history(&root);
+    assert_eq!((h.runs, h.passed, h.first_pass), (1, 1, 1));
     let _ = std::fs::remove_dir_all(&root);
 }

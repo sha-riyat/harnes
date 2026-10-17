@@ -23,8 +23,8 @@ pub fn definitions(orchestrator: bool) -> Vec<Value> {
             "inputSchema": {"type": "object", "properties": {"thread": {"type": "string"}, "summary": {"type": "string"}}, "required": ["thread"]}}),
     ];
     if orchestrator {
-        v.push(json!({"name": "crew_start", "description": "Start a crew run (Planner -> Teacher -> Workers -> Reviewer -> Teacher gate) for a task.",
-            "inputSchema": {"type": "object", "properties": {"task": {"type": "string"}}, "required": ["task"]}}));
+        v.push(json!({"name": "crew_start", "description": "Start a crew run (Planner -> Teacher -> Workers -> Reviewer -> Teacher gate) for a task. mode=light: one worker and a Sonnet review, for a small change in a few files. mode=full (default): the whole crew. mode=deep: several reviewers and a verifier, for risky or wide changes.",
+            "inputSchema": {"type": "object", "properties": {"task": {"type": "string"}, "mode": {"type": "string", "enum": ["light", "full", "deep"], "default": "full"}}, "required": ["task"]}}));
         v.push(json!({"name": "crew_status", "description": "Current crew run: phase, agents and their state, last events. With `wait_secs`, waits for the next change first.",
             "inputSchema": {"type": "object", "properties": {"wait_secs": {"type": "integer", "default": 0}}}}));
         v.push(json!({"name": "crew_cancel", "description": "Stop the current crew run.", "inputSchema": {"type": "object", "properties": {}}}));
@@ -86,7 +86,7 @@ pub fn call(t: &Threads, name: &str, a: &Value) -> Result<Option<String>> {
             t.close(s(a, "thread")?, &author(a), a.get("summary").and_then(Value::as_str))?;
             "fil clos".into()
         }
-        "crew_start" => api("start", &json!({"task": s(a, "task")?}))?,
+        "crew_start" => api("start", &json!({"task": s(a, "task")?, "mode": a.get("mode").and_then(Value::as_str).unwrap_or("full")}))?,
         "crew_status" => api("status", &json!({"wait_secs": a.get("wait_secs").and_then(Value::as_u64).unwrap_or(0).min(600)}))?,
         "crew_cancel" => api("cancel", &json!({}))?,
         _ => return Ok(None),

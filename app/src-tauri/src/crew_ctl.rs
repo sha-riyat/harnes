@@ -4,14 +4,14 @@ use crate::{
     host::{agent_env, PaneHost},
     state::{AgentView, Project, Shared},
 };
-use harnes_crew::{engine::Engine, threading::RunThreads, AgentState, CrewEvent, Phase};
+use harnes_crew::{budget::Mode, engine::Engine, threading::RunThreads, AgentState, CrewEvent, Phase};
 use harnes_pty::SpawnSpec;
 use serde_json::{json, Value};
 use std::{sync::Arc, time::Duration};
 use tauri::{Emitter, State};
 
 /// Starts (or resumes) a crew run in a project, in the background.
-pub fn start_crew(st: &Shared, p: &Arc<Project>, task: String, resume: Option<String>) -> Result<(), String> {
+pub fn start_crew(st: &Shared, p: &Arc<Project>, task: String, resume: Option<String>, mode: Mode) -> Result<(), String> {
     if task.trim().is_empty() {
         return Err("tâche vide".into());
     }
@@ -23,7 +23,18 @@ pub fn start_crew(st: &Shared, p: &Arc<Project>, task: String, resume: Option<St
     let (tx, rx) = tokio::sync::watch::channel(false);
     *slot = Some(tx);
     p.crew.log.lock().clear();
+    let resuming = resume.is_some();
     let run_id = resume.unwrap_or_else(|| std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0).to_string());
+    // The mode is kept with the run, so a resumed run keeps its shape.
+    let mode_file = harnes_crew::setup::run_dir(&p.root, &run_id).join("mode.json");
+    let mode = match std::fs::read_to_string(&mode_file).ok().and_then(|s| serde_json::from_str(&s).ok()) {
+        Some(saved) if resuming => saved,
+        _ => {
+            let _ = std::fs::create_dir_all(mode_file.parent().unwrap());
+            let _ = std::fs::write(&mode_file, serde_json::to_string(&mode).unwrap_or_default());
+            mode
+        }
+    };
     *p.crew.task.lock() = Some((run_id.clone(), task.clone()));
     let (shared, project) = (st.clone(), p.clone());
     let engine = Engine {
@@ -45,6 +56,8 @@ pub fn start_crew(st: &Shared, p: &Arc<Project>, task: String, resume: Option<St
         agent_timeout: Duration::from_secs(60 * 60),
         run_e2e: true,
         threads: RunThreads(project.threads.clone()),
+        mode,
+        eco: false,
     };
     tauri::async_runtime::spawn(async move {
         let _ = engine.run_resumable(&task, Some(run_id)).await;
@@ -85,7 +98,7 @@ pub fn install_control(st: &Shared) {
                 return json!({"error": "projet inconnu"});
             };
             match cmd.as_str() {
-                "start" => match start_crew(&st, &p, body["task"].as_str().unwrap_or("").to_string(), None) {
+                "start" => match start_crew(&st, &p, body["task"].as_str().unwrap_or("").to_string(), None, serde_json::from_value(body["mode"].clone()).unwrap_or_default()) {
                     Ok(()) => json!({"ok": true, "message": "run lancé"}),
                     Err(e) => json!({"ok": false, "error": e}),
                 },

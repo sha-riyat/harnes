@@ -25,9 +25,11 @@ Lis la tâche et le plan. Fixe une barre **vérifiable**, ni laxiste ni perfecti
     {"id": "C1", "lot": "L1", "description": "ce que l'utilisateur doit pouvoir constater", "evidence": "e2e:tests/billing.e2e.yaml"}
   ],
   "threshold": {"e2e_must_pass": true, "tests_must_pass": true, "all_criteria": true},
-  "notify_user_when": "condition précise pour présenter le travail"
+  "notify_user_when": "condition précise pour présenter le travail",
+  "risk": "low | medium | high"
 }
 ```
+`risk` vient des chemins que le plan touche, pas de l'auteur : `high` pour la CI (`.github/`, workflows), l'auth, le paiement, les migrations, les secrets et tout chemin que `REVIEW.md` marque sensible ; `low` pour la doc, les textes et ce qui est derrière un flag ; `medium` sinon. Un run `high` a une revue renforcée et l'utilisateur relit le diff.
 Termine par `BAR OK`.
 
 ## 2. Porte de validation (après un PASS du Reviewer)

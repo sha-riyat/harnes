@@ -45,6 +45,16 @@ pub struct Report {
     /// Worker's own e2e run: {"command", "exit", "passed", "failed"}.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub e2e: Option<serde_json::Value>,
+    /// What became of each fix it was asked for: fixed, wrong, intentional, irrelevant.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub resolved: Vec<Resolution>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Resolution {
+    #[serde(default)]
+    pub r#where: String,
+    pub outcome: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,6 +65,22 @@ pub struct Fix {
     pub problem: String,
     #[serde(default)]
     pub fix: String,
+    /// important (blocks), nit (dropped) or pre-existing (not this run's doing).
+    #[serde(default = "important")]
+    pub severity: String,
+}
+
+fn important() -> String {
+    "important".into()
+}
+
+impl Fix {
+    pub fn blocks(&self) -> bool {
+        !matches!(self.severity.trim().to_lowercase().as_str(), "nit" | "pre-existing" | "preexisting")
+    }
+    pub fn pre_existing(&self) -> bool {
+        matches!(self.severity.trim().to_lowercase().as_str(), "pre-existing" | "preexisting")
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,6 +100,9 @@ pub struct Review {
     pub fixes: Vec<Fix>,
     #[serde(default)]
     pub commits: Vec<Commit>,
+    /// Starts with the count of blocking problems; says plainly when there are none.
+    #[serde(default)]
+    pub summary: String,
 }
 
 /// Validation bar fixed by the Teacher before the work starts.
@@ -84,6 +113,9 @@ pub struct Bar {
     pub threshold: serde_json::Value,
     #[serde(default)]
     pub notify_user_when: String,
+    /// low, medium or high, from the paths the plan touches.
+    #[serde(default)]
+    pub risk: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -109,12 +141,19 @@ pub struct Gate {
 }
 
 impl Review {
+    /// PASS, or a CHANGES verdict with nothing left that blocks.
     pub fn passed(&self) -> bool {
-        self.verdict.trim().eq_ignore_ascii_case("PASS")
+        self.verdict.trim().eq_ignore_ascii_case("PASS") || !self.fixes.iter().any(Fix::blocks)
     }
 }
 
 impl Plan {
+    /// A light run's plan: the whole task as one lot.
+    pub fn single(task: &str) -> Plan {
+        let lot = Lot { id: "L1".into(), title: task.chars().take(80).collect(), kind: String::new(), files: vec![], instructions: task.into(), acceptance: String::new(), commit: String::new() };
+        Plan { context: String::new(), test_command: None, lots: vec![lot], waves: vec![], risks: None }
+    }
+
     pub fn lot(&self, id: &str) -> Option<&Lot> {
         self.lots.iter().find(|l| l.id == id)
     }
@@ -182,6 +221,14 @@ mod tests {
     fn waves_fill_in_missing_lots() {
         let p = plan(r#"{"lots":[{"id":"L1","title":"a","instructions":"x"},{"id":"L2","title":"b","instructions":"y"}],"waves":[["L1","LX"]]}"#);
         assert_eq!(p.effective_waves(), vec![vec!["L1".to_string()], vec!["L2".to_string()]]);
+    }
+
+    #[test]
+    fn only_important_fixes_block() {
+        let r: Review = serde_json::from_str(r#"{"verdict":"CHANGES","fixes":[{"lot":"L1","problem":"a","severity":"nit"},{"lot":"L1","problem":"b","severity":"pre-existing"}]}"#).unwrap();
+        assert!(r.passed());
+        let r: Review = serde_json::from_str(r#"{"verdict":"CHANGES","fixes":[{"lot":"L1","problem":"a"}]}"#).unwrap();
+        assert!(!r.passed() && r.fixes[0].blocks());
     }
 
     #[test]

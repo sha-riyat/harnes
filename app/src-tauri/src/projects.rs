@@ -123,7 +123,7 @@ pub fn app_info(st: State<'_, Shared>) -> Value {
 #[tauri::command]
 pub fn stats(st: State<'_, Shared>) -> Value {
     match st.active() {
-        Some(p) => json!({ "proxy": p.proxy.snapshot(), "ctx": p.store.stats().ok() }),
+        Some(p) => json!({ "proxy": p.proxy.snapshot(), "ctx": p.store.stats().ok(), "runs": harnes_crew::review::history(&p.root) }),
         None => json!({ "proxy": null, "ctx": null }),
     }
 }

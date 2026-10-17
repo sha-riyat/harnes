@@ -176,7 +176,7 @@ pub async fn restore(st: Shared) {
             panes += ok as usize;
         }
         if let Some((run, task)) = &rec.crew {
-            runs += crew_ctl::start_crew(&st, &project, task.clone(), Some(run.clone())).is_ok() as usize;
+            runs += crew_ctl::start_crew(&st, &project, task.clone(), Some(run.clone()), Default::default()).is_ok() as usize;
         }
     }
     if let Some(active) = &file.active {

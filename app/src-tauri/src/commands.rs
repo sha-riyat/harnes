@@ -116,7 +116,7 @@ pub fn pane_refresh(st: State<'_, Shared>, id: String) -> Res<()> {
 #[tauri::command]
 pub fn crew_start(st: State<'_, Shared>, task: String, project: Option<String>) -> Res<()> {
     let p = st.pick(project.as_deref())?;
-    crate::crew_ctl::start_crew(st.inner(), &p, task, None)
+    crate::crew_ctl::start_crew(st.inner(), &p, task, None, Default::default())
 }
 
 #[tauri::command]

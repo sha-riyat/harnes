@@ -1,7 +1,7 @@
 //! Runs crew agents in panes of their project.
 
 use crate::state::{AgentView, Project, Shared};
-use harnes_crew::{engine::AgentHost, providers::Providers, AgentState, Role};
+use harnes_crew::{budget::Tune, engine::AgentHost, providers::Providers, AgentState, Role};
 use harnes_pty::SpawnSpec;
 use std::{path::Path, sync::Arc};
 use tauri::Emitter;
@@ -21,9 +21,14 @@ pub fn agent_env(p: &Project, key: &str) -> Vec<(String, String)> {
 pub struct PaneHost(pub Shared, pub Providers, pub Arc<Project>);
 
 impl AgentHost for PaneHost {
-    fn spawn(&self, key: &str, role: Role, prompt: &str, settings: &Path) -> anyhow::Result<String> {
+    fn spawn(&self, key: &str, role: Role, prompt: &str, settings: &Path, tune: Option<Tune>) -> anyhow::Result<String> {
         let (st, p) = (&self.0, &self.2);
-        let launch = self.1.launch(role, prompt, settings)?;
+        let mut launch = self.1.launch(role, prompt, settings)?;
+        // The run's mode or the week's pace can pick another model than the role's own.
+        if let (Some(t), "claude") = (tune, launch.provider.as_str()) {
+            let at = launch.args.len().saturating_sub(1); // before the prompt
+            launch.args.splice(at..at, ["--model".into(), t.model.into(), "--effort".into(), t.effort.into()]);
+        }
         let info = st.panes.spawn(SpawnSpec {
             title: key.split_once('-').map(|(_, n)| n).unwrap_or(key).to_string(),
             program: launch.program,
