@@ -1,10 +1,18 @@
 <p align="center">
+  <img src="site/brand/mark.svg" width="72" alt="harnes logo: an h set in terminal cells with a cursor after it">
+</p>
+
+<p align="center">
   <img src="docs/field.svg" width="100%" alt="harnes: a field of ASCII characters drifting from clouds to a turning torus, a vortex and a network">
 </p>
 
 <p align="center">
   A desktop cockpit for a crew of coding agents.<br>
   <sub>Rust · Tauri 2 · SolidJS · libghostty-vt · black and white · MIT</sub>
+</p>
+
+<p align="center">
+  <b>English</b> · <a href="README.fr.md">Français</a> · <a href="https://sha-riyat.github.io/harnes/">website</a>
 </p>
 
 <p align="center">
@@ -222,6 +230,7 @@ crates/crew     setup, hooks, providers, crew engine, context hand-offs, JSON co
 app/            Tauri 2 app (src-tauri) + SolidJS UI
 template/       agents (orchestrator, planner, teacher, worker, reviewer, scout), settings, CLAUDE.md
 docs/           the animations on this page
+site/           the website (English and French) and the logo
 ```
 </details>
 
