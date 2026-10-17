@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod attention;
+mod budget;
 mod commands;
 mod crew_ctl;
 mod host;
@@ -40,6 +41,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             projects::app_info,
+            budget::budget_get,
             projects::open_project,
             projects::projects_list,
             projects::project_activate,

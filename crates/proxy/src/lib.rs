@@ -115,6 +115,11 @@ async fn forward(State(s): State<Arc<Shared>>, method: Method, uri: Uri, headers
     if !status.is_success() {
         s.stats.errors.fetch_add(1, Relaxed);
     }
+    if let Some(l) = stats::Limits::from_headers(upstream.headers()) {
+        if let Ok(mut slot) = s.stats.limits.lock() {
+            *slot = Some(l);
+        }
+    }
     let mut builder = Response::builder().status(status.as_u16());
     for (k, v) in upstream.headers().iter() {
         if !HOP.contains(&k.as_str()) {

@@ -15,6 +15,9 @@ pub fn start_crew(st: &Shared, p: &Arc<Project>, task: String, resume: Option<St
     if task.trim().is_empty() {
         return Err("tâche vide".into());
     }
+    if let Some(why) = crate::budget::blocked(st) {
+        return Err(why);
+    }
     let mut slot = p.crew.cancel.lock();
     if slot.is_some() {
         return Err("un run est déjà en cours dans ce projet".into());
@@ -57,7 +60,7 @@ pub fn start_crew(st: &Shared, p: &Arc<Project>, task: String, resume: Option<St
         run_e2e: true,
         threads: RunThreads(project.threads.clone()),
         mode,
-        eco: false,
+        eco: crate::budget::pace(st).is_some_and(|p| p.eco()),
     };
     tauri::async_runtime::spawn(async move {
         let _ = engine.run_resumable(&task, Some(run_id)).await;
