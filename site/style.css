@@ -50,6 +50,8 @@ code, pre { font-family: var(--mono); }
 /* Bar */
 .bar { position: absolute; z-index: 5; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 32px; padding: 20px var(--m); }
 .mark { display: inline-flex; align-items: center; gap: 10px; font: 500 18px var(--mono); letter-spacing: 0.02em; text-decoration: none; }
+.lang { color: var(--muted); text-decoration: none; font-size: 15px; transition: color 0.18s; }
+.lang:hover { color: var(--ink); }
 .bar nav { display: flex; gap: 28px; margin-left: auto; font-size: 15px; }
 .bar nav a { text-decoration: none; color: var(--muted); transition: color 0.18s; }
 .bar nav a:hover { color: var(--ink); }
@@ -220,7 +222,7 @@ h1 { font-size: clamp(44px, 4.9vw, 96px); line-height: 0.95; letter-spacing: -0.
   .hero-field { mask-image: linear-gradient(180deg, rgb(0 0 0 / 0.15) 0%, rgb(0 0 0 / 0.15) 45%, #000 85%); }
   .sim { justify-self: stretch; }
   .bar nav { display: none; }
-  .bar .btn { margin-left: auto; }
+  .bar .lang { margin-left: auto; }
   .show-row { padding: 0 7vw; gap: 4vw; }
   .show-row figure { width: 86vw; }
   .show-say { margin: 32px 7vw 0; grid-template-columns: 1fr; }

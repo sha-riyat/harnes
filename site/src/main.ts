@@ -105,8 +105,9 @@ if (plate) {
 for (const b of all<HTMLButtonElement>("[data-copy]"))
   b.addEventListener("click", async () => {
     await navigator.clipboard.writeText(document.getElementById(b.dataset.copy!)!.textContent!.trim());
-    b.textContent = "Copied";
-    setTimeout(() => (b.textContent = "Copy"), 1400);
+    const label = b.textContent;
+    b.textContent = document.documentElement.lang === "fr" ? "Copié" : "Copied";
+    setTimeout(() => (b.textContent = label), 1400);
   });
 
 // Entrances: each section's parts arrive in reading order, once.

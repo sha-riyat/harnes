@@ -20,22 +20,28 @@ interface Beat {
   wait?: number;
 }
 
+// The agents' own words follow the page's language; the interface stays as the app shows it.
+const FR = document.documentElement.lang === "fr";
+const W = FR
+  ? { plan: "2 lots, 1 vague, aucun fichier partagé", bar: "4 critères, chacun avec sa preuve", test: "npm test · 12 réussis", met: "barre atteinte", denied: "utilise le mailer déjà présent" }
+  : { plan: "2 lots, 1 wave, no shared files", bar: "4 criteria, each with its evidence", test: "npm test · 12 passed", met: "bar met", denied: W.denied };
+
 const beats = (task: string): Beat[] => [
   { at: "orchestrator", state: "working", tool: "crew_start", text: task, step: 0 },
   { at: "planner", state: "working", tool: "os_brief", text: "project · stepper" },
-  { at: "planner", state: "done", tool: "plan.json", text: "2 lots, 1 wave, no shared files", step: 1 },
-  { at: "teacher", state: "working", tool: "bar.json", text: "4 criteria, each with its evidence" },
+  { at: "planner", state: "done", tool: "plan.json", text: W.plan, step: 1 },
+  { at: "teacher", state: "working", tool: "bar.json", text: W.bar },
   { at: "teacher", state: "idle", step: 2 },
   { at: "worker-L1", state: "working", tool: "thread_read", text: "lot-1-L1" },
   { at: "worker-L2", state: "working", tool: "thread_read", text: "lot-1-L2" },
   { at: "worker-L1", state: "blocked", ask: true },
   { at: "worker-L1", state: "working", tool: "e2e_observe", text: "#n3 button \"Send\"" },
-  { at: "worker-L2", state: "working", tool: "ctx_execute", text: "npm test · 12 passed" },
+  { at: "worker-L2", state: "working", tool: "ctx_execute", text: W.test },
   { at: "worker-L1", state: "done", tool: "e2e_save", text: "reports/L1-r0.json" },
   { at: "worker-L2", state: "done", tool: "reports", text: "reports/L2-r0.json", step: 3 },
   { at: "reviewer", state: "working", tool: "review-1.json", text: "PASS" },
   { at: "reviewer", state: "done", step: 4 },
-  { at: "teacher", state: "working", tool: "gate-1.json", text: "bar met", step: 5 },
+  { at: "teacher", state: "working", tool: "gate-1.json", text: W.met, step: 5 },
   { at: "teacher", state: "done" },
   { at: "orchestrator", state: "done", wait: 0 },
 ];
@@ -82,7 +88,7 @@ export function run(root: HTMLElement) {
       card.querySelectorAll("button").forEach((btn) => (btn.onclick = () => {
         const allowed = btn.dataset.allow !== undefined;
         card.hidden = true;
-        line({ at: "worker-L1", tool: allowed ? "Bash" : "denied", text: allowed ? "npm install nodemailer" : "uses the mailer already in the repo" });
+        line({ at: "worker-L1", tool: allowed ? "Bash" : "denied", text: allowed ? "npm install nodemailer" : W.denied });
         done();
       }));
     });
