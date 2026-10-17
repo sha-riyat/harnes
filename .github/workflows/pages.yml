@@ -25,6 +25,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # Pages caches files for 10 minutes: a new version gets new URLs.
+      - run: sed -i "s/__V__/${GITHUB_SHA::7}/g" site/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
