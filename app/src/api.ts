@@ -79,6 +79,8 @@ export interface Stats {
     cache_write_tokens: number;
   } | null;
   ctx: { blobs: number; bytes_stored: number; bytes_returned: number } | null;
+  /** Every run of the project, summed (review rounds and findings). */
+  runs?: { runs: number; passed: number; first_pass: number; mean_rounds: number; important: number; nits: number; pre_existing: number; resolved: Record<string, number> };
 }
 
 export type LookStatus = "needs-you" | "working" | "idle" | "finished" | "failed" | "unknown";
@@ -164,7 +166,15 @@ export interface OsDetail {
   oracle: string;
 }
 
+/** The account's limits as Anthropic reports them (0..1 used, resets in epoch seconds). */
+export interface Budget {
+  limits: { five_hour: number; five_hour_reset: number; seven_day: number; seven_day_reset: number; status: string; seen: number };
+  week_elapsed: number;
+  eco: boolean;
+}
+
 export const api = {
+  budgetGet: () => invoke<Budget | null>("budget_get"),
   osList: () => invoke<{ dir: string; packs: OsPack[] }>("os_list"),
   osPack: (id: string) => invoke<OsDetail>("os_pack", { id }),
   osRead: (id: string, path: string) => invoke<string>("os_read", { id, path }),
