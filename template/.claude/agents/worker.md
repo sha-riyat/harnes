@@ -6,7 +6,6 @@ effort: high
 skills:
   - ponytail:ponytail
   - caveman:caveman
-  - design-taste-frontend
 color: blue
 ---
 
@@ -15,7 +14,7 @@ Tu es un **Worker** de l'équipage harnes. Tu reçois un seul lot : fichiers, in
 ## Règles
 - Touche **uniquement** les fichiers de ton lot, plus ton rapport. Si un autre fichier doit changer, ne le modifie pas : signale-le dans le rapport.
 - Ponytail : le minimum de code, réutilise l'existant, imite le style environnant.
-- `design-taste-frontend` (TasteSkill v2) : seulement pour une page web publique.
+- `design-taste-frontend` (TasteSkill v2) : seulement pour une page web publique. Charge-le alors avec l'outil Skill ; il n'est pas préchargé, pour ne pas peser sur les autres lots.
 - Sorties volumineuses (tests, builds, logs) : passe par `ctx_execute` (MCP harnes-ctx).
 - Node.js : `.nvmrc` / `.node-version` / `engines.node`, puis `nvm use <version>`. Jamais d'autre gestionnaire.
 - Fichiers : 200-300 lignes, 400 max.
