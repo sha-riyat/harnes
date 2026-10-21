@@ -10,13 +10,22 @@ mod methods;
 mod persist;
 mod projects;
 mod pump;
+mod runs;
 mod state;
 mod switch;
+mod trace;
 
 use tauri::Manager;
 
 fn main() {
-    tracing_subscriber::fmt().with_env_filter(tracing_subscriber::EnvFilter::from_default_env()).init();
+    // The cockpit binary is also the native guard. Claude Code hooks invoke
+    // `harnes __hook` so a packaged app never depends on curl or a second file.
+    if std::env::args().nth(1).as_deref() == Some("__hook") {
+        std::process::exit(harnes_guards::hook_main());
+    }
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -29,6 +38,7 @@ fn main() {
             pump::start(st.clone());
             lookout::start(st.clone());
             crew_ctl::install_control(&st);
+            trace::install(&st);
             attention::install(&st);
             app.manage(attention::Prompts::default());
             app.manage(st.clone());
@@ -57,6 +67,27 @@ fn main() {
             commands::crew_start,
             commands::crew_cancel,
             projects::stats,
+            runs::run_view,
+            runs::trace_events,
+            runs::trace_runs,
+            runs::trace_summary,
+            runs::run_decide,
+            runs::memory_candidates,
+            runs::memory_records,
+            runs::memory_stats,
+            runs::memory_review,
+            runs::memory_propose,
+            runs::harness_get,
+            runs::harness_save,
+            runs::guards_get,
+            runs::guards_save,
+            runs::guards_reload,
+            runs::eval_list,
+            runs::eval_run,
+            runs::tune_plan,
+            runs::worktree_list,
+            runs::worktree_remove,
+            runs::handoffs,
             commands::lookout,
             methods::os_list,
             methods::os_pack,

@@ -37,7 +37,12 @@ pub struct CrewState {
 
 impl Default for CrewState {
     fn default() -> Self {
-        Self { cancel: Mutex::new(None), log: Mutex::new(Vec::new()), tick: tokio::sync::watch::channel(0).0, task: Mutex::new(None) }
+        Self {
+            cancel: Mutex::new(None),
+            log: Mutex::new(Vec::new()),
+            tick: tokio::sync::watch::channel(0).0,
+            task: Mutex::new(None),
+        }
     }
 }
 
@@ -56,6 +61,12 @@ pub struct Project {
     pub proxy: ProxyHandle,
     pub threads: Option<Arc<harnes_threads::Threads>>,
     pub crew: CrewState,
+    pub telemetry: Arc<harnes_telemetry::Telemetry>,
+    pub memory: Arc<harnes_memory::Memory>,
+    pub guards: Arc<RwLock<harnes_guards::Guard>>,
+    pub worktrees: harnes_worktree::Worktrees,
+    /// Run id currently producing proxy usage events.
+    pub run_slot: Arc<Mutex<Option<String>>>,
 }
 
 impl Project {
@@ -67,7 +78,12 @@ impl Project {
 
 /// Stable short id for a project path (case-insensitive on Windows).
 pub fn project_id(root: &std::path::Path) -> String {
-    let norm = root.display().to_string().replace('\\', "/").trim_end_matches('/').to_lowercase();
+    let norm = root
+        .display()
+        .to_string()
+        .replace('\\', "/")
+        .trim_end_matches('/')
+        .to_lowercase();
     let mut h: u64 = 0xcbf29ce484222325;
     for b in norm.bytes() {
         h = (h ^ b as u64).wrapping_mul(0x100000001b3);
@@ -104,8 +120,26 @@ impl AppState {
                     if let Some(a) = s.agents.write().get_mut(key) {
                         a.state = st;
                     }
+                    if let Some(p) = s.project_of_key(key) {
+                        let role = s
+                            .agents
+                            .read()
+                            .get(key)
+                            .map(|a| a.role.clone())
+                            .unwrap_or_default();
+                        let run = p.run_slot.lock().clone().unwrap_or_default();
+                        let _ = p.telemetry.append(
+                            harnes_telemetry::Event::new(&run, &p.id, "agent.state")
+                                .role(role)
+                                .status(format!("{st:?}").to_lowercase())
+                                .summary(format!("{key} → {st:?}")),
+                        );
+                    }
                 }
-                let _ = app_h.emit("agent-state", serde_json::json!({ "key": key, "state": st }));
+                let _ = app_h.emit(
+                    "agent-state",
+                    serde_json::json!({ "key": key, "state": st }),
+                );
                 // The orchestrator's transcript changes with each of its hook events.
                 if let Some(project) = key.strip_prefix("orch-") {
                     let _ = app_h.emit("conversation-changed", project);
@@ -155,13 +189,16 @@ impl AppState {
     }
 
     pub fn active_or_err(&self) -> Result<Arc<Project>, String> {
-        self.active().ok_or_else(|| "aucun projet ouvert".to_string())
+        self.active()
+            .ok_or_else(|| "aucun projet ouvert".to_string())
     }
 
     /// `id` if given, else the active project.
     pub fn pick(&self, id: Option<&str>) -> Result<Arc<Project>, String> {
         match id {
-            Some(i) => self.project(i).ok_or_else(|| format!("projet inconnu : {i}")),
+            Some(i) => self
+                .project(i)
+                .ok_or_else(|| format!("projet inconnu : {i}")),
             None => self.active_or_err(),
         }
     }
@@ -171,8 +208,19 @@ impl AppState {
         self.project(&id)
     }
 
+    /// Project owning an agent key (`orch-<id>` or an entry in `agents`).
+    pub fn project_of_key(&self, key: &str) -> Option<Arc<Project>> {
+        if let Some(id) = key.strip_prefix("orch-") {
+            return self.project(id);
+        }
+        let id = self.agents.read().get(key).map(|a| a.project.clone())?;
+        self.project(&id)
+    }
+
     pub fn tag_pane(&self, pane: &str, project: &str) {
-        self.pane_project.write().insert(pane.to_string(), project.to_string());
+        self.pane_project
+            .write()
+            .insert(pane.to_string(), project.to_string());
     }
 }
 
@@ -180,14 +228,23 @@ fn id_to_key(app: &AppHandle, pane: &str) -> Option<String> {
     use tauri::Manager;
     let st = app.try_state::<Shared>()?;
     let agents = st.agents.read();
-    agents.values().find(|a| a.pane.as_deref() == Some(pane)).map(|a| a.key.clone())
+    agents
+        .values()
+        .find(|a| a.pane.as_deref() == Some(pane))
+        .map(|a| a.key.clone())
 }
 
 /// Path of the `harnes-ctx` MCP binary shipped next to the app executable.
 pub fn ctx_bin() -> PathBuf {
     let exe = std::env::current_exe().unwrap_or_default();
-    let name = if cfg!(windows) { "harnes-ctx.exe" } else { "harnes-ctx" };
-    exe.parent().map(|d| d.join(name)).unwrap_or_else(|| PathBuf::from(name))
+    let name = if cfg!(windows) {
+        "harnes-ctx.exe"
+    } else {
+        "harnes-ctx"
+    };
+    exe.parent()
+        .map(|d| d.join(name))
+        .unwrap_or_else(|| PathBuf::from(name))
 }
 
 #[cfg(test)]

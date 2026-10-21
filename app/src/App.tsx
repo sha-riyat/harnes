@@ -7,6 +7,7 @@ import { ProjectDialog, Toasts } from "./components/Overlays";
 import Palette from "./components/Palette";
 import PaneGrid from "./components/PaneGrid";
 import RightPanel from "./components/RightPanel";
+import RunView from "./components/RunView";
 import Sidebar from "./components/Sidebar";
 import TermDock from "./components/TermDock";
 import TopBar from "./components/TopBar";
@@ -69,6 +70,9 @@ export default function App() {
         <Switch>
           <Match when={view() === "chat"}>
             <Conversation />
+          </Match>
+          <Match when={view() === "run"}>
+            <RunView />
           </Match>
           <Match when={view() === "panes"}>
             <PaneGrid />

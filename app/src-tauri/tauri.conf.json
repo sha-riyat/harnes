@@ -27,6 +27,11 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico"]
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico"],
+    "resources": {
+      "../../THIRD_PARTY.md": "THIRD_PARTY.md",
+      "../../NOTICE": "NOTICE",
+      "../../LICENSE": "LICENSE"
+    }
   }
 }

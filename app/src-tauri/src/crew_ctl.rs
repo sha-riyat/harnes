@@ -4,14 +4,22 @@ use crate::{
     host::{agent_env, PaneHost},
     state::{AgentView, Project, Shared},
 };
-use harnes_crew::{budget::Mode, engine::Engine, threading::RunThreads, AgentState, CrewEvent, Phase};
+use harnes_crew::{
+    budget::Mode, engine::Engine, threading::RunThreads, AgentState, CrewEvent, Phase,
+};
 use harnes_pty::SpawnSpec;
 use serde_json::{json, Value};
 use std::{sync::Arc, time::Duration};
 use tauri::{Emitter, State};
 
 /// Starts (or resumes) a crew run in a project, in the background.
-pub fn start_crew(st: &Shared, p: &Arc<Project>, task: String, resume: Option<String>, mode: Mode) -> Result<(), String> {
+pub fn start_crew(
+    st: &Shared,
+    p: &Arc<Project>,
+    task: String,
+    resume: Option<String>,
+    mode: Mode,
+) -> Result<(), String> {
     if task.trim().is_empty() {
         return Err("tâche vide".into());
     }
@@ -22,15 +30,25 @@ pub fn start_crew(st: &Shared, p: &Arc<Project>, task: String, resume: Option<St
     if slot.is_some() {
         return Err("un run est déjà en cours dans ce projet".into());
     }
-    let providers = harnes_crew::providers::Providers::load(&p.root).map_err(|e| format!("{e:#}"))?;
+    let providers =
+        harnes_crew::providers::Providers::load(&p.root).map_err(|e| format!("{e:#}"))?;
     let (tx, rx) = tokio::sync::watch::channel(false);
     *slot = Some(tx);
     p.crew.log.lock().clear();
     let resuming = resume.is_some();
-    let run_id = resume.unwrap_or_else(|| std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0).to_string());
+    let run_id = resume.unwrap_or_else(|| {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0)
+            .to_string()
+    });
     // The mode is kept with the run, so a resumed run keeps its shape.
     let mode_file = harnes_crew::setup::run_dir(&p.root, &run_id).join("mode.json");
-    let mode = match std::fs::read_to_string(&mode_file).ok().and_then(|s| serde_json::from_str(&s).ok()) {
+    let mode = match std::fs::read_to_string(&mode_file)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+    {
         Some(saved) if resuming => saved,
         _ => {
             let _ = std::fs::create_dir_all(mode_file.parent().unwrap());
@@ -39,11 +57,13 @@ pub fn start_crew(st: &Shared, p: &Arc<Project>, task: String, resume: Option<St
         }
     };
     *p.crew.task.lock() = Some((run_id.clone(), task.clone()));
+    *p.run_slot.lock() = Some(run_id.clone());
     let (shared, project) = (st.clone(), p.clone());
     let engine = Engine {
         host: Arc::new(PaneHost(shared.clone(), providers, project.clone())),
         hooks: shared.hooks.clone(),
         root: project.root.clone(),
+        project: project.id.clone(),
         emit: {
             let (s, pr) = (shared.clone(), project.clone());
             Arc::new(move |ev: CrewEvent| {
@@ -61,11 +81,15 @@ pub fn start_crew(st: &Shared, p: &Arc<Project>, task: String, resume: Option<St
         threads: RunThreads(project.threads.clone()),
         mode,
         eco: crate::budget::pace(st).is_some_and(|p| p.eco()),
+        telemetry: Some(project.telemetry.clone()),
+        memory: Some(project.memory.clone()),
+        worktrees: Some(project.worktrees.clone()),
     };
     tauri::async_runtime::spawn(async move {
         let _ = engine.run_resumable(&task, Some(run_id)).await;
         *project.crew.cancel.lock() = None;
         *project.crew.task.lock() = None;
+        *project.run_slot.lock() = None;
         project.crew.tick.send_modify(|n| *n += 1);
         let _ = shared.app.emit("projects-changed", ());
     });
@@ -77,7 +101,10 @@ pub fn start_crew(st: &Shared, p: &Arc<Project>, task: String, resume: Option<St
 pub fn status(st: &Shared, p: &Project) -> Value {
     let log = p.crew.log.lock();
     let agents = st.agents.read();
-    let mine: Vec<&AgentView> = agents.values().filter(|a| a.project == p.id && a.key != p.orch_key()).collect();
+    let mine: Vec<&AgentView> = agents
+        .values()
+        .filter(|a| a.project == p.id && a.key != p.orch_key())
+        .collect();
     json!({
         "project": p.name,
         "running": p.crew.running(),
@@ -94,45 +121,69 @@ pub fn status(st: &Shared, p: &Project) -> Value {
 /// Handler behind `POST /api/<cmd>`; the body carries `project` (from `HARNES_PROJECT`).
 pub fn install_control(st: &Shared) {
     let shared = st.clone();
-    st.hooks.set_control(Arc::new(move |cmd: String, body: Value| {
-        let st = shared.clone();
-        Box::pin(async move {
-            let Ok(p) = st.pick(body["project"].as_str()) else {
-                return json!({"error": "projet inconnu"});
-            };
-            match cmd.as_str() {
-                "start" => match start_crew(&st, &p, body["task"].as_str().unwrap_or("").to_string(), None, serde_json::from_value(body["mode"].clone()).unwrap_or_default()) {
-                    Ok(()) => json!({"ok": true, "message": "run lancé"}),
-                    Err(e) => json!({"ok": false, "error": e}),
-                },
-                "status" => {
-                    let wait = body["wait_secs"].as_u64().unwrap_or(0);
-                    if wait > 0 {
-                        let mut rx = p.crew.tick.subscribe();
-                        rx.borrow_and_update();
-                        let _ = tokio::time::timeout(Duration::from_secs(wait), rx.changed()).await;
+    st.hooks
+        .set_control(Arc::new(move |cmd: String, body: Value| {
+            let st = shared.clone();
+            Box::pin(async move {
+                let Ok(p) = st.pick(body["project"].as_str()) else {
+                    return json!({"error": "projet inconnu"});
+                };
+                match cmd.as_str() {
+                    "start" => match start_crew(
+                        &st,
+                        &p,
+                        body["task"].as_str().unwrap_or("").to_string(),
+                        None,
+                        serde_json::from_value(body["mode"].clone()).unwrap_or_default(),
+                    ) {
+                        Ok(()) => json!({"ok": true, "message": "run lancé"}),
+                        Err(e) => json!({"ok": false, "error": e}),
+                    },
+                    "status" => {
+                        let wait = body["wait_secs"].as_u64().unwrap_or(0);
+                        if wait > 0 {
+                            let mut rx = p.crew.tick.subscribe();
+                            rx.borrow_and_update();
+                            let _ =
+                                tokio::time::timeout(Duration::from_secs(wait), rx.changed()).await;
+                        }
+                        status(&st, &p)
                     }
-                    status(&st, &p)
-                }
-                "cancel" => {
-                    if let Some(tx) = p.crew.cancel.lock().as_ref() {
-                        let _ = tx.send(true);
+                    "cancel" => {
+                        if let Some(tx) = p.crew.cancel.lock().as_ref() {
+                            let _ = tx.send(true);
+                        }
+                        json!({"ok": true})
                     }
-                    json!({"ok": true})
+                    other => json!({"error": format!("commande inconnue : {other}")}),
                 }
-                other => json!({"error": format!("commande inconnue : {other}")}),
-            }
-        })
-    }));
+            })
+        }));
 }
 
 /// Interactive Claude Code pane with harnes hooks (state + session id).
 /// `resume` reopens a previous Claude session; `prompt` is the first message.
-pub fn spawn_claude(st: &Shared, p: &Arc<Project>, key: &str, title: &str, agent: Option<&str>, resume: Option<&str>, prompt: Option<String>) -> Result<String, String> {
-    let settings = p.root.join(".harnes").join("agents").join(format!("{key}.settings.json"));
+pub fn spawn_claude(
+    st: &Shared,
+    p: &Arc<Project>,
+    key: &str,
+    title: &str,
+    agent: Option<&str>,
+    resume: Option<&str>,
+    prompt: Option<String>,
+) -> Result<String, String> {
+    let settings = p
+        .root
+        .join(".harnes")
+        .join("agents")
+        .join(format!("{key}.settings.json"));
     std::fs::create_dir_all(settings.parent().unwrap()).map_err(|e| e.to_string())?;
     drop(st.hooks.registry.register(key));
-    std::fs::write(&settings, st.hooks.settings_for(key).to_string()).map_err(|e| e.to_string())?;
+    std::fs::write(
+        &settings,
+        st.hooks.settings_for_root(key, Some(&p.root)).to_string(),
+    )
+    .map_err(|e| e.to_string())?;
     let mut env = agent_env(p, key);
     if agent == Some("orchestrator") {
         env.push(("HARNES_ROLE".into(), "orchestrator".into()));
@@ -145,36 +196,85 @@ pub fn spawn_claude(st: &Shared, p: &Arc<Project>, key: &str, title: &str, agent
     if let Some(r) = resume {
         args.extend(["--resume".into(), r.into()]);
     }
-    args.extend(["--permission-mode".into(), "auto".into(), "--settings".into(), settings.display().to_string()]);
+    args.extend([
+        "--permission-mode".into(),
+        "auto".into(),
+        "--settings".into(),
+        settings.display().to_string(),
+    ]);
     args.extend(prompt);
     let info = st
         .panes
-        .spawn(SpawnSpec { title: title.into(), program: "claude".into(), args, cwd: Some(p.root.clone()), env, cols: 120, rows: 32 })
+        .spawn(SpawnSpec {
+            title: title.into(),
+            program: "claude".into(),
+            args,
+            cwd: Some(p.root.clone()),
+            env,
+            cols: 120,
+            rows: 32,
+        })
         .map_err(|e| e.to_string())?;
     st.tag_pane(&info.id, &p.id);
     let role = agent.unwrap_or("claude").to_string();
     st.agents.write().insert(
         key.into(),
-        AgentView { key: key.into(), project: p.id.clone(), pane: Some(info.id.clone()), pid: info.pid, role: role.clone(), provider: "claude".into(), state: AgentState::Starting, context: None },
+        AgentView {
+            key: key.into(),
+            project: p.id.clone(),
+            pane: Some(info.id.clone()),
+            pid: info.pid,
+            role: role.clone(),
+            provider: "claude".into(),
+            state: AgentState::Starting,
+            context: None,
+        },
     );
-    let _ = st.app.emit("pane-open", json!({ "info": &info, "key": key, "role": role, "provider": "claude", "project": p.id }));
+    let _ = st.app.emit(
+        "pane-open",
+        json!({ "info": &info, "key": key, "role": role, "provider": "claude", "project": p.id }),
+    );
     let _ = st.app.emit("projects-changed", ());
     Ok(info.id)
 }
 
 /// Sends a message to a project's orchestrator, starting its pane if needed.
 #[tauri::command]
-pub fn orchestrator_say(st: State<'_, Shared>, text: String, project: Option<String>) -> Result<String, String> {
+pub fn orchestrator_say(
+    st: State<'_, Shared>,
+    text: String,
+    project: Option<String>,
+) -> Result<String, String> {
     let p = st.pick(project.as_deref())?;
     let key = p.orch_key();
-    let existing = st.agents.read().get(&key).and_then(|a| a.pane.clone()).filter(|x| st.panes.get(x).is_ok());
+    let existing = st
+        .agents
+        .read()
+        .get(&key)
+        .and_then(|a| a.pane.clone())
+        .filter(|x| st.panes.get(x).is_ok());
     if let Some(pane) = existing {
         // Bracketed paste keeps multi-line messages in one prompt, then submit.
-        let data = format!("{}{}{}", "\u{1b}[200~", text.replace("\r\n", "\n"), "\u{1b}[201~\r");
-        st.panes.write(&pane, data.as_bytes()).map_err(|e| e.to_string())?;
+        let data = format!(
+            "{}{}{}",
+            "\u{1b}[200~",
+            text.replace("\r\n", "\n"),
+            "\u{1b}[201~\r"
+        );
+        st.panes
+            .write(&pane, data.as_bytes())
+            .map_err(|e| e.to_string())?;
         return Ok(pane);
     }
-    spawn_claude(st.inner(), &p, &key, "orchestrateur", Some("orchestrator"), None, Some(text))
+    spawn_claude(
+        st.inner(),
+        &p,
+        &key,
+        "orchestrateur",
+        Some("orchestrator"),
+        None,
+        Some(text),
+    )
 }
 
 fn threads_of(st: &Shared, project: Option<&str>) -> Option<Arc<harnes_threads::Threads>> {
@@ -182,27 +282,56 @@ fn threads_of(st: &Shared, project: Option<&str>) -> Option<Arc<harnes_threads::
 }
 
 #[tauri::command]
-pub fn threads_list(st: State<'_, Shared>, status: String, project: Option<String>) -> Result<Value, String> {
-    let Some(t) = threads_of(st.inner(), project.as_deref()) else { return Ok(json!([])) };
-    t.list(&status, None, 200).map(|l| json!(l)).map_err(|e| e.to_string())
+pub fn threads_list(
+    st: State<'_, Shared>,
+    status: String,
+    project: Option<String>,
+) -> Result<Value, String> {
+    let Some(t) = threads_of(st.inner(), project.as_deref()) else {
+        return Ok(json!([]));
+    };
+    t.list(&status, None, 200)
+        .map(|l| json!(l))
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn thread_read(st: State<'_, Shared>, id: String, project: Option<String>) -> Result<Value, String> {
-    let Some(t) = threads_of(st.inner(), project.as_deref()) else { return Ok(json!({"thread": null, "messages": []})) };
+pub fn thread_read(
+    st: State<'_, Shared>,
+    id: String,
+    project: Option<String>,
+) -> Result<Value, String> {
+    let Some(t) = threads_of(st.inner(), project.as_deref()) else {
+        return Ok(json!({"thread": null, "messages": []}));
+    };
     let th = t.get(&id).map_err(|e| e.to_string())?;
     let msgs = t.read(&id, 0, 1000).map_err(|e| e.to_string())?;
     Ok(json!({"thread": th, "messages": msgs}))
 }
 
 #[tauri::command]
-pub fn thread_post(st: State<'_, Shared>, id: String, body: String, project: Option<String>) -> Result<(), String> {
+pub fn thread_post(
+    st: State<'_, Shared>,
+    id: String,
+    body: String,
+    project: Option<String>,
+) -> Result<(), String> {
     let t = threads_of(st.inner(), project.as_deref()).ok_or("aucun projet ouvert")?;
-    t.post(&id, "user", "message", &body).map(|_| ()).map_err(|e| e.to_string())
+    t.post(&id, "user", "message", &body)
+        .map(|_| ())
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn threads_recent(st: State<'_, Shared>, since: i64, project: Option<String>) -> Result<Value, String> {
-    let Some(t) = threads_of(st.inner(), project.as_deref()) else { return Ok(json!([])) };
-    t.recent(since, 40).map(|l| json!(l)).map_err(|e| e.to_string())
+pub fn threads_recent(
+    st: State<'_, Shared>,
+    since: i64,
+    project: Option<String>,
+) -> Result<Value, String> {
+    let Some(t) = threads_of(st.inner(), project.as_deref()) else {
+        return Ok(json!([]));
+    };
+    t.recent(since, 40)
+        .map(|l| json!(l))
+        .map_err(|e| e.to_string())
 }

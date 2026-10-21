@@ -54,7 +54,11 @@ impl SessionFile {
     pub fn migrate(mut self) -> Self {
         if self.version < 2 {
             if let Some(root) = self.project.take() {
-                self.projects = vec![ProjectRecord { root: root.clone(), panes: std::mem::take(&mut self.panes), crew: self.crew.take() }];
+                self.projects = vec![ProjectRecord {
+                    root: root.clone(),
+                    panes: std::mem::take(&mut self.panes),
+                    crew: self.crew.take(),
+                }];
                 self.active = Some(root);
             }
             self.version = 2;
@@ -64,7 +68,11 @@ impl SessionFile {
 }
 
 fn path(st: &Shared) -> Option<PathBuf> {
-    st.app.path().app_data_dir().ok().map(|d| d.join("session.json"))
+    st.app
+        .path()
+        .app_data_dir()
+        .ok()
+        .map(|d| d.join("session.json"))
 }
 
 /// Current workspace. Crew agents are not recorded: the engine resumes them from the run directory.
@@ -80,24 +88,49 @@ pub fn snapshot(st: &Shared) -> SessionFile {
             let panes = all_panes
                 .iter()
                 .filter(|x| owners.get(&x.id) == Some(&p.id))
-                .filter_map(|x| match agents.values().find(|a| a.pane.as_deref() == Some(x.id.as_str())) {
-                    Some(a) if a.key == p.orch_key() || a.key.starts_with("claude-") => Some(PaneRecord {
-                        kind: if a.key == p.orch_key() { "orchestrator".into() } else { "claude".into() },
-                        title: x.title.clone(),
-                        cwd: x.cwd.clone(),
-                        key: Some(a.key.clone()),
-                        session: st.hooks.registry.session_of(&a.key),
-                        provider: Some(a.provider.clone()),
-                        context: a.context.clone(),
-                    }),
-                    Some(_) => None, // crew agent
-                    None => Some(PaneRecord { kind: "shell".into(), title: x.title.clone(), cwd: x.cwd.clone(), ..Default::default() }),
+                .filter_map(|x| {
+                    match agents
+                        .values()
+                        .find(|a| a.pane.as_deref() == Some(x.id.as_str()))
+                    {
+                        Some(a) if a.key == p.orch_key() || a.key.starts_with("claude-") => {
+                            Some(PaneRecord {
+                                kind: if a.key == p.orch_key() {
+                                    "orchestrator".into()
+                                } else {
+                                    "claude".into()
+                                },
+                                title: x.title.clone(),
+                                cwd: x.cwd.clone(),
+                                key: Some(a.key.clone()),
+                                session: st.hooks.registry.session_of(&a.key),
+                                provider: Some(a.provider.clone()),
+                                context: a.context.clone(),
+                            })
+                        }
+                        Some(_) => None, // crew agent
+                        None => Some(PaneRecord {
+                            kind: "shell".into(),
+                            title: x.title.clone(),
+                            cwd: x.cwd.clone(),
+                            ..Default::default()
+                        }),
+                    }
                 })
                 .collect();
-            ProjectRecord { root: p.root.display().to_string(), panes, crew: p.crew.task.lock().clone() }
+            ProjectRecord {
+                root: p.root.display().to_string(),
+                panes,
+                crew: p.crew.task.lock().clone(),
+            }
         })
         .collect();
-    SessionFile { version: 2, projects, active: st.active().map(|p| p.root.display().to_string()), ..Default::default() }
+    SessionFile {
+        version: 2,
+        projects,
+        active: st.active().map(|p| p.root.display().to_string()),
+        ..Default::default()
+    }
 }
 
 fn write(path: &PathBuf, f: &SessionFile) {
@@ -135,8 +168,12 @@ pub fn save_now(st: &Shared) {
 /// Restores every project of the last session. Best-effort per piece.
 pub async fn restore(st: Shared) {
     let Some(p) = path(&st) else { return };
-    let Ok(raw) = std::fs::read_to_string(&p) else { return };
-    let Ok(file) = serde_json::from_str::<SessionFile>(&raw).map(SessionFile::migrate) else { return };
+    let Ok(raw) = std::fs::read_to_string(&p) else {
+        return;
+    };
+    let Ok(file) = serde_json::from_str::<SessionFile>(&raw).map(SessionFile::migrate) else {
+        return;
+    };
     let (mut opened, mut panes, mut runs, mut errors) = (0, 0, 0, vec![]);
     for rec in &file.projects {
         let project = match projects::open(&st, &rec.root, false, false).await {
@@ -153,20 +190,62 @@ pub async fn restore(st: Shared) {
                 // Non-Claude sessions cannot be resumed natively: restart them from their last hand-off.
                 "orchestrator" | "claude" if provider != "claude" => {
                     let key = pr.key.clone().unwrap_or_else(|| project.orch_key());
-                    let prompt = pr.context.as_deref().map(harnes_crew::context::resume_prompt).unwrap_or_else(|| "Reprends le travail en cours du projet.".into());
-                    switch::spawn_on(&st, &project, &key, &pr.title, &provider, prompt, pr.context.clone()).is_ok()
+                    let prompt = pr
+                        .context
+                        .as_deref()
+                        .map(harnes_crew::context::resume_prompt)
+                        .unwrap_or_else(|| "Reprends le travail en cours du projet.".into());
+                    switch::spawn_on(
+                        &st,
+                        &project,
+                        &key,
+                        &pr.title,
+                        &provider,
+                        prompt,
+                        pr.context.clone(),
+                    )
+                    .is_ok()
                 }
-                "orchestrator" => crew_ctl::spawn_claude(&st, &project, &project.orch_key(), "orchestrateur", Some("orchestrator"), pr.session.as_deref(), None).is_ok(),
+                "orchestrator" => crew_ctl::spawn_claude(
+                    &st,
+                    &project,
+                    &project.orch_key(),
+                    "orchestrateur",
+                    Some("orchestrator"),
+                    pr.session.as_deref(),
+                    None,
+                )
+                .is_ok(),
                 "claude" => {
-                    let key = pr.key.clone().unwrap_or_else(|| format!("claude-{}", crate::commands::short_id()));
-                    crew_ctl::spawn_claude(&st, &project, &key, &pr.title, None, pr.session.as_deref(), None).is_ok()
+                    let key = pr
+                        .key
+                        .clone()
+                        .unwrap_or_else(|| format!("claude-{}", crate::commands::short_id()));
+                    crew_ctl::spawn_claude(
+                        &st,
+                        &project,
+                        &key,
+                        &pr.title,
+                        None,
+                        pr.session.as_deref(),
+                        None,
+                    )
+                    .is_ok()
                 }
                 _ => {
-                    let cwd = Some(PathBuf::from(&pr.cwd)).filter(|d| d.is_dir()).unwrap_or_else(|| project.root.clone());
-                    match st.panes.spawn(SpawnSpec { cwd: Some(cwd), ..shell_spec(&pr.title) }) {
+                    let cwd = Some(PathBuf::from(&pr.cwd))
+                        .filter(|d| d.is_dir())
+                        .unwrap_or_else(|| project.root.clone());
+                    match st.panes.spawn(SpawnSpec {
+                        cwd: Some(cwd),
+                        ..shell_spec(&pr.title)
+                    }) {
                         Ok(info) => {
                             st.tag_pane(&info.id, &project.id);
-                            let _ = st.app.emit("pane-open", serde_json::json!({ "info": info, "project": project.id }));
+                            let _ = st.app.emit(
+                                "pane-open",
+                                serde_json::json!({ "info": info, "project": project.id }),
+                            );
                             true
                         }
                         Err(_) => false,
@@ -176,7 +255,14 @@ pub async fn restore(st: Shared) {
             panes += ok as usize;
         }
         if let Some((run, task)) = &rec.crew {
-            runs += crew_ctl::start_crew(&st, &project, task.clone(), Some(run.clone()), Default::default()).is_ok() as usize;
+            runs += crew_ctl::start_crew(
+                &st,
+                &project,
+                task.clone(),
+                Some(run.clone()),
+                Default::default(),
+            )
+            .is_ok() as usize;
         }
     }
     if let Some(active) = &file.active {
@@ -186,7 +272,10 @@ pub async fn restore(st: Shared) {
         }
     }
     let _ = st.app.emit("projects-changed", ());
-    let _ = st.app.emit("restore", serde_json::json!({ "projects": opened, "panes": panes, "runs": runs, "errors": errors }));
+    let _ = st.app.emit(
+        "restore",
+        serde_json::json!({ "projects": opened, "panes": panes, "runs": runs, "errors": errors }),
+    );
 }
 
 #[cfg(test)]

@@ -66,6 +66,124 @@ export interface CrewEvent {
   gate?: Gate;
 }
 
+export interface TraceItem {
+  id: string;
+  at: number;
+  kind: string;
+  role: string;
+  lot?: string | null;
+  tool?: string | null;
+  path?: string | null;
+  command?: string | null;
+  status?: string | null;
+  summary: string;
+  evidence: string[];
+}
+
+export interface Decision {
+  at: number;
+  kind: string;
+  id: string;
+  action: string;
+  reason: string;
+  by: string;
+}
+
+export interface MemoryItem {
+  id: number;
+  title: string;
+  status: string;
+  kind: string;
+  confidence: number;
+  evidence: string[];
+}
+
+export interface MemoryCandidate extends MemoryItem {
+  project: string;
+  run: string;
+  body: string;
+  applicability: string;
+  tags: string[];
+  source: string;
+  created_at: number;
+  reviewed_at?: number | null;
+  review_reason?: string | null;
+}
+
+export interface UsageView {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+  cost_usd: number;
+  requests: number;
+}
+
+/** `harnes.view.v1`: typed cards, never model-generated HTML. */
+export interface RunView {
+  schema: "harnes.view.v1";
+  run: string;
+  task: string;
+  phase: string;
+  started_at: number;
+  plan: { lots: { id: string; title: string; instructions: string; files?: string[] }[] } | null;
+  reviews: Review[];
+  gate: Gate | null;
+  metrics: { mode: string; eco: boolean; rounds: number; passed: boolean; important: number; nits: number; pre_existing: number; resolved: Record<string, number> } | null;
+  trace: TraceItem[];
+  findings: { rule: string; severity: string; message: string; evidence: string[] }[];
+  usage: UsageView;
+  decisions: Decision[];
+  memory: MemoryItem[];
+  files: string[];
+}
+
+export interface HarnessSpec {
+  version: number;
+  role: string;
+  provider: string;
+  components: {
+    system_prompt: string;
+    guardrails: string;
+    memory: string;
+    tool_guidance: string;
+    subagents: string[];
+    skills: string[];
+    scripts: string[];
+    plugins: string[];
+  };
+  budgets: { always_on_tokens: number; on_demand_tokens: number };
+  provenance: string;
+}
+
+export interface EvalCheck {
+  name: string;
+  command: string;
+  exit: number | null;
+  passed: boolean;
+  timed_out: boolean;
+  duration_ms: number;
+  stdout_tail: string;
+  stderr_tail: string;
+}
+
+export interface EvalResult {
+  schema: "harnes.eval.v1";
+  suite: string;
+  started_at: number;
+  duration_ms: number;
+  passed: boolean;
+  passed_tasks: number;
+  total_tasks: number;
+  tasks: { id: string; title: string; passed: boolean; checks: EvalCheck[] }[];
+}
+
+export interface EvalSuite {
+  name: string;
+  description: string;
+  tasks: { id: string; title: string; prompt: string; checks: unknown[]; timeout_secs: number }[];
+}
+
 export interface Stats {
   proxy: {
     requests: number;
@@ -205,6 +323,35 @@ export const api = {
   switchProvider: (id: string, provider: string) => invoke<string>("pane_switch_provider", { id, provider }),
   crewCancel: () => invoke<void>("crew_cancel"),
   stats: () => invoke<Stats>("stats"),
+
+  // Typed run view, trace, review-gated memory, eval and harness policy.
+  runView: (run?: string) => invoke<RunView>("run_view", { run }),
+  traceEvents: (params: { run?: string; kind?: string; role?: string; path?: string; limit?: number } = {}) =>
+    invoke<TraceItem[]>("trace_events", params),
+  traceRuns: () => invoke<[string, number, number][]>("trace_runs"),
+  traceSummary: (run: string) => invoke<Record<string, unknown>>("trace_summary", { run }),
+  runDecide: (run: string, kind: string, id: string, action: string, reason: string) =>
+    invoke<unknown>("run_decide", { run, kind, id, action, reason }),
+  memoryCandidates: (status = "candidate", run?: string, limit = 50) =>
+    invoke<MemoryCandidate[]>("memory_candidates", { status, run, limit }),
+  memoryRecords: (limit = 100) => invoke<MemoryItem[]>("memory_records", { limit }),
+  memoryStats: () => invoke<{ candidates: number; pending: number; approved: number; rejected: number; records: number }>("memory_stats"),
+  memoryReview: (id: number, decision: "approve" | "reject", reason?: string, title?: string, body?: string) =>
+    invoke<MemoryCandidate>("memory_review", { id, decision, reason, title, body }),
+  memoryPropose: (input: { title: string; body: string; kind?: string; applicability?: string; tags?: string[]; evidence?: string[]; confidence?: number }) =>
+    invoke<MemoryCandidate>("memory_propose", input),
+  harnessGet: () => invoke<{ spec: HarnessSpec; components: Record<string, unknown>; path: string }>("harness_get"),
+  harnessSave: (spec: HarnessSpec) => invoke<{ ok: boolean; spec: HarnessSpec }>("harness_save", { spec }),
+  guardsGet: () => invoke<unknown>("guards_get"),
+  guardsSave: (guards: unknown) => invoke<{ ok: boolean }>("guards_save", { guards }),
+  guardsReload: () => invoke<{ ok: boolean }>("guards_reload"),
+  evalList: () => invoke<EvalSuite[]>("eval_list"),
+  evalRun: (suite?: string) => invoke<{ result: EvalResult; path: string; ledger: unknown }>("eval_run", { suite }),
+  tunePlan: (component = "worker", suite = "smoke", model = "sonnet") =>
+    invoke<{ plan: unknown; path: string }>("tune_plan", { component, suite, model }),
+  worktreeList: () => invoke<{ lot: string; branch: string; path: string; base: string }[]>("worktree_list"),
+  worktreeRemove: (run: string, lot: string, force = false) => invoke<{ ok: boolean }>("worktree_remove", { run, lot, force }),
+  handoffs: () => invoke<{ name: string; path: string; modified: number }[]>("handoffs"),
 };
 
 /** Subscribes to binary frames: (paneId, frameBytes). */

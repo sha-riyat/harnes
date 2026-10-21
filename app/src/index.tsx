@@ -5,6 +5,7 @@ import "./lookout.css";
 import "./methods.css";
 import "./threads.css";
 import "./interaction.css";
+import "./run.css";
 
 async function main() {
   // Dev-only: ?mock fakes the Tauri backend to work on the UI in a browser.

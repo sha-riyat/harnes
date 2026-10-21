@@ -1,0 +1,47 @@
+/* Typed run view: dense, auditable cards. No decorative chrome. */
+.runview { flex: 1; display: flex; flex-direction: column; min-height: 0; width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+.run-head { display: flex; align-items: flex-end; gap: 18px; min-height: 76px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.run-head h1 { margin: 4px 0 3px; font-size: 17px; font-weight: 600; line-height: 1.3; }
+.run-head .dim { font-family: var(--mono); font-size: 11px; }
+.run-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 14px 0 28px; }
+.run-empty { margin: 40px 0; color: var(--muted); }
+.run-figures { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border: 1px solid var(--line); }
+.run-figures .figure { padding: 10px 12px; border-right: 1px solid var(--line); }
+.run-figures .figure:last-child { border-right: 0; }
+.run-card { border: 1px solid var(--line); background: var(--bg); }
+.run-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-height: 32px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.run-card > p, .run-card > .run-list, .run-card > .run-lots, .run-card > .run-trace, .run-card > .run-memory, .run-card > .run-review { margin: 12px; }
+.run-summary { margin: 12px; white-space: pre-wrap; line-height: 1.55; }
+.run-list { padding-left: 16px; }
+.run-list li { margin: 3px 0; }
+.run-list li.err { color: var(--danger, #b43); }
+.run-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 12px; }
+.run-reason { flex: 1; min-width: 160px; height: 28px; padding: 0 8px; border: 1px solid var(--line-strong); background: transparent; color: var(--text); font-family: var(--mono); font-size: 11px; }
+.run-select { height: 28px; padding: 0 8px; border: 1px solid var(--line-strong); background: transparent; color: var(--text); font-family: var(--mono); font-size: 11px; }
+.run-review { padding: 10px 0; border-top: 1px solid var(--line); }
+.run-review:first-child { border-top: 0; padding-top: 0; }
+.run-review-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.run-fix, .run-commit { margin: 6px 0; font-size: 12.5px; line-height: 1.45; }
+.run-lots { padding-left: 18px; }
+.run-lots li { margin: 8px 0; }
+.run-lots p { margin: 3px 0; font-size: 12.5px; white-space: pre-wrap; }
+.run-memory { padding: 10px 0; border-top: 1px solid var(--line); }
+.run-memory:first-of-type { border-top: 0; }
+.run-memory p { margin: 5px 0; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; }
+.run-trace { list-style: none; margin: 12px; padding: 0; max-height: 460px; overflow-y: auto; font-family: var(--mono); font-size: 11px; }
+.run-trace li { display: grid; grid-template-columns: 66px 150px minmax(0, 1fr) auto; gap: 8px; padding: 4px 0; border-top: 1px solid var(--line); align-items: baseline; }
+.run-trace li.err .trace-kind { color: var(--danger, #b43); }
+.trace-time, .trace-kind { color: var(--faint); }
+.trace-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trace-what code { margin-left: 6px; color: var(--text-2); }
+.trace-what code.cmd { color: var(--muted); }
+.run-eval { margin: 0 12px 12px; font-family: var(--mono); font-size: 11px; }
+.run-eval p { margin: 5px 0; }
+.run-eval p.err { color: var(--danger, #b43); }
+.run-eval code { font-size: 11px; }
+@media (max-width: 900px) {
+  .runview { padding: 0 14px; }
+  .run-figures { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .run-trace li { grid-template-columns: 58px minmax(0, 1fr) auto; }
+  .run-trace .trace-kind { display: none; }
+}

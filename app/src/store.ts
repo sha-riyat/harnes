@@ -20,7 +20,7 @@ export const [stats, setStats] = createSignal<Stats | null>(null);
 export const [focused, setFocused] = createSignal<string | null>(null);
 export const [maximized, setMaximized] = createSignal<string | null>(null);
 /** Main area: conversation with the orchestrator, terminals grid, or every agent on the machine. */
-export const [view, setView] = createSignal<"chat" | "panes" | "agents" | "os">("chat");
+export const [view, setView] = createSignal<"chat" | "run" | "panes" | "agents" | "os">("chat");
 /** Terminals docked under the main view, opened on demand (they stay hidden otherwise). */
 export const [dockTabs, setDockTabs] = createSignal<string[]>([]);
 /** The docked terminal shown; null folds the dock away. */

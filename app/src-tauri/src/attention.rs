@@ -3,7 +3,11 @@
 //! and the orchestrator conversation.
 
 use crate::state::Shared;
-use harnes_crew::{context, permissions::Decision, screen};
+use harnes_crew::{
+    context,
+    permissions::{Ask, Decision},
+    screen,
+};
 use parking_lot::Mutex;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -15,17 +19,57 @@ use tauri::{Emitter, State};
 #[derive(Default)]
 pub struct Prompts(Mutex<HashMap<String, (Option<screen::ScreenPrompt>, bool)>>);
 
+/// Records a permission request or answer next to the agent's run, so the
+/// trace and the findings agree with what the user saw in the UI.
+fn record_ask(st: &Shared, ask: &Ask, kind: &str, status: &str, summary: String) {
+    let Some(p) = st.project_of_key(&ask.agent) else {
+        return;
+    };
+    let role = st
+        .agents
+        .read()
+        .get(&ask.agent)
+        .map(|a| a.role.clone())
+        .unwrap_or_default();
+    let run = p.run_slot.lock().clone().unwrap_or_default();
+    let _ = p.telemetry.append(
+        harnes_telemetry::Event::new(&run, &p.id, kind)
+            .role(role)
+            .tool(ask.tool.clone())
+            .status(status)
+            .summary(summary)
+            .detail(ask.input.clone())
+            .evidence(vec![ask.id.clone()]),
+    );
+}
+
 /// Forwards new permission requests to the UI.
 pub fn install(st: &Shared) {
     let app = st.app.clone();
-    st.hooks.permissions.set_sink(std::sync::Arc::new(move |ask| {
-        let _ = app.emit("permission-request", ask);
-    }));
+    let shared = st.clone();
+    st.hooks
+        .permissions
+        .set_sink(std::sync::Arc::new(move |ask| {
+            record_ask(
+                &shared,
+                ask,
+                "approval.requested",
+                "pending",
+                ask.summary.clone(),
+            );
+            let _ = app.emit("permission-request", ask);
+        }));
 }
 
 /// Runs on every fresh frame of an agent pane (from the frame pump).
 pub fn on_frame(st: &Shared, prompts: &Prompts, pane: &str, text: &str) {
-    let Some((key, project)) = st.agents.read().values().find(|a| a.pane.as_deref() == Some(pane)).map(|a| (a.key.clone(), a.project.clone())) else {
+    let Some((key, project)) = st
+        .agents
+        .read()
+        .values()
+        .find(|a| a.pane.as_deref() == Some(pane))
+        .map(|a| (a.key.clone(), a.project.clone()))
+    else {
         return;
     };
     let found = screen::detect(text);
@@ -35,7 +79,10 @@ pub fn on_frame(st: &Shared, prompts: &Prompts, pane: &str, text: &str) {
     }
     seen.insert(pane.to_string(), (found.clone(), false));
     drop(seen);
-    let _ = st.app.emit("screen-prompt", json!({ "pane": pane, "agent": key, "project": project, "prompt": found }));
+    let _ = st.app.emit(
+        "screen-prompt",
+        json!({ "pane": pane, "agent": key, "project": project, "prompt": found }),
+    );
 }
 
 #[tauri::command]
@@ -44,8 +91,32 @@ pub fn permissions_pending(st: State<'_, Shared>) -> Value {
 }
 
 #[tauri::command]
-pub fn permission_answer(st: State<'_, Shared>, id: String, decision: Decision) -> Result<(), String> {
+pub fn permission_answer(
+    st: State<'_, Shared>,
+    id: String,
+    decision: Decision,
+) -> Result<(), String> {
+    let ask = st
+        .hooks
+        .permissions
+        .pending()
+        .into_iter()
+        .find(|a| a.id == id);
     if st.hooks.permissions.answer(&id, decision) {
+        if let Some(ask) = ask {
+            let (kind, status, label) = match decision {
+                Decision::Allow => ("approval.granted", "allowed", "accordée"),
+                Decision::Always => ("approval.granted", "allowed", "toujours autorisée"),
+                Decision::Deny => ("approval.denied", "denied", "refusée"),
+            };
+            record_ask(
+                &st,
+                &ask,
+                kind,
+                status,
+                format!("{} — {label}", ask.summary),
+            );
+        }
         Ok(())
     } else {
         Err("demande expirée : réponds dans le terminal de l'agent".into())
@@ -62,7 +133,9 @@ pub fn screen_prompts(st: State<'_, Shared>, prompts: State<'_, Prompts>) -> Val
         .iter()
         .filter_map(|(pane, (p, answered))| {
             let p = p.as_ref().filter(|_| !answered)?;
-            let a = agents.values().find(|a| a.pane.as_deref() == Some(pane.as_str()))?;
+            let a = agents
+                .values()
+                .find(|a| a.pane.as_deref() == Some(pane.as_str()))?;
             Some(json!({ "pane": pane, "agent": a.key, "project": a.project, "prompt": p }))
         })
         .collect();
@@ -71,13 +144,22 @@ pub fn screen_prompts(st: State<'_, Shared>, prompts: State<'_, Prompts>) -> Val
 
 /// Sends the chosen answer's keys to the agent's terminal.
 #[tauri::command]
-pub fn screen_answer(st: State<'_, Shared>, prompts: State<'_, Prompts>, pane: String, keys: String) -> Result<(), String> {
+pub fn screen_answer(
+    st: State<'_, Shared>,
+    prompts: State<'_, Prompts>,
+    pane: String,
+    keys: String,
+) -> Result<(), String> {
     // One key per write, a beat apart: terminal UIs (Ink) read a burst of
     // escape sequences as one unknown key.
     let mut tokens = vec![];
     let mut rest = keys.as_str();
     while let Some(c) = rest.chars().next() {
-        let n = if rest.starts_with("\u{1b}[") { 3.min(rest.len()) } else { c.len_utf8() };
+        let n = if rest.starts_with("\u{1b}[") {
+            3.min(rest.len())
+        } else {
+            c.len_utf8()
+        };
         tokens.push(rest[..n].to_string());
         rest = &rest[n..];
     }

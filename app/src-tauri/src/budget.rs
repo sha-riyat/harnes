@@ -10,12 +10,19 @@ use serde_json::{json, Value};
 use tauri::State;
 
 fn now() -> u64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 /// The freshest limits any project's proxy has seen.
 pub fn limits(st: &Shared) -> Option<Limits> {
-    st.projects.read().iter().filter_map(|p| p.proxy.snapshot().limits).max_by_key(|l| l.seen)
+    st.projects
+        .read()
+        .iter()
+        .filter_map(|p| p.proxy.snapshot().limits)
+        .max_by_key(|l| l.seen)
 }
 
 pub fn pace(st: &Shared) -> Option<Pace> {
@@ -26,12 +33,19 @@ pub fn pace(st: &Shared) -> Option<Pace> {
 pub fn blocked(st: &Shared) -> Option<String> {
     let l = limits(st)?;
     let t = now();
-    (l.five_hour >= 1.0 && l.five_hour_reset > t).then(|| format!("limite des 5 h atteinte : reprise dans {} min", (l.five_hour_reset - t).div_ceil(60)))
+    (l.five_hour >= 1.0 && l.five_hour_reset > t).then(|| {
+        format!(
+            "limite des 5 h atteinte : reprise dans {} min",
+            (l.five_hour_reset - t).div_ceil(60)
+        )
+    })
 }
 
 #[tauri::command]
 pub fn budget_get(st: State<'_, Shared>) -> Value {
-    let Some(l) = limits(st.inner()) else { return json!(null) };
+    let Some(l) = limits(st.inner()) else {
+        return json!(null);
+    };
     let p = Pace::new(l.seven_day, l.seven_day_reset, l.five_hour, now());
     json!({ "limits": l, "week_elapsed": p.week_elapsed, "eco": p.eco() })
 }

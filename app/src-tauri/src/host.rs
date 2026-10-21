@@ -13,27 +13,65 @@ pub fn agent_env(p: &Project, key: &str) -> Vec<(String, String)> {
         ("ENABLE_TOOL_SEARCH".into(), "true".into()),
         ("HARNES_AGENT".into(), key.into()),
         ("HARNES_PROJECT".into(), p.id.clone()),
+        ("HARNES_PROJECT_ROOT".into(), p.root.display().to_string()),
         ("ANTHROPIC_BASE_URL".into(), p.proxy.url()),
-        ("HARNES_OS_DIR".into(), harnes_os::default_dir().display().to_string()),
+        (
+            "HARNES_OS_DIR".into(),
+            harnes_os::default_dir().display().to_string(),
+        ),
     ]
 }
 
 pub struct PaneHost(pub Shared, pub Providers, pub Arc<Project>);
 
 impl AgentHost for PaneHost {
-    fn spawn(&self, key: &str, role: Role, prompt: &str, settings: &Path, tune: Option<Tune>) -> anyhow::Result<String> {
+    fn spawn(
+        &self,
+        key: &str,
+        role: Role,
+        prompt: &str,
+        settings: &Path,
+        tune: Option<Tune>,
+    ) -> anyhow::Result<String> {
+        self.spawn_in(key, role, prompt, settings, tune, None)
+    }
+
+    fn spawn_in(
+        &self,
+        key: &str,
+        role: Role,
+        prompt: &str,
+        settings: &Path,
+        tune: Option<Tune>,
+        cwd: Option<&Path>,
+    ) -> anyhow::Result<String> {
         let (st, p) = (&self.0, &self.2);
         let mut launch = self.1.launch(role, prompt, settings)?;
         // The run's mode or the week's pace can pick another model than the role's own.
         if let (Some(t), "claude") = (tune, launch.provider.as_str()) {
             let at = launch.args.len().saturating_sub(1); // before the prompt
-            launch.args.splice(at..at, ["--model".into(), t.model.into(), "--effort".into(), t.effort.into()]);
+            launch.args.splice(
+                at..at,
+                [
+                    "--model".into(),
+                    t.model.into(),
+                    "--effort".into(),
+                    t.effort.into(),
+                ],
+            );
         }
+        let dir = cwd
+            .map(|c| c.to_path_buf())
+            .unwrap_or_else(|| p.root.clone());
         let info = st.panes.spawn(SpawnSpec {
-            title: key.split_once('-').map(|(_, n)| n).unwrap_or(key).to_string(),
+            title: key
+                .split_once('-')
+                .map(|(_, n)| n)
+                .unwrap_or(key)
+                .to_string(),
             program: launch.program,
             args: launch.args,
-            cwd: Some(p.root.clone()),
+            cwd: Some(dir),
             env: agent_env(p, key),
             cols: 120,
             rows: 32,
@@ -58,14 +96,19 @@ impl AgentHost for PaneHost {
     }
 
     fn has_hooks(&self, role: Role) -> bool {
-        self.1.launch(role, "", Path::new("")).map(|l| l.hooks).unwrap_or(true)
+        self.1
+            .launch(role, "", Path::new(""))
+            .map(|l| l.hooks)
+            .unwrap_or(true)
     }
 
     fn close(&self, pane: &str) {
         let st = &self.0;
         // Keep the pane a moment so the user sees the final message.
         let (shared, pane) = (st.clone(), pane.to_string());
-        st.agents.write().retain(|_, a| a.pane.as_deref() != Some(pane.as_str()));
+        st.agents
+            .write()
+            .retain(|_, a| a.pane.as_deref() != Some(pane.as_str()));
         tauri::async_runtime::spawn(async move {
             tokio::time::sleep(std::time::Duration::from_secs(4)).await;
             let _ = shared.panes.close(&pane);
