@@ -248,6 +248,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bstr"
+version = "1.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bb31b46c14244e20ee9984b11bf5c992b91fb6939fea616e3512c8baecdbe5f"
+dependencies = [
+ "memchr",
+ "serde_core",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1371,6 +1381,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4eba85ea1d0a966a983acd07deee566e67395d2d96b6fb39e62b5a833f1eb0b"
 
 [[package]]
+name = "globset"
+version = "0.4.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07c34a9410465b45bd9787443bc7370f37735bad04b0f0cd57ff1a3186c98988"
+dependencies = [
+ "aho-corasick",
+ "bstr",
+ "log",
+ "regex-automata",
+ "regex-syntax",
+]
+
+[[package]]
 name = "gobject-sys"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1440,11 +1463,16 @@ dependencies = [
  "anyhow",
  "harnes-crew",
  "harnes-ctx",
+ "harnes-eval",
+ "harnes-guards",
  "harnes-lookout",
+ "harnes-memory",
  "harnes-os",
  "harnes-proxy",
  "harnes-pty",
+ "harnes-telemetry",
  "harnes-threads",
+ "harnes-worktree",
  "parking_lot",
  "serde",
  "serde_json",
@@ -1464,8 +1492,12 @@ dependencies = [
  "axum",
  "futures-util",
  "harnes-e2e",
+ "harnes-guards",
+ "harnes-memory",
  "harnes-os",
+ "harnes-telemetry",
  "harnes-threads",
+ "harnes-worktree",
  "parking_lot",
  "serde",
  "serde_json",
@@ -1478,6 +1510,7 @@ name = "harnes-ctx"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "harnes-memory",
  "harnes-os",
  "harnes-threads",
  "parking_lot",
@@ -1502,6 +1535,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "harnes-eval"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "wait-timeout",
+]
+
+[[package]]
+name = "harnes-guards"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "globset",
+ "harnes-telemetry",
+ "regex",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "harnes-lookout"
 version = "0.1.0"
 dependencies = [
@@ -1509,6 +1565,18 @@ dependencies = [
  "serde",
  "serde_json",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "harnes-memory"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "harnes-telemetry",
+ "parking_lot",
+ "rusqlite",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1552,6 +1620,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "harnes-telemetry"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "parking_lot",
+ "regex",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "harnes-threads"
 version = "0.1.0"
 dependencies = [
@@ -1567,6 +1648,15 @@ name = "harnes-vt"
 version = "0.1.0"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "harnes-worktree"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -4726,6 +4816,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb067e4cbd1ff067d1df46c9194b5de0e98efd2810bbc95c5d5e5f25a3231150"
 dependencies = [
  "cc",
+ "libc",
+]
+
+[[package]]
+name = "wait-timeout"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09ac3b126d3914f9849036f826e054cbabdc8519970b8998ddaf3b5bd3c65f11"
+dependencies = [
  "libc",
 ]
 

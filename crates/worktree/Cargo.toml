@@ -1,0 +1,11 @@
+[package]
+name = "harnes-worktree"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Git worktrees per crew lot: isolated branches, commit, merge and cleanup"
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true

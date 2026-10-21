@@ -1,0 +1,15 @@
+[package]
+name = "harnes-telemetry"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Unified, redacted event log for harnes runs (JSONL + SQLite index)"
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rusqlite.workspace = true
+parking_lot.workspace = true
+sha2.workspace = true
+regex.workspace = true

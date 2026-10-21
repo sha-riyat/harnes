@@ -17,6 +17,10 @@ futures-util.workspace = true
 harnes-e2e.workspace = true
 harnes-threads.workspace = true
 harnes-os.workspace = true
+harnes-telemetry.workspace = true
+harnes-memory.workspace = true
+harnes-worktree.workspace = true
+harnes-guards.workspace = true
 
 [dev-dependencies]
 harnes-threads.workspace = true

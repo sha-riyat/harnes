@@ -10,6 +10,11 @@ members = [
     "crates/lookout",
     "crates/threads",
     "crates/os",
+    "crates/telemetry",
+    "crates/guards",
+    "crates/worktree",
+    "crates/memory",
+    "crates/eval",
     "app/src-tauri",
 ]
 
@@ -35,6 +40,9 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 rusqlite = { version = "0.37", features = ["bundled"] }
 portable-pty = "0.9"
 sha2 = "0.10"
+regex = "1"
+globset = "0.4"
+serde_yaml = "0.9"
 harnes-vt = { path = "crates/vt" }
 harnes-pty = { path = "crates/pty" }
 harnes-proxy = { path = "crates/proxy" }
@@ -44,6 +52,11 @@ harnes-e2e = { path = "crates/e2e" }
 harnes-lookout = { path = "crates/lookout" }
 harnes-threads = { path = "crates/threads" }
 harnes-os = { path = "crates/os" }
+harnes-telemetry = { path = "crates/telemetry" }
+harnes-guards = { path = "crates/guards" }
+harnes-worktree = { path = "crates/worktree" }
+harnes-memory = { path = "crates/memory" }
+harnes-eval = { path = "crates/eval" }
 
 [profile.release]
 lto = "thin"

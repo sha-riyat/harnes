@@ -1,0 +1,18 @@
+[package]
+name = "harnes-guards"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Native runtime guards for harnes: protected paths, dangerous commands, secret egress and correlation findings"
+
+[[bin]]
+name = "harnes-hook"
+path = "src/bin/harnes-hook.rs"
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+regex.workspace = true
+globset.workspace = true
+harnes-telemetry.workspace = true
