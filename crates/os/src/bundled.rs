@@ -11,9 +11,15 @@ const MARKER: &str = ".bundled";
 /// Installs the bundled packs once per harnes build. Packs the user imported
 /// stay; a bundled pack replaces its older copy. Returns installed ids.
 pub fn install_bundled(lib: &Library) -> Result<Vec<String>> {
-    let stamp = BUNDLED.iter().map(|(n, b)| format!("{n}:{}", b.len())).collect::<Vec<_>>().join("\n");
+    let stamp = BUNDLED
+        .iter()
+        .map(|(n, b)| format!("{n}:{}", b.len()))
+        .collect::<Vec<_>>()
+        .join("\n");
     let marker = lib.dir.join(MARKER);
-    if std::fs::read_to_string(&marker).ok().as_deref() == Some(stamp.as_str()) && !lib.list().is_empty() {
+    if std::fs::read_to_string(&marker).ok().as_deref() == Some(stamp.as_str())
+        && !lib.list().is_empty()
+    {
         return Ok(Vec::new());
     }
     std::fs::create_dir_all(&lib.dir)?;
@@ -36,11 +42,42 @@ mod tests {
 
     #[test]
     fn installs_every_bundled_pack_once() {
-        let lib = Library::new(std::env::temp_dir().join(format!("harnes-os-bundled-{}", std::process::id())));
+        let lib = Library::new(
+            std::env::temp_dir().join(format!("harnes-os-bundled-{}", std::process::id())),
+        );
         let _ = std::fs::remove_dir_all(&lib.dir);
         let first = install_bundled(&lib).unwrap();
         assert_eq!(first.len(), BUNDLED.len());
         assert!(lib.list().iter().any(|p| p.id == "orchestration-os"));
+        let packs = lib.list();
+        let eng = packs
+            .iter()
+            .find(|p| p.id == "ecc-engineering-os")
+            .expect("ECC engineering pack");
+        assert_eq!(eng.skills.len(), 48);
+        assert!(eng.playbooks.contains(&"bugfix-loop".to_string()));
+        assert!(eng.rules.contains(&"tests-before-done".to_string()));
+        assert!(eng.provenance.contains("MIT"));
+        assert_eq!(
+            packs
+                .iter()
+                .find(|p| p.id == "ecc-security-os")
+                .unwrap()
+                .skills
+                .len(),
+            9
+        );
+        assert_eq!(
+            packs
+                .iter()
+                .find(|p| p.id == "ecc-agent-os")
+                .unwrap()
+                .skills
+                .len(),
+            23
+        );
+        let brief = lib.brief("ecc-engineering-os").unwrap();
+        assert!(brief.contains("skills/tdd-workflow/SKILL.md") && brief.contains("PROVENANCE"));
         assert!(install_bundled(&lib).unwrap().is_empty());
         let _ = std::fs::remove_dir_all(&lib.dir);
     }

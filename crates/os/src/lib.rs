@@ -35,6 +35,15 @@ pub struct Pack {
     pub skills: Vec<String>,
     #[serde(default, skip_deserializing)]
     pub agents: Vec<String>,
+    /// Playbooks shipped by the pack (markdown, extension stripped).
+    #[serde(default, skip_deserializing)]
+    pub playbooks: Vec<String>,
+    /// Non-negotiable rule files shipped by the pack.
+    #[serde(default, skip_deserializing)]
+    pub rules: Vec<String>,
+    /// Where the pack comes from, its license and pinned revision.
+    #[serde(default)]
+    pub provenance: String,
     /// Crew roles that load this pack by default.
     #[serde(default, skip_deserializing)]
     pub roles: Vec<String>,
@@ -79,7 +88,12 @@ fn names(dir: &Path, want_dir: bool) -> Vec<String> {
         .flatten()
         .flatten()
         .filter(|e| e.path().is_dir() == want_dir)
-        .map(|e| e.file_name().to_string_lossy().trim_end_matches(".md").to_string())
+        .map(|e| {
+            e.file_name()
+                .to_string_lossy()
+                .trim_end_matches(".md")
+                .to_string()
+        })
         .collect();
     v.sort();
     v
@@ -96,23 +110,37 @@ impl Library {
 
     /// Installed packs, sorted by id. Folders without a manifest are skipped.
     pub fn list(&self) -> Vec<Pack> {
-        let mut out: Vec<Pack> = names(&self.dir, true).iter().filter_map(|n| self.pack(n).ok()).collect();
+        let mut out: Vec<Pack> = names(&self.dir, true)
+            .iter()
+            .filter_map(|n| self.pack(n).ok())
+            .collect();
         out.sort_by(|a, b| a.id.cmp(&b.id));
         out
     }
 
     pub fn pack(&self, id: &str) -> Result<Pack> {
         let root = self.root(id)?;
-        let text = std::fs::read_to_string(root.join("manifest.yaml")).map_err(|_| anyhow!("unknown pack {id}"))?;
+        let text = std::fs::read_to_string(root.join("manifest.yaml"))
+            .map_err(|_| anyhow!("unknown pack {id}"))?;
         let mut p: Pack = serde_yaml::from_str(&text)?;
         p.skills = names(&root.join("skills"), true);
         p.agents = names(&root.join("agents"), false);
-        p.roles = ROLES.iter().filter(|(_, ids)| ids.contains(&p.id.as_str())).map(|(r, _)| r.to_string()).collect();
+        p.playbooks = names(&root.join("playbooks"), false);
+        p.rules = names(&root.join("rules"), false);
+        p.roles = ROLES
+            .iter()
+            .filter(|(_, ids)| ids.contains(&p.id.as_str()))
+            .map(|(r, _)| r.to_string())
+            .collect();
         Ok(p)
     }
 
     fn root(&self, id: &str) -> Result<PathBuf> {
-        if id.is_empty() || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+        if id.is_empty()
+            || !id
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        {
             bail!("bad pack id {id:?}");
         }
         Ok(self.dir.join(id))
@@ -134,9 +162,36 @@ impl Library {
         let p = self.pack(id)?;
         let os = self.read(id, "OS.md").unwrap_or_default();
         let oracle = self.read(id, "oracle/ORACLE.md").unwrap_or_default();
-        let principles = self.read(id, "knowledge/first-principles.md").unwrap_or_default();
-        let skills = p.skills.iter().map(|s| format!("- {s}: os_read(\"{id}\", \"skills/{s}/SKILL.md\")")).collect::<Vec<_>>().join("\n");
-        Ok(format!("{os}\n\n{oracle}\n\n{principles}\n\n## Skills\n{skills}\n").trim().to_string())
+        let principles = self
+            .read(id, "knowledge/first-principles.md")
+            .unwrap_or_default();
+        let skills = p
+            .skills
+            .iter()
+            .map(|s| format!("- {s}: os_read(\"{id}\", \"skills/{s}/SKILL.md\")"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let playbooks = p
+            .playbooks
+            .iter()
+            .map(|s| format!("- {s}: os_read(\"{id}\", \"playbooks/{s}.md\")"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let rules = p
+            .rules
+            .iter()
+            .map(|s| format!("- {s}: os_read(\"{id}\", \"rules/{s}.md\")"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let provenance = if p.provenance.is_empty() {
+            String::new()
+        } else {
+            format!(
+                "\n## Provenance\n{}\nVoir PROVENANCE.md et NOTICE.\n",
+                p.provenance
+            )
+        };
+        Ok(format!("{os}\n\n{oracle}\n\n{principles}\n\n## Skills\n{skills}\n\n## Playbooks\n{playbooks}\n\n## Rules\n{rules}\n{provenance}").trim().to_string())
     }
 
     pub(crate) fn intents(&self, id: &str) -> Vec<Intent> {
@@ -160,7 +215,11 @@ impl Library {
              `os_route(\"texte\")` trouve le pack et la skill adaptés ; `os_read(id, chemin)` lit une skill, un playbook ou un workflow.\n\n",
         );
         for (role, ids) in ROLES {
-            let have: Vec<&str> = ids.iter().copied().filter(|i| packs.iter().any(|p| p.id == *i)).collect();
+            let have: Vec<&str> = ids
+                .iter()
+                .copied()
+                .filter(|i| packs.iter().any(|p| p.id == *i))
+                .collect();
             if !have.is_empty() {
                 s.push_str(&format!("- {role} : {}\n", have.join(", ")));
             }
@@ -168,6 +227,16 @@ impl Library {
         s.push('\n');
         for p in &packs {
             s.push_str(&format!("- `{}` : {}\n", p.id, p.purpose));
+            if !p.playbooks.is_empty() || !p.rules.is_empty() {
+                s.push_str(&format!(
+                    "  playbooks : {} · règles : {}\n",
+                    p.playbooks.join(", "),
+                    p.rules.join(", ")
+                ));
+            }
+            if !p.provenance.is_empty() {
+                s.push_str(&format!("  provenance : {}\n", p.provenance));
+            }
         }
         s
     }
@@ -189,7 +258,11 @@ pub(crate) mod tests {
         std::fs::write(p.join("OS.md"), "# Builder OS\n").unwrap();
         std::fs::write(p.join("oracle/ORACLE.md"), "## Refuse\n- hero rewrites\n").unwrap();
         std::fs::write(p.join("routing/intents.yaml"), "os: builder-os\nintents:\n  - id: review\n    match: \"review this diff|PR review\"\n    route: skill:review-diff\n").unwrap();
-        std::fs::write(p.join("skills/review-diff/SKILL.md"), "# Skill: review-diff\n").unwrap();
+        std::fs::write(
+            p.join("skills/review-diff/SKILL.md"),
+            "# Skill: review-diff\n",
+        )
+        .unwrap();
         Library::new(dir)
     }
 

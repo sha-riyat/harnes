@@ -6,12 +6,54 @@ use serde::Serialize;
 /// Default packs per crew role. Product packs (brand, pricing, offer…) are
 /// not bound to a role: agents reach them through `os_route`.
 pub const ROLES: &[(&str, &[&str])] = &[
-    ("orchestrator", &["orchestration-os", "agent-os", "team-delegation-os", "decision-os"]),
-    ("planner", &["project-os", "stepper-os", "blueprint-os", "execution-os"]),
-    ("worker", &["builder-os", "tool-integration-os", "documentation-os"]),
-    ("reviewer", &["quality-evaluation-os", "security-os", "builder-os"]),
+    (
+        "orchestrator",
+        &[
+            "orchestration-os",
+            "agent-os",
+            "team-delegation-os",
+            "decision-os",
+            "ecc-agent-os",
+        ],
+    ),
+    (
+        "planner",
+        &[
+            "project-os",
+            "stepper-os",
+            "blueprint-os",
+            "execution-os",
+            "ecc-agent-os",
+        ],
+    ),
+    (
+        "worker",
+        &[
+            "builder-os",
+            "tool-integration-os",
+            "documentation-os",
+            "ecc-engineering-os",
+        ],
+    ),
+    (
+        "reviewer",
+        &[
+            "quality-evaluation-os",
+            "security-os",
+            "builder-os",
+            "ecc-security-os",
+            "ecc-engineering-os",
+        ],
+    ),
     ("teacher", &["validation-os", "quality-evaluation-os"]),
-    ("scout", &["market-research-os", "customer-discovery-os", "documentation-os"]),
+    (
+        "scout",
+        &[
+            "market-research-os",
+            "customer-discovery-os",
+            "documentation-os",
+        ],
+    ),
 ];
 
 /// Installed packs for a role.
@@ -20,7 +62,12 @@ pub fn for_role(lib: &Library, role: &str) -> Vec<String> {
     ROLES
         .iter()
         .find(|(r, _)| *r == role)
-        .map(|(_, ids)| ids.iter().filter(|i| installed.iter().any(|p| p.id == **i)).map(|i| i.to_string()).collect())
+        .map(|(_, ids)| {
+            ids.iter()
+                .filter(|i| installed.iter().any(|p| p.id == **i))
+                .map(|i| i.to_string())
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -65,18 +112,33 @@ impl Library {
             let bonus = purpose.iter().filter(|w| tw.contains(w)).count() as f32 * 0.05;
             for i in self.intents(&p.id) {
                 let mut best = 0f32;
-                for phrase in i.pattern.split('|').map(str::trim).filter(|s| !s.is_empty()) {
+                for phrase in i
+                    .pattern
+                    .split('|')
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                {
                     let score = if low.contains(&phrase.to_lowercase()) {
                         1.0
                     } else {
                         let pw = words(phrase);
-                        if pw.is_empty() { 0.0 } else { pw.iter().filter(|w| tw.contains(w)).count() as f32 / pw.len() as f32 * 0.8 }
+                        if pw.is_empty() {
+                            0.0
+                        } else {
+                            pw.iter().filter(|w| tw.contains(w)).count() as f32 / pw.len() as f32
+                                * 0.8
+                        }
                     };
                     best = best.max(score);
                 }
                 let score = (best + bonus).min(1.0);
                 if score > 0.15 {
-                    hits.push(Hit { os: p.id.clone(), intent: i.id.clone(), route: i.route.clone(), score });
+                    hits.push(Hit {
+                        os: p.id.clone(),
+                        intent: i.id.clone(),
+                        route: i.route.clone(),
+                        score,
+                    });
                 }
             }
         }
