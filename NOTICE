@@ -1,0 +1,21 @@
+harnes
+Copyright (c) 2026 sha-riyat
+
+This product includes a curated subset of ECC — Everything Claude Code,
+Copyright (c) 2026 Affaan Mustafa, licensed under the MIT License.
+Upstream: https://github.com/affaan-m/ECC
+Pinned revision: 90606c8315ee09cafc303515c5f33024db6b9882
+The MIT permission notice is included in each ECC pack as LICENSE-ECC.
+
+The review-gated memory method is informed by Beacon
+(https://github.com/Asymptote-Labs/agent-beacon, MIT). No Beacon code or binary
+is bundled.
+
+The harness evaluation and tuning method is informed by Harness 2.0
+(https://github.com/google-research/harness2, Copyright Google LLC, Apache
+License 2.0). No Harness 2.0 source code or benchmark data is bundled.
+
+OpenUI and CopilotKit are not bundled and are not runtime dependencies.
+
+See THIRD_PARTY.md for details and for the attribution rules applied to future
+copies or modifications.

@@ -38,7 +38,8 @@ Claude Code est le runtime par défaut. Chaque rôle peut aussi tourner sur Code
 | **Tests e2e** | Specs YAML, étapes `act` en langage naturel résolues par les agents, rejeu sans modèle | `harnes-e2e` |
 | **Tous les agents** | Vue de toute la machine : sessions Claude Code, Codex, Gemini CLI et fichiers de statut | `harnes-lookout` |
 | **Équipage** | Planner → Teacher → Workers → Reviewer → gate du Teacher | `harnes-crew` |
-| **Méthodes** | 24 packs OS (doctrine, oracle, skills, routage) livrés dans harnes, chargés par rôle | `harnes-os` |
+| **Méthodes** | 27 packs OS (doctrine, oracle, skills, routage), dont 80 skills ECC sélectionnées, chargés par rôle | `harnes-os` |
+| **Plan de contrôle** | Journal d'événements, vue de run typée, gardes, worktrees, mémoire revue par un humain, évals et HarnessSpec | `harnes-telemetry` `harnes-guards` `harnes-memory` `harnes-eval` |
 
 Ponytail, Caveman et TasteSkill v2 (`design-taste-frontend`) restent des skills Claude Code.
 
@@ -118,7 +119,7 @@ Tout ce qui vit est dessiné en ASCII animé, sur une seule boucle partagée qui
 
 - **Le chat d'abord.** La vue principale est le chat avec l'orchestrateur. Son terminal reste caché ; sa transcription Claude devient des messages en vrai Markdown (gras, listes, code, citations), avec une ligne mono par appel d'outil.
 - **Le champ.** Une vue vide se remplit d'un champ de caractères qui occupe tout le centre et s'élargit quand les panneaux latéraux se ferment. Il passe par 23 motifs, organiques et géométriques en alternance : nuages, plan en train de se dessiner, messages qui s'écrivent, trame, courants, tore en rotation, réseau de nœuds, tuiles de Truchet, ondes, spécimens typographiques, signaux d'oscilloscope, moiré, courbes de niveau, traceur, nuée d'oiseaux, formes Bauhaus, vortex, grille de mise en page, aurore, phyllotaxie, pluie, nuanciers et marées. Chacun se dissout dans le suivant le long d'un front bruité, et le champ se brouille sous le pointeur.
-- **Vues.** `chat`, `methods` (les packs OS) et `machine` (tous les agents de l'ordinateur). La grille de terminaux est dans la palette (`Ctrl K`).
+- **Vues.** `chat`, `run` (la trace typée, la gate, les revues, la mémoire et l'éval), `methods` (les packs OS) et `machine` (tous les agents de l'ordinateur). La grille de terminaux est dans la palette (`Ctrl K`).
 - **Terminaux en dock.** Un terminal ne s'ouvre que si vous le demandez, dans un dock sous la vue principale : un onglet par terminal, redimensionnable, replié en un clic. Les couleurs du terminal suivent le thème clair ou sombre.
 - **Permissions en cartes.** Chaque agent reçoit un hook Claude Code `PermissionRequest` bloquant. La demande s'affiche en *Allow · Always · Deny* ; votre réponse devient la décision du hook. Sans réponse en 10 minutes environ, Claude Code revient à sa propre invite.
 - **Questions lues à l'écran.** Comme un agent computer-use lit un arbre d'accessibilité, harnes lit la grille Ghostty de chaque agent, repère les menus numérotés et les invites `(y/n)`, et les affiche en cartes. Votre choix repart en flèches puis Entrée, une touche à la fois.
@@ -139,18 +140,18 @@ SQLite plutôt qu'un backend hébergé comme Convex : une seule machine, hors li
 
 ## Méthodes
 
-harnes livre 24 packs OS dans son binaire (`crates/os/packs`) et les installe dans `%APPDATA%\dev.harnes.app\os` une fois par build. Chaque pack est une méthode : une doctrine (`OS.md`), un oracle de règles par défaut et de refus non négociables, des principes premiers, des skills avec schémas, des playbooks, des workflows, un routage par intention et des évaluations.
+harnes livre 27 packs OS dans son binaire (`crates/os/packs`) et les installe dans `%APPDATA%\dev.harnes.app\os` une fois par build. Chaque pack est une méthode : une doctrine (`OS.md`), un oracle de règles par défaut et de refus non négociables, des principes premiers, des skills avec schémas, des playbooks, des règles, un routage par intention et des évaluations.
 
 | Rôle | Packs |
 |---|---|
-| orchestrator | orchestration, agent, team-delegation, decision |
-| planner | project, stepper, blueprint, execution |
-| workers | builder, tool-integration, documentation |
-| reviewer | quality-evaluation, security, builder |
+| orchestrator | orchestration, agent, team-delegation, decision, ecc-agent |
+| planner | project, stepper, blueprint, execution, ecc-agent |
+| workers | builder, tool-integration, documentation, ecc-engineering |
+| reviewer | quality-evaluation, security, builder, ecc-security, ecc-engineering |
 | teacher | validation, quality-evaluation |
 | scouts | market-research, customer-discovery, documentation |
 
-Les packs produit (brand, pricing, offer, positioning, design…) sont chargés à la demande.
+Les trois packs `ecc-*` ajoutent 80 skills sélectionnées d'[ECC](https://github.com/affaan-m/ECC) (MIT) : 48 ingénierie, 9 sécurité et 23 agents, copiées telles quelles à un commit épinglé. C'est une sélection, pas le catalogue complet de 311 skills. Chaque pack contient `LICENSE-ECC`, `NOTICE` et `PROVENANCE.md`. Les packs produit (brand, pricing, offer, positioning, design…) sont chargés à la demande ; voir [THIRD_PARTY.md](THIRD_PARTY.md) pour toutes les attributions.
 
 <details>
 <summary>Outils et import</summary>
@@ -168,6 +169,19 @@ harnes-ctx os-import PATH
 
 Les projets ouverts sont rééquipés immédiatement.
 </details>
+
+## Plan de contrôle
+
+La vue de run est typée (`harnes.view.v1`), jamais du HTML généré par le modèle. Elle lit `.harnes/` et réunit les preuves et les décisions :
+
+- **Trace et usage.** Chaque hook, appel d'outil, commande, fichier et token devient un événement dans `.harnes/telemetry.db` et `.harnes/telemetry/events.jsonl` (`harnes.event.v1`). Les secrets sont caviardés avant stockage.
+- **Gardes.** `.harnes/guards.json` contient des règles allow/ask/deny. Le garde natif `harnes __hook` (ou `harnes-hook` seul) le lit avant chaque appel d'outil, signale l'événement et continue de fonctionner si le cockpit est fermé. `PermissionRequest` reste une décision humaine bloquante.
+- **Worktrees.** Chaque lot travaille dans `.harnes/worktrees/<run>/<lot>` sur `harnes/<run>/<lot>`. Les fusions sont en `--no-ff` ; un conflit annule la fusion, conserve le worktree et attend un humain. Aucune réécriture d'historique.
+- **Mémoire.** Un run propose des candidats adossés à des preuves ; seul un humain peut en promouvoir un. `HARNES_MEMORY_REVIEW=1` active l'outil de revue et `HARNES_MEMORY_WRITE=0` désactive les écritures.
+- **HarnessSpec et évals.** `.harnes/harness.json` décrit les huit composants du harnais et ses budgets. `.harnes/evals/*.yaml` contient les suites déterministes ; les résultats vont dans `.harnes/evals/results/` et `.harnes/eval-ledger.json`.
+- **Réglage.** `tune_plan` propose un balayage d'un seul composant après une baseline ; on garde un changement seulement si la même suite gagne ou reste neutre. Il n'appelle jamais de modèle lui-même.
+
+Contrats, fichiers et exemples complets : [docs/control-plane.md](docs/control-plane.md).
 
 ## Projets
 
@@ -238,10 +252,15 @@ crates/e2e      harnes-e2e : specs, navigateur CDP, cache de rejeu, exécuteur, 
 crates/lookout  sessions d'agents de la machine : adaptateurs, événements, historique
 crates/threads  fils des agents (SQLite) : runs, lots, questions, historique
 crates/os       packs OS : zips livrés, import, index, routage par rôle
-crates/crew     installation, hooks, fournisseurs, moteur d'équipage, passages de contexte, contrats JSON
+crates/telemetry  journal d'événements : schéma, caviardage, index SQLite, résumés
+crates/guards   politique runtime, `harnes-hook` natif, findings a posteriori
+crates/worktree worktrees git par lot, fusion prudente, conflits conservés
+crates/memory   candidats revus par un humain et mémoire approuvée
+crates/eval     suites déterministes, résultats, ledger, plans de réglage
+crates/crew     installation, hooks, fournisseurs, HarnessSpec, vues typées, passations
 app/            app Tauri 2 (src-tauri) + interface SolidJS
 template/       agents (orchestrator, planner, teacher, worker, reviewer, scout), réglages, CLAUDE.md
-docs/           les animations de cette page
+docs/           les animations de cette page et les contrats du plan de contrôle
 site/           le site (anglais et français) et le logo
 ```
 </details>
@@ -274,4 +293,5 @@ npm run app:build  # release + installateur NSIS
 - `harnes-ctx` tient les sorties hors du contexte du modèle. Ce n'est pas un bac à sable de sécurité.
 - La compression du proxy est déterministe : le cache des prompts continue de fonctionner.
 - harnes-e2e et harnes-lookout sont des implémentations indépendantes inspirées de TesterArmy e2e (Apache-2.0) et agent-lookout (MIT). Aucun code de ces projets n'est inclus.
+- Les 80 skills ECC sont sous MIT et livrées avec leur licence et leur provenance. Beacon (MIT) a inspiré la mémoire revue par un humain et Harness 2.0 (Apache-2.0) la méthode de harnais et d'évaluation ; aucun code de ces projets n'est livré. OpenUI et CopilotKit ne sont pas des dépendances. Voir [THIRD_PARTY.md](THIRD_PARTY.md) et [NOTICE](NOTICE).
 - L'API de libghostty-vt évolue encore. `crates/vt/shim/hv.c` est le seul fichier à adapter.

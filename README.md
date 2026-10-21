@@ -38,7 +38,8 @@ Claude Code is the default runtime. Each role can also run on Codex, Gemini CLI 
 | **e2e tests** | YAML specs, natural-language `act` steps resolved by the agents, model-free replay | `harnes-e2e` |
 | **Every agent** | Machine-wide view of Claude Code, Codex, Gemini CLI and status-file sessions | `harnes-lookout` |
 | **Crew** | Planner → Teacher → Workers → Reviewer → Teacher gate | `harnes-crew` |
-| **Methods** | 24 OS packs (doctrine, oracle, skills, routing) shipped inside harnes, loaded by role | `harnes-os` |
+| **Methods** | 27 OS packs (doctrine, oracle, skills, routing), including 80 curated ECC skills, loaded by role | `harnes-os` |
+| **Control plane** | Event log, typed run view, guards, worktrees, review-gated memory, evals and harness specs | `harnes-telemetry` `harnes-guards` `harnes-memory` `harnes-eval` |
 
 Ponytail, Caveman and TasteSkill v2 (`design-taste-frontend`) remain Claude Code skills.
 
@@ -118,7 +119,7 @@ Everything that lives is drawn in animated ASCII, on one shared loop that runs o
 
 - **Chat first.** The main view is the chat with the orchestrator. Its terminal stays hidden; its Claude transcript becomes messages with real Markdown (bold, lists, code, quotes), and one mono line per tool call.
 - **The field.** An empty view fills with a field of characters that takes the whole centre and widens when the side panels close. It moves through 23 motifs, organic and geometric in turn: clouds, a blueprint being drawn, typing messages, halftone, currents, a turning torus, a node network, Truchet tiles, ripples, type specimens, oscilloscope signals, moiré, contours, a pen plotter, a murmuration, Bauhaus shapes, a vortex, a layout grid, aurora, phyllotaxis, rain, swatches and tides. Each dissolves into the next along a noisy front, and the field scrambles under the pointer.
-- **Views.** `chat`, `methods` (the OS packs) and `machine` (every agent on the computer). The terminal grid is in the palette (`Ctrl K`).
+- **Views.** `chat`, `run` (the typed trace, gate, reviews, memory and eval), `methods` (the OS packs) and `machine` (every agent on the computer). The terminal grid is in the palette (`Ctrl K`).
 - **Docked terminals.** A terminal opens only when you ask, in a dock under the main view: one tab per terminal, resizable, folded away in one click. Terminal colours follow the light or dark theme.
 - **Permissions as cards.** Each agent gets a blocking Claude Code `PermissionRequest` hook. The request shows as *Allow · Always · Deny*; your answer is the hook's decision. Without an answer within about 10 minutes, Claude Code falls back to its own prompt.
 - **Questions read from the screen.** Like a computer-use agent reading an accessibility tree, harnes reads each agent's Ghostty grid, finds numbered menus and `(y/n)` prompts, and shows them as cards. Your choice goes back as arrow keys and Enter, one key at a time.
@@ -139,18 +140,18 @@ SQLite rather than a hosted backend such as Convex: one machine, offline, no ext
 
 ## Methods
 
-harnes ships 24 OS packs inside its binary (`crates/os/packs`) and installs them into `%APPDATA%\dev.harnes.app\os` once per build. Each pack is a method: a doctrine (`OS.md`), an oracle of non-negotiable defaults and refusals, first principles, skills with schemas, playbooks, workflows, intent routing and evals.
+harnes ships 27 OS packs inside its binary (`crates/os/packs`) and installs them into `%APPDATA%\dev.harnes.app\os` once per build. Each pack is a method: a doctrine (`OS.md`), an oracle of non-negotiable defaults and refusals, first principles, skills with schemas, playbooks, rules, intent routing and evals.
 
 | Role | Packs |
 |---|---|
-| orchestrator | orchestration, agent, team-delegation, decision |
-| planner | project, stepper, blueprint, execution |
-| workers | builder, tool-integration, documentation |
-| reviewer | quality-evaluation, security, builder |
+| orchestrator | orchestration, agent, team-delegation, decision, ecc-agent |
+| planner | project, stepper, blueprint, execution, ecc-agent |
+| workers | builder, tool-integration, documentation, ecc-engineering |
+| reviewer | quality-evaluation, security, builder, ecc-security, ecc-engineering |
 | teacher | validation, quality-evaluation |
 | scouts | market-research, customer-discovery, documentation |
 
-Product packs (brand, pricing, offer, positioning, design…) are reached on demand.
+The three `ecc-*` packs add 80 curated skills from [ECC](https://github.com/affaan-m/ECC) (MIT): 48 engineering, 9 security and 23 agent skills, copied verbatim at a pinned commit. They are a selection, not the full 311-skill catalogue. Each pack carries `LICENSE-ECC`, `NOTICE` and `PROVENANCE.md`. Product packs (brand, pricing, offer, positioning, design…) are reached on demand; see [THIRD_PARTY.md](THIRD_PARTY.md) for all attributions.
 
 <details>
 <summary>Tools and import</summary>
@@ -168,6 +169,19 @@ harnes-ctx os-import PATH
 
 Open projects are re-equipped straight away.
 </details>
+
+## Control plane
+
+The run view is typed (`harnes.view.v1`), never model-generated HTML. It reads `.harnes/` and gives you the evidence and the decisions in one place:
+
+- **Trace and usage.** Every hook, tool call, command, file and token becomes an event in `.harnes/telemetry.db` and `.harnes/telemetry/events.jsonl` (`harnes.event.v1`). Secrets are redacted before storage.
+- **Guards.** `.harnes/guards.json` holds allow/ask/deny rules. The native `harnes __hook` (or the standalone `harnes-hook`) reads it before every tool call, reports the event and still works if the cockpit is closed. `PermissionRequest` stays a blocking human decision.
+- **Worktrees.** Each lot runs in `.harnes/worktrees/<run>/<lot>` on `harnes/<run>/<lot>`. Merges are `--no-ff`; a conflict aborts the merge, keeps the worktree and waits for a human. No history rewrite.
+- **Memory.** A run proposes evidence-backed candidates; only a human can promote one. `HARNES_MEMORY_REVIEW=1` enables the review tool and `HARNES_MEMORY_WRITE=0` disables writes.
+- **HarnessSpec and evals.** `.harnes/harness.json` describes the eight harness components and budgets. `.harnes/evals/*.yaml` holds deterministic suites; results go to `.harnes/evals/results/` and `.harnes/eval-ledger.json`.
+- **Tuning.** `tune_plan` proposes a one-component-at-a-time sweep after a baseline; keep a change only when the same suite wins or is neutral. It never calls a model itself.
+
+Full contracts, files and examples: [docs/control-plane.md](docs/control-plane.md).
 
 ## Projects
 
@@ -238,10 +252,15 @@ crates/e2e      harnes-e2e: specs, CDP browser, replay cache, runner, MCP
 crates/lookout  machine-wide agent sessions: adapters, events, history
 crates/threads  agent threads (SQLite): runs, lots, questions, history
 crates/os       OS packs: bundled zips, import, index, routing by role
-crates/crew     setup, hooks, providers, crew engine, context hand-offs, JSON contracts
+crates/telemetry  event log: schema, redaction, SQLite index, summaries
+crates/guards   runtime policy, native `harnes-hook`, post-hoc findings
+crates/worktree per-lot git worktrees, conservative merge/conflict handling
+crates/memory   review-gated candidates and approved project memory
+crates/eval     deterministic suites, results, ledger, tune plans
+crates/crew     setup, hooks, providers, crew engine, harness spec, typed views, hand-offs
 app/            Tauri 2 app (src-tauri) + SolidJS UI
 template/       agents (orchestrator, planner, teacher, worker, reviewer, scout), settings, CLAUDE.md
-docs/           the animations on this page
+docs/           the animations on this page and control-plane contracts
 site/           the website (English and French) and the logo
 ```
 </details>
@@ -274,4 +293,5 @@ npm run app:build  # release + NSIS installer
 - `harnes-ctx` keeps output out of the model context. It is not a security sandbox.
 - Proxy compression is deterministic, so prompt caching keeps working.
 - harnes-e2e and harnes-lookout are independent implementations inspired by TesterArmy e2e (Apache-2.0) and agent-lookout (MIT). No code from either is included.
+- The 80 ECC skills are MIT-licensed and bundled with their license and provenance. Beacon (MIT) informed review-gated memory and Harness 2.0 (Apache-2.0) informed the harness/eval method; neither ships code here. OpenUI and CopilotKit are not dependencies. See [THIRD_PARTY.md](THIRD_PARTY.md) and [NOTICE](NOTICE).
 - libghostty-vt's API still moves. `crates/vt/shim/hv.c` is the only file to adapt.
