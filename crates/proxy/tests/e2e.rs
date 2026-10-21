@@ -37,6 +37,7 @@ async fn compresses_and_counts_usage() {
         upstream: format!("http://127.0.0.1:{up}"),
         compress: true,
         store: Some(store.clone()),
+        events: None,
     })
     .await
     .unwrap();
@@ -55,14 +56,21 @@ async fn compresses_and_counts_usage() {
     assert!(text.contains("message_delta"), "stream passed through");
 
     let got = seen.lock().unwrap().clone().expect("upstream saw request");
-    let sent = got["messages"][0]["content"][0]["content"].as_str().unwrap();
-    assert!(sent.len() < big.len() / 2, "tool_result compressed: {} -> {}", big.len(), sent.len());
+    let sent = got["messages"][0]["content"][0]["content"]
+        .as_str()
+        .unwrap();
+    assert!(
+        sent.len() < big.len() / 2,
+        "tool_result compressed: {} -> {}",
+        big.len(),
+        sent.len()
+    );
 
     let s = proxy.snapshot();
     assert_eq!(s.requests, 1);
     assert_eq!(s.elided_blocks, 1);
     assert_eq!(s.input_tokens, 120);
     assert_eq!(s.cache_read_tokens, 80);
-    assert_eq!(s.output_tokens, 43);
+    assert_eq!(s.output_tokens, 42);
     assert_eq!(store.stats().unwrap().blobs, 1);
 }

@@ -18,7 +18,7 @@ use axum::{
 };
 use futures_util::StreamExt;
 use harnes_ctx::Store;
-use stats::{Stats, StatsSnapshot, UsageTap};
+use stats::{Stats, StatsSnapshot, UsageSink, UsageTap};
 use std::sync::{atomic::Ordering::Relaxed, Arc};
 
 pub const DEFAULT_UPSTREAM: &str = "https://api.anthropic.com";
@@ -29,6 +29,8 @@ pub struct ProxyConfig {
     pub upstream: String,
     pub compress: bool,
     pub store: Option<Arc<Store>>,
+    /// Receives token usage as it streams (telemetry). None disables it.
+    pub events: Option<UsageSink>,
 }
 
 struct Shared {
@@ -60,7 +62,11 @@ pub async fn start(cfg: ProxyConfig) -> Result<ProxyHandle> {
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", cfg.port)).await?;
     let port = listener.local_addr()?.port();
     let stats = Arc::new(Stats::default());
-    let shared = Arc::new(Shared { client: reqwest::Client::builder().build()?, cfg, stats: stats.clone() });
+    let shared = Arc::new(Shared {
+        client: reqwest::Client::builder().build()?,
+        cfg,
+        stats: stats.clone(),
+    });
     let app = Router::new()
         .route("/harnes/stats", get(stats_route))
         .fallback(any(forward))
@@ -77,9 +83,22 @@ async fn stats_route(State(s): State<Arc<Shared>>) -> Json<StatsSnapshot> {
     Json(s.stats.snapshot())
 }
 
-const HOP: [&str; 6] = ["host", "content-length", "connection", "transfer-encoding", "keep-alive", "accept-encoding"];
+const HOP: [&str; 6] = [
+    "host",
+    "content-length",
+    "connection",
+    "transfer-encoding",
+    "keep-alive",
+    "accept-encoding",
+];
 
-async fn forward(State(s): State<Arc<Shared>>, method: Method, uri: Uri, headers: HeaderMap, body: Bytes) -> Response {
+async fn forward(
+    State(s): State<Arc<Shared>>,
+    method: Method,
+    uri: Uri,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
     s.stats.requests.fetch_add(1, Relaxed);
     let path = uri.path_and_query().map(|p| p.as_str()).unwrap_or("/");
     let url = format!("{}{}", s.cfg.upstream.trim_end_matches('/'), path);
@@ -91,11 +110,20 @@ async fn forward(State(s): State<Arc<Shared>>, method: Method, uri: Uri, headers
             if saved.before > 0 {
                 s.stats.bytes_before.fetch_add(saved.before as u64, Relaxed);
                 s.stats.bytes_after.fetch_add(saved.after as u64, Relaxed);
-                s.stats.elided_blocks.fetch_add(saved.elided as u64, Relaxed);
+                s.stats
+                    .elided_blocks
+                    .fetch_add(saved.elided as u64, Relaxed);
                 body = serde_json::to_vec(&json).unwrap_or(body);
             }
         }
     }
+    let model = if method == Method::POST && uri.path().ends_with("/v1/messages") {
+        serde_json::from_slice::<serde_json::Value>(&body)
+            .ok()
+            .and_then(|v| v["model"].as_str().map(str::to_string))
+    } else {
+        None
+    };
 
     let mut req = s.client.request(method, &url).body(body);
     for (k, v) in headers.iter() {
@@ -127,12 +155,14 @@ async fn forward(State(s): State<Arc<Shared>>, method: Method, uri: Uri, headers
         }
     }
     let stats = s.stats.clone();
-    let mut tap = UsageTap::default();
+    let mut tap = UsageTap::new(model, s.cfg.events.clone());
     let stream = upstream.bytes_stream().map(move |chunk| {
         if let Ok(c) = &chunk {
             tap.feed(c, &stats);
         }
         chunk
     });
-    builder.body(Body::from_stream(stream)).unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())
+    builder
+        .body(Body::from_stream(stream))
+        .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())
 }
