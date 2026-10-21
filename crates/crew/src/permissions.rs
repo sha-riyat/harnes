@@ -44,7 +44,16 @@ pub struct Broker {
 }
 
 fn summarize(input: &Value) -> String {
-    let pick = ["command", "file_path", "path", "url", "pattern", "description"].iter().find_map(|k| input[*k].as_str());
+    let pick = [
+        "command",
+        "file_path",
+        "path",
+        "url",
+        "pattern",
+        "description",
+    ]
+    .iter()
+    .find_map(|k| input[*k].as_str());
     let s = pick.map(String::from).unwrap_or_else(|| input.to_string());
     let s = s.trim();
     let short: String = s.chars().take(300).collect();
@@ -57,7 +66,12 @@ impl Broker {
     }
 
     pub fn pending(&self) -> Vec<Ask> {
-        let mut v: Vec<Ask> = self.pending.lock().values().map(|(a, ..)| a.clone()).collect();
+        let mut v: Vec<Ask> = self
+            .pending
+            .lock()
+            .values()
+            .map(|(a, ..)| a.clone())
+            .collect();
         v.sort_by_key(|a| a.at);
         v
     }
@@ -76,7 +90,13 @@ impl Broker {
         let tool = payload["tool_name"].as_str().unwrap_or("").to_string();
         let input = payload["tool_input"].clone();
         let suggestions = payload["permission_suggestions"].clone();
-        let id = format!("{:x}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0));
+        let id = format!(
+            "{:x}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        );
         let ask = Ask {
             id: id.clone(),
             agent: agent.into(),
@@ -84,10 +104,15 @@ impl Broker {
             tool,
             input,
             can_remember: suggestions.as_array().is_some_and(|a| !a.is_empty()),
-            at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0),
+            at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0),
         };
         let (tx, rx) = oneshot::channel();
-        self.pending.lock().insert(id.clone(), (ask.clone(), suggestions.clone(), tx));
+        self.pending
+            .lock()
+            .insert(id.clone(), (ask.clone(), suggestions.clone(), tx));
         if let Some(sink) = self.sink.get() {
             sink(&ask);
         }
@@ -107,7 +132,9 @@ pub fn decision_json(d: Decision, suggestions: &Value) -> Value {
             Some(s) => json!({"behavior": "allow", "updatedPermissions": s}),
             None => json!({"behavior": "allow"}),
         },
-        Decision::Deny => json!({"behavior": "deny", "message": "Refusé par l'utilisateur dans harnes."}),
+        Decision::Deny => {
+            json!({"behavior": "deny", "message": "Refusé par l'utilisateur dans harnes."})
+        }
     };
     json!({"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": decision}})
 }

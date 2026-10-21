@@ -76,10 +76,16 @@ fn important() -> String {
 
 impl Fix {
     pub fn blocks(&self) -> bool {
-        !matches!(self.severity.trim().to_lowercase().as_str(), "nit" | "pre-existing" | "preexisting")
+        !matches!(
+            self.severity.trim().to_lowercase().as_str(),
+            "nit" | "pre-existing" | "preexisting"
+        )
     }
     pub fn pre_existing(&self) -> bool {
-        matches!(self.severity.trim().to_lowercase().as_str(), "pre-existing" | "preexisting")
+        matches!(
+            self.severity.trim().to_lowercase().as_str(),
+            "pre-existing" | "preexisting"
+        )
     }
 }
 
@@ -150,8 +156,22 @@ impl Review {
 impl Plan {
     /// A light run's plan: the whole task as one lot.
     pub fn single(task: &str) -> Plan {
-        let lot = Lot { id: "L1".into(), title: task.chars().take(80).collect(), kind: String::new(), files: vec![], instructions: task.into(), acceptance: String::new(), commit: String::new() };
-        Plan { context: String::new(), test_command: None, lots: vec![lot], waves: vec![], risks: None }
+        let lot = Lot {
+            id: "L1".into(),
+            title: task.chars().take(80).collect(),
+            kind: String::new(),
+            files: vec![],
+            instructions: task.into(),
+            acceptance: String::new(),
+            commit: String::new(),
+        };
+        Plan {
+            context: String::new(),
+            test_command: None,
+            lots: vec![lot],
+            waves: vec![],
+            risks: None,
+        }
     }
 
     pub fn lot(&self, id: &str) -> Option<&Lot> {
@@ -164,11 +184,21 @@ impl Plan {
         let mut waves: Vec<Vec<String>> = self
             .waves
             .iter()
-            .map(|w| w.iter().filter(|id| self.lot(id).is_some()).cloned().collect::<Vec<_>>())
+            .map(|w| {
+                w.iter()
+                    .filter(|id| self.lot(id).is_some())
+                    .cloned()
+                    .collect::<Vec<_>>()
+            })
             .filter(|w| !w.is_empty())
             .collect();
         let placed: Vec<&String> = waves.iter().flatten().collect();
-        let missing: Vec<String> = self.lots.iter().map(|l| l.id.clone()).filter(|id| !placed.contains(&id)).collect();
+        let missing: Vec<String> = self
+            .lots
+            .iter()
+            .map(|l| l.id.clone())
+            .filter(|id| !placed.contains(&id))
+            .collect();
         if !missing.is_empty() {
             waves.push(missing);
         }
@@ -206,7 +236,9 @@ pub fn read_json<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<Option<T>>
         .or_else(|| trimmed.strip_prefix("```"))
         .map(|s| s.trim_end().trim_end_matches("```"))
         .unwrap_or(trimmed);
-    serde_json::from_str(body).map(Some).with_context(|| format!("invalid JSON in {}", path.display()))
+    serde_json::from_str(body)
+        .map(Some)
+        .with_context(|| format!("invalid JSON in {}", path.display()))
 }
 
 #[cfg(test)]
@@ -219,21 +251,30 @@ mod tests {
 
     #[test]
     fn waves_fill_in_missing_lots() {
-        let p = plan(r#"{"lots":[{"id":"L1","title":"a","instructions":"x"},{"id":"L2","title":"b","instructions":"y"}],"waves":[["L1","LX"]]}"#);
-        assert_eq!(p.effective_waves(), vec![vec!["L1".to_string()], vec!["L2".to_string()]]);
+        let p = plan(
+            r#"{"lots":[{"id":"L1","title":"a","instructions":"x"},{"id":"L2","title":"b","instructions":"y"}],"waves":[["L1","LX"]]}"#,
+        );
+        assert_eq!(
+            p.effective_waves(),
+            vec![vec!["L1".to_string()], vec!["L2".to_string()]]
+        );
     }
 
     #[test]
     fn only_important_fixes_block() {
         let r: Review = serde_json::from_str(r#"{"verdict":"CHANGES","fixes":[{"lot":"L1","problem":"a","severity":"nit"},{"lot":"L1","problem":"b","severity":"pre-existing"}]}"#).unwrap();
         assert!(r.passed());
-        let r: Review = serde_json::from_str(r#"{"verdict":"CHANGES","fixes":[{"lot":"L1","problem":"a"}]}"#).unwrap();
+        let r: Review =
+            serde_json::from_str(r#"{"verdict":"CHANGES","fixes":[{"lot":"L1","problem":"a"}]}"#)
+                .unwrap();
         assert!(!r.passed() && r.fixes[0].blocks());
     }
 
     #[test]
     fn rejects_shared_files_in_a_wave() {
-        let p = plan(r#"{"lots":[{"id":"L1","title":"a","instructions":"x","files":["src/a.rs"]},{"id":"L2","title":"b","instructions":"y","files":["src\\A.rs"]}],"waves":[["L1","L2"]]}"#);
+        let p = plan(
+            r#"{"lots":[{"id":"L1","title":"a","instructions":"x","files":["src/a.rs"]},{"id":"L2","title":"b","instructions":"y","files":["src\\A.rs"]}],"waves":[["L1","L2"]]}"#,
+        );
         assert!(p.validate().is_err());
     }
 }

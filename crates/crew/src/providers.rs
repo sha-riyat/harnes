@@ -36,16 +36,48 @@ pub struct Providers {
 }
 
 fn spec(program: &str, args: &[&str], hooks: bool) -> ProviderSpec {
-    ProviderSpec { program: program.into(), args: args.iter().map(|s| s.to_string()).collect(), hooks }
+    ProviderSpec {
+        program: program.into(),
+        args: args.iter().map(|s| s.to_string()).collect(),
+        hooks,
+    }
 }
 
 /// Best-effort defaults; override them in `.harnes/providers.json` if a CLI changes its flags.
 pub fn builtin() -> HashMap<String, ProviderSpec> {
     HashMap::from([
-        ("claude".into(), spec("claude", &["--agent", "{agent}", "--permission-mode", "auto", "--settings", "{settings}", "{prompt}"], true)),
-        ("codex".into(), spec("codex", &["--full-auto", "{prompt_with_role}"], false)),
-        ("gemini".into(), spec("gemini", &["--yolo", "--prompt-interactive", "{prompt_with_role}"], false)),
-        ("opencode".into(), spec("opencode", &["--prompt", "{prompt_with_role}"], false)),
+        (
+            "claude".into(),
+            spec(
+                "claude",
+                &[
+                    "--agent",
+                    "{agent}",
+                    "--permission-mode",
+                    "auto",
+                    "--settings",
+                    "{settings}",
+                    "{prompt}",
+                ],
+                true,
+            ),
+        ),
+        (
+            "codex".into(),
+            spec("codex", &["--full-auto", "{prompt_with_role}"], false),
+        ),
+        (
+            "gemini".into(),
+            spec(
+                "gemini",
+                &["--yolo", "--prompt-interactive", "{prompt_with_role}"],
+                false,
+            ),
+        ),
+        (
+            "opencode".into(),
+            spec("opencode", &["--prompt", "{prompt_with_role}"], false),
+        ),
     ])
 }
 
@@ -62,16 +94,24 @@ impl Providers {
     pub fn load(root: &Path) -> Result<Self> {
         let path = root.join(".harnes").join("providers.json");
         let file: ProvidersFile = match std::fs::read_to_string(&path) {
-            Ok(s) => serde_json::from_str(&s).with_context(|| format!("{} invalide", path.display()))?,
+            Ok(s) => {
+                serde_json::from_str(&s).with_context(|| format!("{} invalide", path.display()))?
+            }
             Err(_) => ProvidersFile::default(),
         };
         let mut specs = builtin();
         specs.extend(file.providers);
-        Ok(Self { roles: file.roles, specs })
+        Ok(Self {
+            roles: file.roles,
+            specs,
+        })
     }
 
     pub fn provider_for(&self, role: Role) -> &str {
-        self.roles.get(role.agent()).map(String::as_str).unwrap_or("claude")
+        self.roles
+            .get(role.agent())
+            .map(String::as_str)
+            .unwrap_or("claude")
     }
 
     pub fn names(&self) -> Vec<String> {
@@ -82,7 +122,10 @@ impl Providers {
 
     /// Interactive session on `provider` without a crew role (`--agent` dropped).
     pub fn launch_session(&self, provider: &str, prompt: &str, settings: &Path) -> Result<Launch> {
-        let spec = self.specs.get(provider).with_context(|| format!("fournisseur inconnu : {provider}"))?;
+        let spec = self
+            .specs
+            .get(provider)
+            .with_context(|| format!("fournisseur inconnu : {provider}"))?;
         let mut args = vec![];
         let mut it = spec.args.iter();
         while let Some(a) = it.next() {
@@ -90,14 +133,26 @@ impl Providers {
                 it.next();
                 continue;
             }
-            args.push(a.replace("{settings}", &settings.display().to_string()).replace("{prompt_with_role}", prompt).replace("{prompt}", prompt));
+            args.push(
+                a.replace("{settings}", &settings.display().to_string())
+                    .replace("{prompt_with_role}", prompt)
+                    .replace("{prompt}", prompt),
+            );
         }
-        Ok(Launch { provider: provider.into(), program: spec.program.clone(), args, hooks: spec.hooks })
+        Ok(Launch {
+            provider: provider.into(),
+            program: spec.program.clone(),
+            args,
+            hooks: spec.hooks,
+        })
     }
 
     pub fn launch(&self, role: Role, prompt: &str, settings: &Path) -> Result<Launch> {
         let name = self.provider_for(role).to_string();
-        let spec = self.specs.get(&name).with_context(|| format!("fournisseur inconnu : {name}"))?;
+        let spec = self
+            .specs
+            .get(&name)
+            .with_context(|| format!("fournisseur inconnu : {name}"))?;
         let with_role = format!(
             "Lis et applique les instructions de `.claude/agents/{}.md` (ignore l'en-tête YAML) : c'est ton rôle. {prompt}",
             role.agent()
@@ -112,7 +167,12 @@ impl Providers {
                     .replace("{prompt}", prompt)
             })
             .collect();
-        Ok(Launch { provider: name, program: spec.program.clone(), args, hooks: spec.hooks })
+        Ok(Launch {
+            provider: name,
+            program: spec.program.clone(),
+            args,
+            hooks: spec.hooks,
+        })
     }
 }
 
@@ -129,11 +189,20 @@ mod tests {
         assert_eq!((l.program.as_str(), l.hooks), ("claude", true));
         assert_eq!(l.args.last().unwrap(), "go");
 
-        std::fs::write(dir.join(".harnes/providers.json"), r#"{"roles":{"worker":"codex"}}"#).unwrap();
+        std::fs::write(
+            dir.join(".harnes/providers.json"),
+            r#"{"roles":{"worker":"codex"}}"#,
+        )
+        .unwrap();
         let p = Providers::load(&dir).unwrap();
-        let l = p.launch(Role::Worker, "do L1", Path::new("s.json")).unwrap();
+        let l = p
+            .launch(Role::Worker, "do L1", Path::new("s.json"))
+            .unwrap();
         assert_eq!((l.provider.as_str(), l.hooks), ("codex", false));
-        assert!(l.args.last().unwrap().contains(".claude/agents/worker.md") && l.args.last().unwrap().ends_with("do L1"));
+        assert!(
+            l.args.last().unwrap().contains(".claude/agents/worker.md")
+                && l.args.last().unwrap().ends_with("do L1")
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

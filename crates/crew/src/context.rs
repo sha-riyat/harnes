@@ -13,13 +13,20 @@ const MAX_CHARS: usize = 60_000;
 const TOOL_RESULT_CHARS: usize = 400;
 
 fn home() -> PathBuf {
-    std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")).map(PathBuf::from).unwrap_or_default()
+    std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(PathBuf::from)
+        .unwrap_or_default()
 }
 
 /// Finds `~/.claude/projects/*/<session>.jsonl`.
 pub fn claude_transcript(session: &str) -> Option<PathBuf> {
     let dir = home().join(".claude").join("projects");
-    std::fs::read_dir(dir).ok()?.flatten().map(|d| d.path().join(format!("{session}.jsonl"))).find(|p| p.exists())
+    std::fs::read_dir(dir)
+        .ok()?
+        .flatten()
+        .map(|d| d.path().join(format!("{session}.jsonl")))
+        .find(|p| p.exists())
 }
 
 fn clip(s: &str, max: usize) -> String {
@@ -35,7 +42,9 @@ fn clip(s: &str, max: usize) -> String {
 pub fn export_claude(path: &Path) -> Result<String> {
     let mut out = Vec::new();
     for line in std::fs::read_to_string(path)?.lines() {
-        let Ok(v) = serde_json::from_str::<Value>(line) else { continue };
+        let Ok(v) = serde_json::from_str::<Value>(line) else {
+            continue;
+        };
         if v["isSidechain"].as_bool() == Some(true) {
             continue; // sub-agent internals
         }
@@ -45,17 +54,41 @@ pub fn export_claude(path: &Path) -> Result<String> {
         }
         let content = &v["message"]["content"];
         if let Some(text) = content.as_str() {
-            out.push(format!("**{}** : {}", if role == "user" { "Utilisateur" } else { "Agent" }, text.trim()));
+            out.push(format!(
+                "**{}** : {}",
+                if role == "user" {
+                    "Utilisateur"
+                } else {
+                    "Agent"
+                },
+                text.trim()
+            ));
             continue;
         }
         for b in content.as_array().into_iter().flatten() {
             match b["type"].as_str() {
-                Some("text") => out.push(format!("**{}** : {}", if role == "user" { "Utilisateur" } else { "Agent" }, b["text"].as_str().unwrap_or("").trim())),
-                Some("tool_use") => out.push(format!("> outil `{}` {}", b["name"].as_str().unwrap_or("?"), clip(&b["input"].to_string(), 200))),
+                Some("text") => out.push(format!(
+                    "**{}** : {}",
+                    if role == "user" {
+                        "Utilisateur"
+                    } else {
+                        "Agent"
+                    },
+                    b["text"].as_str().unwrap_or("").trim()
+                )),
+                Some("tool_use") => out.push(format!(
+                    "> outil `{}` {}",
+                    b["name"].as_str().unwrap_or("?"),
+                    clip(&b["input"].to_string(), 200)
+                )),
                 Some("tool_result") => {
                     let text = match &b["content"] {
                         Value::String(s) => s.clone(),
-                        Value::Array(parts) => parts.iter().filter_map(|p| p["text"].as_str()).collect::<Vec<_>>().join(" "),
+                        Value::Array(parts) => parts
+                            .iter()
+                            .filter_map(|p| p["text"].as_str())
+                            .collect::<Vec<_>>()
+                            .join(" "),
                         _ => String::new(),
                     };
                     if !text.trim().is_empty() {
@@ -88,7 +121,9 @@ pub struct ConvItem {
 pub fn conversation_claude(path: &Path, limit: usize) -> Result<Vec<ConvItem>> {
     let mut items = Vec::new();
     for line in std::fs::read_to_string(path)?.lines() {
-        let Ok(v) = serde_json::from_str::<Value>(line) else { continue };
+        let Ok(v) = serde_json::from_str::<Value>(line) else {
+            continue;
+        };
         if v["isSidechain"].as_bool() == Some(true) {
             continue;
         }
@@ -101,7 +136,12 @@ pub fn conversation_claude(path: &Path, limit: usize) -> Result<Vec<ConvItem>> {
         if let Some(text) = content.as_str() {
             // Skip injected command/system wrappers.
             if !text.trim_start().starts_with('<') && !text.trim().is_empty() {
-                items.push(ConvItem { role: role.into(), text: text.trim().into(), tool: None, at });
+                items.push(ConvItem {
+                    role: role.into(),
+                    text: text.trim().into(),
+                    tool: None,
+                    at,
+                });
             }
             continue;
         }
@@ -110,17 +150,41 @@ pub fn conversation_claude(path: &Path, limit: usize) -> Result<Vec<ConvItem>> {
                 Some("text") => {
                     let t = b["text"].as_str().unwrap_or("").trim();
                     if !t.is_empty() && !t.starts_with('<') {
-                        items.push(ConvItem { role: role.into(), text: t.into(), tool: None, at: at.clone() });
+                        items.push(ConvItem {
+                            role: role.into(),
+                            text: t.into(),
+                            tool: None,
+                            at: at.clone(),
+                        });
                     }
                 }
                 Some("tool_use") => {
-                    let name = b["name"].as_str().unwrap_or("?").replace("mcp__harnes-ctx__", "").replace("mcp__harnes-e2e__", "");
+                    let name = b["name"]
+                        .as_str()
+                        .unwrap_or("?")
+                        .replace("mcp__harnes-ctx__", "")
+                        .replace("mcp__harnes-e2e__", "");
                     let input = &b["input"];
-                    let hint = ["task", "body", "title", "thread", "command", "file_path", "pattern", "description", "prompt"]
-                        .iter()
-                        .find_map(|k| input[*k].as_str())
-                        .unwrap_or("");
-                    items.push(ConvItem { role: "tool".into(), text: clip(hint, 140), tool: Some(name), at: at.clone() });
+                    let hint = [
+                        "task",
+                        "body",
+                        "title",
+                        "thread",
+                        "command",
+                        "file_path",
+                        "pattern",
+                        "description",
+                        "prompt",
+                    ]
+                    .iter()
+                    .find_map(|k| input[*k].as_str())
+                    .unwrap_or("");
+                    items.push(ConvItem {
+                        role: "tool".into(),
+                        text: clip(hint, 140),
+                        tool: Some(name),
+                        at: at.clone(),
+                    });
                 }
                 _ => {}
             }
@@ -134,12 +198,18 @@ pub fn conversation_claude(path: &Path, limit: usize) -> Result<Vec<ConvItem>> {
 pub fn export_codex(path: &Path) -> Result<String> {
     let mut out = Vec::new();
     for line in std::fs::read_to_string(path)?.lines() {
-        let Ok(v) = serde_json::from_str::<Value>(line) else { continue };
+        let Ok(v) = serde_json::from_str::<Value>(line) else {
+            continue;
+        };
         let p = &v["payload"];
         if v["type"] != "response_item" || p["type"] != "message" {
             continue;
         }
-        let who = if p["role"] == "user" { "Utilisateur" } else { "Agent" };
+        let who = if p["role"] == "user" {
+            "Utilisateur"
+        } else {
+            "Agent"
+        };
         for c in p["content"].as_array().into_iter().flatten() {
             if let Some(t) = c["text"].as_str() {
                 out.push(format!("**{who}** : {}", t.trim()));
@@ -164,16 +234,99 @@ fn tail(lines: Vec<String>) -> String {
     kept.join("\n")
 }
 
+fn git(root: &Path, args: &[&str]) -> Option<String> {
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(args)
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    Some(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+/// Facts the next session needs before touching the repository. Read-only:
+/// this never stages, commits or cleans anything.
+fn repo_section(root: &Path) -> String {
+    let branch = git(root, &["rev-parse", "--abbrev-ref", "HEAD"]).unwrap_or_else(|| "?".into());
+    let status = git(root, &["status", "--porcelain=v1"]).unwrap_or_default();
+    let commits = git(root, &["log", "-5", "--oneline", "--decorate"]).unwrap_or_default();
+    let changed = if status.is_empty() {
+        "_(arbre propre)_".to_string()
+    } else {
+        let lines = status.lines().take(80).collect::<Vec<_>>().join("\n");
+        let more = status.lines().count().saturating_sub(80);
+        format!(
+            "```text\n{lines}\n```{}",
+            if more > 0 {
+                format!("\n_{more} autre(s) ligne(s) omise(s)._")
+            } else {
+                String::new()
+            }
+        )
+    };
+    let commits = if commits.is_empty() {
+        "_(aucun commit)_".to_string()
+    } else {
+        format!("```text\n{commits}\n```")
+    };
+    format!("Branche : `{branch}`\n\n### Fichiers modifiés ou non suivis\n\n{changed}\n\n### Derniers commits\n\n{commits}")
+}
+
+fn user_lines(transcript: &str) -> Vec<&str> {
+    transcript
+        .lines()
+        .filter_map(|l| l.strip_prefix("**Utilisateur** :"))
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
 /// Writes `.harnes/context/<key>-<ts>.md` and returns its project-relative path.
-pub fn write_handoff(root: &Path, key: &str, from: &str, to: &str, transcript: &str, threads: &str) -> Result<String> {
+/// The handoff is a set of facts (goal, repository state, transcript), not a
+/// claim that the work is complete.
+pub fn write_handoff(
+    root: &Path,
+    key: &str,
+    from: &str,
+    to: &str,
+    transcript: &str,
+    threads: &str,
+) -> Result<String> {
     let dir = root.join(".harnes").join("context");
     std::fs::create_dir_all(&dir)?;
-    let ts = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
     let name = format!("{key}-{ts}.md");
+    let asks = user_lines(transcript);
+    let goal = asks
+        .first()
+        .copied()
+        .unwrap_or("_(objectif absent de la transcription)_");
+    let last = asks
+        .last()
+        .copied()
+        .unwrap_or("_(aucune demande utilisateur)_");
+    let repo = repo_section(root);
     let body = format!(
-        "# Passation de session\n\nSession `{key}` reprise par **{to}** (avant : {from}).\n\
-         Lis ce fichier en entier : c'est tout le contexte de la session précédente. Continue exactement là où elle s'est arrêtée, \
-         sans refaire ce qui est déjà fait.\n\n## Fils de discussion récents\n\n{}\n\n## Transcription de la session précédente\n\n{}\n",
+        "# Passation de session\n\n\
+         Schéma : `harnes.handoff.v1` · session `{key}` reprise par **{to}** (avant : {from}).\n\n\
+         Lis ce fichier en entier avant d'agir. Il décrit l'état réel connu ; il ne prouve pas que le travail est terminé. \
+         Vérifie les fichiers et les commandes avant de continuer, et ne refais pas ce qui est déjà fait.\n\n\
+         ## Objectif initial\n\n{goal}\n\n\
+         ## Dernière demande\n\n{last}\n\n\
+         ## État du dépôt\n\n{repo}\n\n\
+         ## Fils de discussion récents\n\n{}\n\n\
+         ## Transcription de la session précédente\n\n{}\n\n\
+         ## Reprise\n\n\
+         1. Lis l'état du dépôt ci-dessus et la fin de la transcription.\n\
+         2. Vérifie la dernière action annoncée dans les fichiers, pas seulement dans le texte.\n\
+         3. Continue la dernière demande ; si elle est déjà satisfaite, dis-le avec la preuve.\n\
+         4. Ne prétends pas qu'un test passe sans l'avoir exécuté.\n",
         if threads.trim().is_empty() { "_(aucun)_" } else { threads },
         if transcript.trim().is_empty() { "_(transcription indisponible)_" } else { transcript }
     );
@@ -207,14 +360,26 @@ mod tests {
         )
         .unwrap();
         let md = export_claude(&t).unwrap();
-        assert!(md.contains("Ajoute une page contact") && md.contains("outil `Write`") && md.contains("File created") && md.contains("Page créée."));
+        assert!(
+            md.contains("Ajoute une page contact")
+                && md.contains("outil `Write`")
+                && md.contains("File created")
+                && md.contains("Page créée.")
+        );
         assert!(!md.contains("secret") && !md.contains("sub-agent noise"));
         let conv = conversation_claude(&t, 50).unwrap();
-        assert_eq!(conv.iter().map(|c| c.role.as_str()).collect::<Vec<_>>(), ["user", "tool", "assistant"]);
+        assert_eq!(
+            conv.iter().map(|c| c.role.as_str()).collect::<Vec<_>>(),
+            ["user", "tool", "assistant"]
+        );
         assert_eq!(conv[1].tool.as_deref(), Some("Write"));
         assert_eq!(conv[1].text, "contact.html");
         let rel = write_handoff(&dir, "claude-1", "claude", "codex", &md, "").unwrap();
-        assert!(std::fs::read_to_string(dir.join(&rel)).unwrap().contains("reprise par **codex**"));
+        let handoff = std::fs::read_to_string(dir.join(&rel)).unwrap();
+        assert!(handoff.contains("reprise par **codex**"));
+        assert!(handoff.contains("harnes.handoff.v1"));
+        assert!(handoff.contains("Ajoute une page contact"));
+        assert!(handoff.contains("## État du dépôt") && handoff.contains("## Reprise"));
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

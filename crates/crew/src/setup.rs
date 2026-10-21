@@ -20,8 +20,18 @@ pub struct SetupReport {
     pub kept: Vec<String>,
 }
 
-fn write_if(path: &Path, content: &str, force: bool, rep: &mut SetupReport, root: &Path) -> Result<()> {
-    let rel = path.strip_prefix(root).unwrap_or(path).display().to_string();
+fn write_if(
+    path: &Path,
+    content: &str,
+    force: bool,
+    rep: &mut SetupReport,
+    root: &Path,
+) -> Result<()> {
+    let rel = path
+        .strip_prefix(root)
+        .unwrap_or(path)
+        .display()
+        .to_string();
     if path.exists() && !force {
         rep.kept.push(rel);
         return Ok(());
@@ -50,7 +60,11 @@ fn register_mcp(root: &Path, ctx_bin: &Path, rep: &mut SetupReport) -> Result<()
         "args": ["--root", "."]
     });
     // harnes-e2e MCP: drive the live app, resolve `act` steps, run specs.
-    let e2e_bin = ctx_bin.with_file_name(if cfg!(windows) { "harnes-e2e.exe" } else { "harnes-e2e" });
+    let e2e_bin = ctx_bin.with_file_name(if cfg!(windows) {
+        "harnes-e2e.exe"
+    } else {
+        "harnes-e2e"
+    });
     doc["mcpServers"]["harnes-e2e"] = json!({
         "type": "stdio",
         "command": e2e_bin.display().to_string(),
@@ -73,17 +87,42 @@ pub fn equip(root: &Path, ctx_bin: &Path, force: bool) -> Result<SetupReport> {
     write_if(&agents.join("reviewer.md"), REVIEWER, force, &mut rep, root)?;
     write_if(&agents.join("teacher.md"), TEACHER, force, &mut rep, root)?;
     write_if(&agents.join("scout.md"), SCOUT, force, &mut rep, root)?;
-    write_if(&agents.join("orchestrator.md"), ORCHESTRATOR, force, &mut rep, root)?;
-    write_if(&root.join(".claude").join("settings.json"), SETTINGS, force, &mut rep, root)?;
+    write_if(
+        &agents.join("orchestrator.md"),
+        ORCHESTRATOR,
+        force,
+        &mut rep,
+        root,
+    )?;
+    write_if(
+        &root.join(".claude").join("settings.json"),
+        SETTINGS,
+        force,
+        &mut rep,
+        root,
+    )?;
     // HARNESS.md is ours: rewritten each time, with the installed OS packs.
-    let harness = format!("{HARNESS_MD}{}", harnes_os::Library::open_default().index_md());
-    write_if(&root.join(".claude").join("HARNESS.md"), &harness, true, &mut rep, root)?;
+    let harness = format!(
+        "{HARNESS_MD}{}",
+        harnes_os::Library::open_default().index_md()
+    );
+    write_if(
+        &root.join(".claude").join("HARNESS.md"),
+        &harness,
+        true,
+        &mut rep,
+        root,
+    )?;
     register_mcp(root, ctx_bin, &mut rep)?;
 
     let claude_md = root.join("CLAUDE.md");
     let current = std::fs::read_to_string(&claude_md).unwrap_or_default();
     if !current.contains(IMPORT) {
-        let sep = if current.is_empty() || current.ends_with('\n') { "" } else { "\n" };
+        let sep = if current.is_empty() || current.ends_with('\n') {
+            ""
+        } else {
+            "\n"
+        };
         std::fs::write(&claude_md, format!("{current}{sep}{IMPORT}\n"))?;
         rep.written.push("CLAUDE.md".into());
     }
@@ -91,6 +130,18 @@ pub fn equip(root: &Path, ctx_bin: &Path, force: bool) -> Result<SetupReport> {
     // Keep run artefacts out of git.
     let gi = root.join(".harnes").join(".gitignore");
     write_if(&gi, "*\n", false, &mut rep, root)?;
+
+    // Runtime guard policy: created once, never overwritten by `equip`.
+    // The native hook reads it before every tool call.
+    let guards = root.join(".harnes").join("guards.json");
+    if !guards.exists() {
+        if let Some(dir) = guards.parent() {
+            std::fs::create_dir_all(dir)?;
+        }
+        let text = serde_json::to_string_pretty(&harnes_guards::default_guards())?;
+        std::fs::write(&guards, text + "\n")?;
+        rep.written.push(".harnes/guards.json".into());
+    }
     Ok(rep)
 }
 
@@ -108,20 +159,33 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("harnes-setup-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join(".mcp.json"), r#"{"mcpServers":{"other":{"command":"x"}}}"#).unwrap();
+        std::fs::write(
+            dir.join(".mcp.json"),
+            r#"{"mcpServers":{"other":{"command":"x"}}}"#,
+        )
+        .unwrap();
         std::fs::write(dir.join("CLAUDE.md"), "# Mine").unwrap();
 
         equip(&dir, Path::new("C:/bin/harnes-ctx.exe"), false).unwrap();
         let second = equip(&dir, Path::new("C:/bin/harnes-ctx.exe"), false).unwrap();
         assert!(second.kept.iter().any(|k| k.ends_with("planner.md")));
 
-        let mcp: Value = serde_json::from_str(&std::fs::read_to_string(dir.join(".mcp.json")).unwrap()).unwrap();
+        let mcp: Value =
+            serde_json::from_str(&std::fs::read_to_string(dir.join(".mcp.json")).unwrap()).unwrap();
         assert!(mcp["mcpServers"]["other"].is_object());
-        assert!(mcp["mcpServers"]["harnes-ctx"]["command"].as_str().unwrap().ends_with("harnes-ctx.exe"));
-        assert!(mcp["mcpServers"]["harnes-e2e"]["command"].as_str().unwrap().ends_with("harnes-e2e.exe"));
+        assert!(mcp["mcpServers"]["harnes-ctx"]["command"]
+            .as_str()
+            .unwrap()
+            .ends_with("harnes-ctx.exe"));
+        assert!(mcp["mcpServers"]["harnes-e2e"]["command"]
+            .as_str()
+            .unwrap()
+            .ends_with("harnes-e2e.exe"));
         let md = std::fs::read_to_string(dir.join("CLAUDE.md")).unwrap();
         assert_eq!(md.matches(IMPORT).count(), 1);
         assert!(md.starts_with("# Mine"));
+        let guards = std::fs::read_to_string(dir.join(".harnes/guards.json")).unwrap();
+        assert!(guards.contains("deny-destructive-command"));
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

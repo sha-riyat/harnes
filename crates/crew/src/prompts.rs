@@ -38,8 +38,20 @@ pub fn worker(plan: &Plan, lot: &Lot, report_path: &str, fixes: &[Fix], thread: 
     s
 }
 
-pub fn reviewer(task: &str, plan_path: &str, reports: &[String], review_path: &str, round: u32, e2e: Option<&str>, previous: &[String]) -> String {
-    let list = reports.iter().map(|r| format!("- `{}`", fwd(r))).collect::<Vec<_>>().join("\n");
+pub fn reviewer(
+    task: &str,
+    plan_path: &str,
+    reports: &[String],
+    review_path: &str,
+    round: u32,
+    e2e: Option<&str>,
+    previous: &[String],
+) -> String {
+    let list = reports
+        .iter()
+        .map(|r| format!("- `{}`", fwd(r)))
+        .collect::<Vec<_>>()
+        .join("\n");
     let e2e = e2e
         .map(|r| {
             format!(
@@ -69,7 +81,11 @@ pub fn reviewer(task: &str, plan_path: &str, reports: &[String], review_path: &s
 
 /// The last step of a deep review: keep what the finders agree on.
 pub fn verifier(task: &str, found: &[String], review_path: &str) -> String {
-    let list = found.iter().map(|f| format!("- `{}`", fwd(f))).collect::<Vec<_>>().join("\n");
+    let list = found
+        .iter()
+        .map(|f| format!("- `{}`", fwd(f)))
+        .collect::<Vec<_>>()
+        .join("\n");
     format!(
         "Revue renforcée. Tâche d'origine : {task}\n\nPlusieurs relecteurs ont cherché des problèmes, chacun de son côté :\n{list}\n\n\
          Garde un problème seulement s'il est signalé par au moins deux relecteurs, ou si tu le confirmes toi-même dans le code \
@@ -80,7 +96,11 @@ pub fn verifier(task: &str, found: &[String], review_path: &str) -> String {
 }
 
 pub fn teacher_bar(task: &str, plan_path: &str, bar_path: &str, e2e_ready: bool) -> String {
-    let e2e = if e2e_ready { "Le projet a une suite harnes-e2e." } else { "Le projet n'a pas encore de suite harnes-e2e (le plan peut en créer une)." };
+    let e2e = if e2e_ready {
+        "Le projet a une suite harnes-e2e."
+    } else {
+        "Le projet n'a pas encore de suite harnes-e2e (le plan peut en créer une)."
+    };
     format!(
         "Calibrage. Tâche de l'utilisateur : {task}
 Plan : `{}`
@@ -92,10 +112,25 @@ Plan : `{}`
     )
 }
 
-pub fn teacher_gate(task: &str, bar_path: &str, review_path: &str, e2e: Option<&str>, gate_path: &str) -> String {
-    let e2e = e2e.map(|r| format!("Résultat du testeur (harnes-e2e, suite complète) : {r}
-")).unwrap_or_else(|| "Pas de suite e2e dans ce projet.
-".into());
+pub fn teacher_gate(
+    task: &str,
+    bar_path: &str,
+    review_path: &str,
+    e2e: Option<&str>,
+    gate_path: &str,
+) -> String {
+    let e2e = e2e
+        .map(|r| {
+            format!(
+                "Résultat du testeur (harnes-e2e, suite complète) : {r}
+"
+            )
+        })
+        .unwrap_or_else(|| {
+            "Pas de suite e2e dans ce projet.
+"
+            .into()
+        });
     format!(
         "Porte de validation. Tâche : {task}
 Barre : `{}`
@@ -109,12 +144,22 @@ Verdict du Reviewer : `{}`
 }
 
 pub fn run_thread_note(run: &str) -> String {
-    format!("
-Fil du run : `{}` (MCP thread_post) pour signaler une ambiguïté ou une décision importante.", crate::threading::run_thread(run))
+    format!(
+        "
+Fil du run : `{}` (MCP thread_post) pour signaler une ambiguïté ou une décision importante.",
+        crate::threading::run_thread(run)
+    )
 }
 
 pub fn threads_note(run: &str, plan: &Plan) -> String {
-    let lots = plan.lots.iter().map(|l| format!("`{}`", crate::threading::lot_thread(run, &l.id))).collect::<Vec<_>>().join(", ");
-    format!("
-Fils des lots : {lots}. Lis-les (thread_read) : questions, décisions et résumés des Workers.")
+    let lots = plan
+        .lots
+        .iter()
+        .map(|l| format!("`{}`", crate::threading::lot_thread(run, &l.id)))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "
+Fils des lots : {lots}. Lis-les (thread_read) : questions, décisions et résumés des Workers."
+    )
 }
