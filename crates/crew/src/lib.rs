@@ -5,6 +5,7 @@ pub mod budget;
 pub mod context;
 pub mod e2e;
 pub mod engine;
+pub mod harness;
 pub mod hooks;
 pub mod permissions;
 pub mod plan;
@@ -14,6 +15,7 @@ pub mod review;
 pub mod screen;
 pub mod setup;
 pub mod threading;
+pub mod view;
 
 use serde::Serialize;
 
