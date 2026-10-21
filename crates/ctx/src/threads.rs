@@ -34,32 +34,55 @@ pub fn definitions(orchestrator: bool) -> Vec<Value> {
 
 pub fn author(args: &Value) -> String {
     let me = std::env::var("HARNES_AGENT").unwrap_or_else(|_| "agent".into());
-    match args.get("as").and_then(Value::as_str).filter(|s| !s.trim().is_empty()) {
+    match args
+        .get("as")
+        .and_then(Value::as_str)
+        .filter(|s| !s.trim().is_empty())
+    {
         Some(sub) => format!("{me}/{sub}"),
         None => me,
     }
 }
 
 fn s<'a>(a: &'a Value, k: &str) -> Result<&'a str> {
-    a.get(k).and_then(Value::as_str).ok_or_else(|| anyhow!("argument manquant : {k}"))
+    a.get(k)
+        .and_then(Value::as_str)
+        .ok_or_else(|| anyhow!("argument manquant : {k}"))
 }
 
 fn fmt_msgs(msgs: &[harnes_threads::Message]) -> String {
     if msgs.is_empty() {
         return "aucun nouveau message".into();
     }
-    msgs.iter().map(|m| format!("#{} [{}] {} : {}", m.id, m.kind, m.author, m.body)).collect::<Vec<_>>().join("\n")
+    msgs.iter()
+        .map(|m| format!("#{} [{}] {} : {}", m.id, m.kind, m.author, m.body))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 pub fn call(t: &Threads, name: &str, a: &Value) -> Result<Option<String>> {
     Ok(Some(match name {
         "thread_list" => {
-            let list = t.list(a.get("status").and_then(Value::as_str).unwrap_or("open"), a.get("run").and_then(Value::as_str), 50)?;
+            let list = t.list(
+                a.get("status").and_then(Value::as_str).unwrap_or("open"),
+                a.get("run").and_then(Value::as_str),
+                50,
+            )?;
             if list.is_empty() {
                 "aucun thread".into()
             } else {
                 list.iter()
-                    .map(|th| format!("{} [{}|{}] {} — {} msg, dernier : {}", th.id, th.kind, th.status, th.title, th.messages, th.last_author.as_deref().unwrap_or("-")))
+                    .map(|th| {
+                        format!(
+                            "{} [{}|{}] {} — {} msg, dernier : {}",
+                            th.id,
+                            th.kind,
+                            th.status,
+                            th.title,
+                            th.messages,
+                            th.last_author.as_deref().unwrap_or("-")
+                        )
+                    })
                     .collect::<Vec<_>>()
                     .join("\n")
             }
@@ -68,7 +91,13 @@ pub fn call(t: &Threads, name: &str, a: &Value) -> Result<Option<String>> {
             let id = s(a, "thread")?;
             let th = t.get(id)?.ok_or_else(|| anyhow!("thread inconnu : {id}"))?;
             let msgs = t.read(id, a.get("since").and_then(Value::as_i64).unwrap_or(0), 200)?;
-            format!("{} — {} ({})\n{}", th.id, th.title, th.status, fmt_msgs(&msgs))
+            format!(
+                "{} — {} ({})\n{}",
+                th.id,
+                th.title,
+                th.status,
+                fmt_msgs(&msgs)
+            )
         }
         "thread_post" => {
             let m = t.post(s(a, "thread")?, &author(a), "message", s(a, "body")?)?;
@@ -76,18 +105,33 @@ pub fn call(t: &Threads, name: &str, a: &Value) -> Result<Option<String>> {
         }
         "thread_create" => {
             let me = author(a);
-            let th = t.create(s(a, "title")?, a.get("kind").and_then(Value::as_str).unwrap_or("question"), a.get("run").and_then(Value::as_str), &me)?;
+            let th = t.create(
+                s(a, "title")?,
+                a.get("kind").and_then(Value::as_str).unwrap_or("question"),
+                a.get("run").and_then(Value::as_str),
+                &me,
+            )?;
             if let Some(body) = a.get("body").and_then(Value::as_str) {
                 t.post(&th.id, &me, "message", body)?;
             }
             format!("thread créé : {}", th.id)
         }
         "thread_close" => {
-            t.close(s(a, "thread")?, &author(a), a.get("summary").and_then(Value::as_str))?;
+            t.close(
+                s(a, "thread")?,
+                &author(a),
+                a.get("summary").and_then(Value::as_str),
+            )?;
             "fil clos".into()
         }
-        "crew_start" => api("start", &json!({"task": s(a, "task")?, "mode": a.get("mode").and_then(Value::as_str).unwrap_or("full")}))?,
-        "crew_status" => api("status", &json!({"wait_secs": a.get("wait_secs").and_then(Value::as_u64).unwrap_or(0).min(600)}))?,
+        "crew_start" => api(
+            "start",
+            &json!({"task": s(a, "task")?, "mode": a.get("mode").and_then(Value::as_str).unwrap_or("full")}),
+        )?,
+        "crew_status" => api(
+            "status",
+            &json!({"wait_secs": a.get("wait_secs").and_then(Value::as_u64).unwrap_or(0).min(600)}),
+        )?,
         "crew_cancel" => api("cancel", &json!({}))?,
         _ => return Ok(None),
     }))
@@ -95,7 +139,9 @@ pub fn call(t: &Threads, name: &str, a: &Value) -> Result<Option<String>> {
 
 /// Minimal blocking HTTP POST to the harnes app (`HARNES_API=http://127.0.0.1:PORT`).
 fn api(cmd: &str, body: &Value) -> Result<String> {
-    let base = std::env::var("HARNES_API").map_err(|_| anyhow!("HARNES_API absent : outil réservé à l'orchestrateur lancé par harnes"))?;
+    let base = std::env::var("HARNES_API").map_err(|_| {
+        anyhow!("HARNES_API absent : outil réservé à l'orchestrateur lancé par harnes")
+    })?;
     let host = base.trim_start_matches("http://").trim_end_matches('/');
     // Tell harnes which project this orchestrator belongs to.
     let mut body = body.clone();

@@ -6,10 +6,11 @@
 
 pub mod exec;
 pub mod mcp;
+pub mod memory;
+pub mod os;
 pub mod store;
 pub mod summary;
 pub mod threads;
-pub mod os;
 pub mod tools;
 
 pub use store::{Hit, Stats, Store};

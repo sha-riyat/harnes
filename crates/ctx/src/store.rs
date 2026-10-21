@@ -58,25 +58,33 @@ impl Store {
                 blob_id UNINDEXED, line UNINDEXED, body, tokenize='unicode61');
              CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value INTEGER NOT NULL);",
         )?;
-        Ok(Self { conn: Mutex::new(conn) })
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
     }
 
     /// Stores and indexes `content`. Returns its id. Idempotent.
     pub fn put(&self, source: &str, content: &str) -> Result<String> {
         let id = content_id(content);
         let mut conn = self.conn.lock();
-        let exists: Option<String> = conn.query_row("SELECT id FROM blobs WHERE id=?1", [&id], |r| r.get(0)).optional()?;
+        let exists: Option<String> = conn
+            .query_row("SELECT id FROM blobs WHERE id=?1", [&id], |r| r.get(0))
+            .optional()?;
         if exists.is_some() {
             return Ok(id);
         }
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
         let tx = conn.transaction()?;
         tx.execute(
             "INSERT INTO blobs(id, source, created, bytes, content) VALUES(?1, ?2, ?3, ?4, ?5)",
             params![id, source, now as i64, content.len() as i64, content],
         )?;
         {
-            let mut stmt = tx.prepare("INSERT INTO chunks(blob_id, line, body) VALUES(?1, ?2, ?3)")?;
+            let mut stmt =
+                tx.prepare("INSERT INTO chunks(blob_id, line, body) VALUES(?1, ?2, ?3)")?;
             let lines: Vec<&str> = content.lines().collect();
             for (i, chunk) in lines.chunks(CHUNK_LINES).enumerate() {
                 stmt.execute(params![id, (i * CHUNK_LINES + 1) as i64, chunk.join("\n")])?;
@@ -104,7 +112,12 @@ impl Store {
              WHERE chunks MATCH ?1 ORDER BY bm25(chunks) LIMIT ?2",
         )?;
         let rows = stmt.query_map(params![fts, limit as i64], |r| {
-            Ok(Hit { id: r.get(0)?, source: r.get(1)?, line: r.get::<_, i64>(2)? as usize, snippet: r.get(3)? })
+            Ok(Hit {
+                id: r.get(0)?,
+                source: r.get(1)?,
+                line: r.get::<_, i64>(2)? as usize,
+                snippet: r.get(3)?,
+            })
         })?;
         Ok(rows.filter_map(|r| r.ok()).collect())
     }
@@ -112,10 +125,16 @@ impl Store {
     /// Returns lines `[offset, offset+limit)` (1-based offset) of a blob.
     pub fn get(&self, id: &str, offset: usize, limit: usize) -> Result<Option<(String, usize)>> {
         let conn = self.conn.lock();
-        let content: Option<String> = conn.query_row("SELECT content FROM blobs WHERE id=?1", [id], |r| r.get(0)).optional()?;
+        let content: Option<String> = conn
+            .query_row("SELECT content FROM blobs WHERE id=?1", [id], |r| r.get(0))
+            .optional()?;
         Ok(content.map(|c| {
             let total = c.lines().count();
-            let slice: Vec<&str> = c.lines().skip(offset.saturating_sub(1)).take(limit).collect();
+            let slice: Vec<&str> = c
+                .lines()
+                .skip(offset.saturating_sub(1))
+                .take(limit)
+                .collect();
             (slice.join("\n"), total)
         }))
     }
@@ -131,10 +150,21 @@ impl Store {
 
     pub fn stats(&self) -> Result<Stats> {
         let conn = self.conn.lock();
-        let (blobs, bytes): (i64, i64) =
-            conn.query_row("SELECT COUNT(*), COALESCE(SUM(bytes), 0) FROM blobs", [], |r| Ok((r.get(0)?, r.get(1)?)))?;
-        let returned: i64 =
-            conn.query_row("SELECT value FROM meta WHERE key='returned'", [], |r| r.get(0)).optional()?.unwrap_or(0);
-        Ok(Stats { blobs: blobs as u64, bytes_stored: bytes as u64, bytes_returned: returned as u64 })
+        let (blobs, bytes): (i64, i64) = conn.query_row(
+            "SELECT COUNT(*), COALESCE(SUM(bytes), 0) FROM blobs",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )?;
+        let returned: i64 = conn
+            .query_row("SELECT value FROM meta WHERE key='returned'", [], |r| {
+                r.get(0)
+            })
+            .optional()?
+            .unwrap_or(0);
+        Ok(Stats {
+            blobs: blobs as u64,
+            bytes_stored: bytes as u64,
+            bytes_returned: returned as u64,
+        })
     }
 }

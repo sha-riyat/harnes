@@ -10,16 +10,22 @@ pub struct Ctx {
     pub root: PathBuf,
     pub threads: Option<harnes_threads::Threads>,
     pub os: harnes_os::Library,
+    pub memory: Option<harnes_memory::Memory>,
 }
 
 /// All tools offered by this server: context sandbox + threads (+ crew control for the orchestrator).
 pub fn all_definitions(ctx: &Ctx) -> Value {
     let mut v = definitions().as_array().cloned().unwrap_or_default();
     if ctx.threads.is_some() {
-        let orchestrator = std::env::var("HARNES_ROLE").map(|r| r == "orchestrator").unwrap_or(false);
+        let orchestrator = std::env::var("HARNES_ROLE")
+            .map(|r| r == "orchestrator")
+            .unwrap_or(false);
         v.extend(crate::threads::definitions(orchestrator));
     }
     v.extend(crate::os::definitions());
+    if ctx.memory.is_some() {
+        v.extend(crate::memory::definitions());
+    }
     Value::Array(v)
 }
 
@@ -76,12 +82,17 @@ pub fn definitions() -> Value {
     ])
 }
 
-fn str_arg<'a>(args: &'a Value, key: &str) -> Result<&'a str> {
-    args.get(key).and_then(Value::as_str).ok_or_else(|| anyhow!("missing argument: {key}"))
+pub(crate) fn str_arg<'a>(args: &'a Value, key: &str) -> Result<&'a str> {
+    args.get(key)
+        .and_then(Value::as_str)
+        .ok_or_else(|| anyhow!("missing argument: {key}"))
 }
 
-fn usize_arg(args: &Value, key: &str, default: usize) -> usize {
-    args.get(key).and_then(Value::as_u64).map(|v| v as usize).unwrap_or(default)
+pub(crate) fn usize_arg(args: &Value, key: &str, default: usize) -> usize {
+    args.get(key)
+        .and_then(Value::as_u64)
+        .map(|v| v as usize)
+        .unwrap_or(default)
 }
 
 pub fn call(ctx: &Ctx, name: &str, args: &Value) -> Result<String> {
@@ -93,37 +104,77 @@ pub fn call(ctx: &Ctx, name: &str, args: &Value) -> Result<String> {
     if let Some(out) = crate::os::call(&ctx.os, name, args)? {
         return Ok(out);
     }
+    if let Some(memory) = &ctx.memory {
+        if let Some(out) = crate::memory::call(memory, name, args)? {
+            return Ok(out);
+        }
+    }
     match name {
         "ctx_execute" => {
             let lang = str_arg(args, "language")?;
             let code = str_arg(args, "code")?;
             let timeout = Duration::from_millis(usize_arg(args, "timeout_ms", 120_000) as u64);
             let out = exec::run(lang, code, &ctx.root, timeout)?;
-            let mut header = format!("exit={} time={}ms", out.code.map_or("?".into(), |c| c.to_string()), out.millis);
+            let mut header = format!(
+                "exit={} time={}ms",
+                out.code.map_or("?".into(), |c| c.to_string()),
+                out.millis
+            );
             if out.timed_out {
                 header.push_str(" TIMED OUT");
             }
-            let source = format!("{lang}: {}", code.lines().next().unwrap_or("").chars().take(80).collect::<String>());
-            let body = digest(&ctx.store, &source, &out.combined(), args.get("intent").and_then(Value::as_str))?;
+            let source = format!(
+                "{lang}: {}",
+                code.lines()
+                    .next()
+                    .unwrap_or("")
+                    .chars()
+                    .take(80)
+                    .collect::<String>()
+            );
+            let body = digest(
+                &ctx.store,
+                &source,
+                &out.combined(),
+                args.get("intent").and_then(Value::as_str),
+            )?;
             Ok(format!("{header}\n{body}"))
         }
         "ctx_execute_file" => {
             let path = ctx.root.join(str_arg(args, "path")?);
-            let content = std::fs::read_to_string(&path).map_err(|e| anyhow!("{}: {e}", path.display()))?;
-            digest(&ctx.store, &path.display().to_string(), &content, args.get("intent").and_then(Value::as_str))
+            let content =
+                std::fs::read_to_string(&path).map_err(|e| anyhow!("{}: {e}", path.display()))?;
+            digest(
+                &ctx.store,
+                &path.display().to_string(),
+                &content,
+                args.get("intent").and_then(Value::as_str),
+            )
         }
         "ctx_index" => {
-            let id = ctx.store.put(str_arg(args, "source")?, str_arg(args, "content")?)?;
+            let id = ctx
+                .store
+                .put(str_arg(args, "source")?, str_arg(args, "content")?)?;
             Ok(format!("indexed as id={id}"))
         }
         "ctx_search" => {
-            let hits = ctx.store.search(str_arg(args, "query")?, usize_arg(args, "limit", 10))?;
+            let hits = ctx
+                .store
+                .search(str_arg(args, "query")?, usize_arg(args, "limit", 10))?;
             if hits.is_empty() {
                 return Ok("no matches".into());
             }
             Ok(hits
                 .iter()
-                .map(|h| format!("[{} line {}] {}\n  {}", h.id, h.line, h.source, h.snippet.replace('\n', " ")))
+                .map(|h| {
+                    format!(
+                        "[{} line {}] {}\n  {}",
+                        h.id,
+                        h.line,
+                        h.source,
+                        h.snippet.replace('\n', " ")
+                    )
+                })
                 .collect::<Vec<_>>()
                 .join("\n"))
         }
