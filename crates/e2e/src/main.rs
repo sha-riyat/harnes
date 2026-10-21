@@ -9,7 +9,11 @@ use std::{env, path::PathBuf, process::ExitCode};
 #[tokio::main]
 async fn main() -> ExitCode {
     let mut args: Vec<String> = env::args().skip(1).collect();
-    let cmd = if args.is_empty() { "help".to_string() } else { args.remove(0) };
+    let cmd = if args.is_empty() {
+        "help".to_string()
+    } else {
+        args.remove(0)
+    };
     let mut root = env::current_dir().unwrap_or_default();
     let (mut headed, mut json, mut url, mut command) = (false, false, None, None);
     let mut files = vec![];
@@ -44,9 +48,20 @@ async fn main() -> ExitCode {
                 ExitCode::from(4)
             }
         },
-        "init" => match harnes_e2e::init(&root, url.as_deref().unwrap_or("http://localhost:3000"), command.as_deref()) {
+        "init" => match harnes_e2e::init(
+            &root,
+            url.as_deref().unwrap_or("http://localhost:3000"),
+            command.as_deref(),
+        ) {
             Ok(w) => {
-                println!("écrit : {}", if w.is_empty() { "rien (déjà présent)".into() } else { w.join(", ") });
+                println!(
+                    "écrit : {}",
+                    if w.is_empty() {
+                        "rien (déjà présent)".into()
+                    } else {
+                        w.join(", ")
+                    }
+                );
                 ExitCode::SUCCESS
             }
             Err(e) => {

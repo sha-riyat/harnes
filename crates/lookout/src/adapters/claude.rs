@@ -8,7 +8,11 @@ use serde_json::Value;
 pub struct ClaudeCode;
 
 /// Maps registry `status` / `state` / `waitingFor` to our statuses.
-pub fn map(status: &str, state: Option<&str>, waiting_for: Option<&str>) -> (Status, Option<WaitingReason>) {
+pub fn map(
+    status: &str,
+    state: Option<&str>,
+    waiting_for: Option<&str>,
+) -> (Status, Option<WaitingReason>) {
     match state {
         Some("blocked") => return (Status::NeedsYou, Some(WaitingReason::Other)),
         Some("done" | "stopped") => return (Status::Finished, None),
@@ -37,14 +41,19 @@ impl Adapter for ClaudeCode {
 
     fn poll(&self) -> Result<Option<Vec<Session>>> {
         let dir = home().join(".claude").join("sessions");
-        let Ok(rd) = std::fs::read_dir(&dir) else { return Ok(None) };
+        let Ok(rd) = std::fs::read_dir(&dir) else {
+            return Ok(None);
+        };
         let mut out = vec![];
         for e in rd.flatten() {
             let p = e.path();
             if p.extension().and_then(|x| x.to_str()) != Some("json") {
                 continue;
             }
-            let Ok(v) = std::fs::read_to_string(&p).map_err(anyhow::Error::from).and_then(|s| Ok(serde_json::from_str::<Value>(&s)?)) else {
+            let Ok(v) = std::fs::read_to_string(&p)
+                .map_err(anyhow::Error::from)
+                .and_then(|s| Ok(serde_json::from_str::<Value>(&s)?))
+            else {
                 continue;
             };
             let kind = v["kind"].as_str().unwrap_or("");
@@ -58,7 +67,11 @@ impl Adapter for ClaudeCode {
             let sid = v["sessionId"].as_str().unwrap_or_default();
             let mut s = Session::new(self.id(), "claude", sid, v["cwd"].as_str().unwrap_or(""));
             s.name = v["name"].as_str().unwrap_or("claude").to_string();
-            let (status, reason) = map(v["status"].as_str().unwrap_or(""), v["state"].as_str(), v["waitingFor"].as_str());
+            let (status, reason) = map(
+                v["status"].as_str().unwrap_or(""),
+                v["state"].as_str(),
+                v["waitingFor"].as_str(),
+            );
             s.status = status;
             s.waiting_reason = reason;
             s.waiting_text = v["waitingFor"].as_str().map(String::from);
@@ -78,7 +91,10 @@ mod tests {
     #[test]
     fn maps_statuses() {
         assert_eq!(map("busy", None, None).0, Status::Working);
-        assert_eq!(map("waiting", None, Some("permission prompt")), (Status::NeedsYou, Some(WaitingReason::Permission)));
+        assert_eq!(
+            map("waiting", None, Some("permission prompt")),
+            (Status::NeedsYou, Some(WaitingReason::Permission))
+        );
         assert_eq!(map("idle", Some("done"), None).0, Status::Finished);
         assert_eq!(map("weird", None, None).0, Status::Unknown);
     }

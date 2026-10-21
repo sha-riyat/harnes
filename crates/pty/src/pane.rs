@@ -45,7 +45,12 @@ impl Pane {
     pub fn spawn(spec: SpawnSpec, sink: EventSink) -> Result<Arc<Self>> {
         let (cols, rows) = (spec.cols.max(20), spec.rows.max(5));
         let pair = native_pty_system()
-            .openpty(PtySize { rows, cols, pixel_width: 0, pixel_height: 0 })
+            .openpty(PtySize {
+                rows,
+                cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
             .context("openpty")?;
 
         let mut cmd = CommandBuilder::new(&spec.program);
@@ -58,11 +63,15 @@ impl Pane {
         for (k, v) in &spec.env {
             cmd.env(k, v);
         }
-        let child = pair.slave.spawn_command(cmd).with_context(|| format!("spawn {}", spec.program))?;
+        let child = pair
+            .slave
+            .spawn_command(cmd)
+            .with_context(|| format!("spawn {}", spec.program))?;
         drop(pair.slave);
 
         let reader = pair.master.try_clone_reader()?;
-        let writer: Arc<Mutex<Box<dyn Write + Send>>> = Arc::new(Mutex::new(pair.master.take_writer()?));
+        let writer: Arc<Mutex<Box<dyn Write + Send>>> =
+            Arc::new(Mutex::new(pair.master.take_writer()?));
 
         let mut term = Terminal::new(cols, rows, 10_000).context("ghostty terminal")?;
         let reply_writer = writer.clone();
@@ -71,12 +80,23 @@ impl Pane {
         });
 
         let id = uuid::Uuid::new_v4().to_string()[..8].to_string();
-        let created = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0);
+        let created = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
         let info = PaneInfo {
             id: id.clone(),
-            title: if spec.title.is_empty() { spec.program.clone() } else { spec.title.clone() },
+            title: if spec.title.is_empty() {
+                spec.program.clone()
+            } else {
+                spec.title.clone()
+            },
             program: spec.program.clone(),
-            cwd: spec.cwd.as_ref().map(|p| p.display().to_string()).unwrap_or_default(),
+            cwd: spec
+                .cwd
+                .as_ref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_default(),
             created,
             pid: child.process_id(),
         };

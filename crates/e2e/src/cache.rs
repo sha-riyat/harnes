@@ -19,12 +19,16 @@ pub struct Resolution {
 /// Key = hash(test file, test name, step index, act text). Editing the act
 /// text or moving the step invalidates the replay.
 pub fn key(file: &str, test: &str, index: usize, act: &str) -> String {
-    let h = Sha256::digest(format!("{}\n{test}\n{index}\n{act}", file.replace('\\', "/")).as_bytes());
+    let h =
+        Sha256::digest(format!("{}\n{test}\n{index}\n{act}", file.replace('\\', "/")).as_bytes());
     h.iter().take(8).map(|b| format!("{b:02x}")).collect()
 }
 
 fn path(root: &Path, key: &str) -> PathBuf {
-    root.join(".harnes").join("e2e").join("cache").join(format!("{key}.json"))
+    root.join(".harnes")
+        .join("e2e")
+        .join("cache")
+        .join(format!("{key}.json"))
 }
 
 pub fn get(root: &Path, key: &str) -> Option<Resolution> {
@@ -39,7 +43,10 @@ pub fn put(root: &Path, key: &str, res: &Resolution) -> Result<PathBuf> {
     if let Some(bad) = res.actions.iter().find(|s| !s.is_primitive()) {
         bail!("action non rejouable : {bad:?}");
     }
-    if res.actions.iter().any(|s| matches!(s, Step::Click(l) if l.id.is_some()) || matches!(s, Step::Fill(f) if f.target.id.is_some())) {
+    if res.actions.iter().any(|s| {
+        matches!(s, Step::Click(l) if l.id.is_some())
+            || matches!(s, Step::Fill(f) if f.target.id.is_some())
+    }) {
         bail!("les locators enregistrés ne doivent pas utiliser `id` (instable) : utilise role/name/label/text/testid");
     }
     let p = path(root, key);
@@ -49,5 +56,8 @@ pub fn put(root: &Path, key: &str, res: &Resolution) -> Result<PathBuf> {
 }
 
 pub fn now() -> u64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }

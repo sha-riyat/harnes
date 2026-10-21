@@ -59,7 +59,11 @@ pub struct Session {
 
 impl Session {
     pub fn new(source: &str, provider: &str, native_id: &str, cwd: &str) -> Self {
-        let project = std::path::Path::new(cwd).file_name().and_then(|n| n.to_str()).unwrap_or(cwd).to_string();
+        let project = std::path::Path::new(cwd)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(cwd)
+            .to_string();
         Self {
             id: format!("{source}:{native_id}"),
             source: source.into(),
@@ -127,5 +131,8 @@ pub struct Snapshot {
 }
 
 pub fn now_ms() -> u64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
 }

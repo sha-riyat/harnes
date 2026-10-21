@@ -6,13 +6,24 @@
 use std::{env, path::PathBuf};
 
 fn main() {
-    let dir = env::var("GHOSTTY_VT_DIR").map(PathBuf::from).unwrap_or_else(|_| {
-        let home = env::var("USERPROFILE").or_else(|_| env::var("HOME")).expect("no home dir");
-        PathBuf::from(home).join("tools").join("ghostty").join("zig-out")
-    });
+    let dir = env::var("GHOSTTY_VT_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            let home = env::var("USERPROFILE")
+                .or_else(|_| env::var("HOME"))
+                .expect("no home dir");
+            PathBuf::from(home)
+                .join("tools")
+                .join("ghostty")
+                .join("zig-out")
+        });
     let include = dir.join("include");
     let lib = dir.join("lib");
-    assert!(include.join("ghostty").join("vt.h").exists(), "libghostty-vt headers not found in {}", include.display());
+    assert!(
+        include.join("ghostty").join("vt.h").exists(),
+        "libghostty-vt headers not found in {}",
+        include.display()
+    );
 
     cc::Build::new()
         .file("shim/hv.c")

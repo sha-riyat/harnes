@@ -18,21 +18,37 @@ impl Adapter for StatusFiles {
     }
 
     fn poll(&self) -> Result<Option<Vec<Session>>> {
-        let dirs = [home().join(".harnes").join("sessions"), home().join(".agent-lookout").join("sessions")];
+        let dirs = [
+            home().join(".harnes").join("sessions"),
+            home().join(".agent-lookout").join("sessions"),
+        ];
         if !dirs.iter().any(|d| d.exists()) {
             return Ok(None);
         }
         let mut out = vec![];
         for dir in dirs {
-            for e in std::fs::read_dir(&dir).into_iter().flatten().flatten().take(MAX_FILES) {
+            for e in std::fs::read_dir(&dir)
+                .into_iter()
+                .flatten()
+                .flatten()
+                .take(MAX_FILES)
+            {
                 let p = e.path();
-                if p.extension().and_then(|x| x.to_str()) != Some("json") || p.metadata().map(|m| m.len()).unwrap_or(0) > MAX_BYTES {
+                if p.extension().and_then(|x| x.to_str()) != Some("json")
+                    || p.metadata().map(|m| m.len()).unwrap_or(0) > MAX_BYTES
+                {
                     continue;
                 }
-                let Ok(v) = std::fs::read_to_string(&p).map_err(anyhow::Error::from).and_then(|s| Ok(serde_json::from_str::<Value>(&s)?)) else {
+                let Ok(v) = std::fs::read_to_string(&p)
+                    .map_err(anyhow::Error::from)
+                    .and_then(|s| Ok(serde_json::from_str::<Value>(&s)?))
+                else {
                     continue;
                 };
-                let (Some(agent), Some(status)) = (v["agent"].as_str(), v["status"].as_str()) else { continue };
+                let (Some(agent), Some(status)) = (v["agent"].as_str(), v["status"].as_str())
+                else {
+                    continue;
+                };
                 let pid = v["pid"].as_u64().map(|p| p as u32);
                 if pid.is_some_and(|p| !alive(p)) {
                     continue;

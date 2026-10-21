@@ -14,5 +14,12 @@ pub fn configured(root: &Path) -> bool {
 
 /// Runs every spec. Exit codes: 0 pass, 1 failure, 2 config, 3 environment, 5 act steps to resolve.
 pub async fn run(root: &Path) -> Report {
-    harnes_e2e::run(root, RunOptions { files: vec![], headed: false }).await
+    harnes_e2e::run(
+        root,
+        RunOptions {
+            files: vec![],
+            headed: false,
+        },
+    )
+    .await
 }

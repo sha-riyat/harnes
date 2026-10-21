@@ -57,7 +57,10 @@ pub fn light(s: &str) -> String {
     let mut run = 0usize;
     let flush = |out: &mut String, run: usize| {
         if run > 1 {
-            out.push_str(&format!("[… previous line repeated {} more times]\n", run - 1));
+            out.push_str(&format!(
+                "[… previous line repeated {} more times]\n",
+                run - 1
+            ));
         }
     };
     for line in clean.lines().map(str::trim_end) {
@@ -127,7 +130,9 @@ pub fn compress_request(body: &mut Value, store: Option<&Store>) -> Saved {
         return saved;
     };
     for msg in messages.iter_mut().filter(|m| m["role"] == "user") {
-        let Some(blocks) = msg.get_mut("content").and_then(Value::as_array_mut) else { continue };
+        let Some(blocks) = msg.get_mut("content").and_then(Value::as_array_mut) else {
+            continue;
+        };
         for block in blocks.iter_mut().filter(|b| b["type"] == "tool_result") {
             match block.get_mut("content") {
                 Some(Value::String(s)) => {
@@ -158,13 +163,18 @@ mod tests {
     #[test]
     fn collapses_repeats_and_ansi() {
         let s = "\x1b[32mok\x1b[0m\nsame\nsame\nsame\nend\n";
-        assert_eq!(light(s), "ok\nsame\n[… previous line repeated 2 more times]\nend\n");
+        assert_eq!(
+            light(s),
+            "ok\nsame\n[… previous line repeated 2 more times]\nend\n"
+        );
     }
 
     #[test]
     fn elides_huge_results_deterministically() {
         let store = Store::in_memory().unwrap();
-        let big: String = (0..5000).map(|i| format!("row {i} value {}\n", i * 7)).collect();
+        let big: String = (0..5000)
+            .map(|i| format!("row {i} value {}\n", i * 7))
+            .collect();
         let mut a = json!({"messages":[{"role":"user","content":[{"type":"tool_result","tool_use_id":"x","content":big}]}]});
         let mut b = a.clone();
         let saved = compress_request(&mut a, Some(&store));

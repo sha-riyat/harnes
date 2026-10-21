@@ -44,10 +44,14 @@ pub struct Threads {
 }
 
 pub fn now_ms() -> u64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
 }
 
-const THREAD_COLS: &str = "t.id, t.title, t.kind, t.run, t.status, t.created_by, t.created_at, t.closed_at, t.summary,
+const THREAD_COLS: &str =
+    "t.id, t.title, t.kind, t.run, t.status, t.created_by, t.created_at, t.closed_at, t.summary,
     (SELECT COUNT(*) FROM messages m WHERE m.thread = t.id),
     COALESCE((SELECT MAX(at) FROM messages m WHERE m.thread = t.id), t.created_at),
     (SELECT author FROM messages m WHERE m.thread = t.id ORDER BY id DESC LIMIT 1),
@@ -96,11 +100,20 @@ impl Threads {
                author TEXT NOT NULL, at INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'message', body TEXT NOT NULL);
              CREATE INDEX IF NOT EXISTS messages_thread ON messages(thread, id);",
         )?;
-        Ok(Self { conn: Mutex::new(conn) })
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
     }
 
     /// Creates the thread if missing (idempotent on `id`) and returns it.
-    pub fn ensure(&self, id: &str, title: &str, kind: &str, run: Option<&str>, by: &str) -> Result<Thread> {
+    pub fn ensure(
+        &self,
+        id: &str,
+        title: &str,
+        kind: &str,
+        run: Option<&str>,
+        by: &str,
+    ) -> Result<Thread> {
         {
             let c = self.conn.lock();
             c.execute(
@@ -119,7 +132,12 @@ impl Threads {
 
     pub fn get(&self, id: &str) -> Result<Option<Thread>> {
         let c = self.conn.lock();
-        Ok(c.query_row(&format!("SELECT {THREAD_COLS} FROM threads t WHERE t.id = ?1"), [id], row_thread).optional()?)
+        Ok(c.query_row(
+            &format!("SELECT {THREAD_COLS} FROM threads t WHERE t.id = ?1"),
+            [id],
+            row_thread,
+        )
+        .optional()?)
     }
 
     pub fn post(&self, thread: &str, author: &str, kind: &str, body: &str) -> Result<Message> {
@@ -127,18 +145,35 @@ impl Threads {
             bail!("message vide");
         }
         let c = self.conn.lock();
-        let status: Option<String> = c.query_row("SELECT status FROM threads WHERE id = ?1", [thread], |r| r.get(0)).optional()?;
+        let status: Option<String> = c
+            .query_row("SELECT status FROM threads WHERE id = ?1", [thread], |r| {
+                r.get(0)
+            })
+            .optional()?;
         match status.as_deref() {
             None => bail!("thread inconnu : {thread}"),
             // Posting to a closed thread reopens it: the history stays in one place.
             Some("closed") => {
-                c.execute("UPDATE threads SET status = 'open', closed_at = NULL WHERE id = ?1", [thread])?;
+                c.execute(
+                    "UPDATE threads SET status = 'open', closed_at = NULL WHERE id = ?1",
+                    [thread],
+                )?;
             }
             _ => {}
         }
         let at = now_ms();
-        c.execute("INSERT INTO messages(thread, author, at, kind, body) VALUES(?1, ?2, ?3, ?4, ?5)", params![thread, author, at as i64, kind, body])?;
-        Ok(Message { id: c.last_insert_rowid(), thread: thread.into(), author: author.into(), at, kind: kind.into(), body: body.into() })
+        c.execute(
+            "INSERT INTO messages(thread, author, at, kind, body) VALUES(?1, ?2, ?3, ?4, ?5)",
+            params![thread, author, at as i64, kind, body],
+        )?;
+        Ok(Message {
+            id: c.last_insert_rowid(),
+            thread: thread.into(),
+            author: author.into(),
+            at,
+            kind: kind.into(),
+            body: body.into(),
+        })
     }
 
     pub fn close(&self, thread: &str, by: &str, summary: Option<&str>) -> Result<()> {
@@ -170,7 +205,14 @@ impl Threads {
         let c = self.conn.lock();
         let mut st = c.prepare("SELECT id, thread, author, at, kind, body FROM messages WHERE thread = ?1 AND id > ?2 ORDER BY id LIMIT ?3")?;
         let rows = st.query_map(params![thread, since, limit as i64], |r| {
-            Ok(Message { id: r.get(0)?, thread: r.get(1)?, author: r.get(2)?, at: r.get::<_, i64>(3)? as u64, kind: r.get(4)?, body: r.get(5)? })
+            Ok(Message {
+                id: r.get(0)?,
+                thread: r.get(1)?,
+                author: r.get(2)?,
+                at: r.get::<_, i64>(3)? as u64,
+                kind: r.get(4)?,
+                body: r.get(5)?,
+            })
         })?;
         Ok(rows.filter_map(|r| r.ok()).collect())
     }
@@ -180,7 +222,14 @@ impl Threads {
         let c = self.conn.lock();
         let mut st = c.prepare("SELECT id, thread, author, at, kind, body FROM messages WHERE id > ?1 ORDER BY id DESC LIMIT ?2")?;
         let rows = st.query_map(params![since, limit as i64], |r| {
-            Ok(Message { id: r.get(0)?, thread: r.get(1)?, author: r.get(2)?, at: r.get::<_, i64>(3)? as u64, kind: r.get(4)?, body: r.get(5)? })
+            Ok(Message {
+                id: r.get(0)?,
+                thread: r.get(1)?,
+                author: r.get(2)?,
+                at: r.get::<_, i64>(3)? as u64,
+                kind: r.get(4)?,
+                body: r.get(5)?,
+            })
         })?;
         let mut v: Vec<Message> = rows.filter_map(|r| r.ok()).collect();
         v.reverse();
@@ -205,11 +254,17 @@ mod tests {
     #[test]
     fn create_post_close_reopen() {
         let t = Threads::in_memory().unwrap();
-        let th = t.ensure("lot-1-L1", "L1 : page contact", "lot", Some("1"), "harnes").unwrap();
+        let th = t
+            .ensure("lot-1-L1", "L1 : page contact", "lot", Some("1"), "harnes")
+            .unwrap();
         assert_eq!(th.status, "open");
-        t.ensure("lot-1-L1", "autre titre", "lot", Some("1"), "x").unwrap(); // idempotent
-        t.post(&th.id, "worker-L1", "message", "Question : quel endpoint ?").unwrap();
-        let m = t.post(&th.id, "planner", "message", "POST /api/contact").unwrap();
+        t.ensure("lot-1-L1", "autre titre", "lot", Some("1"), "x")
+            .unwrap(); // idempotent
+        t.post(&th.id, "worker-L1", "message", "Question : quel endpoint ?")
+            .unwrap();
+        let m = t
+            .post(&th.id, "planner", "message", "POST /api/contact")
+            .unwrap();
         assert_eq!(t.read(&th.id, 0, 10).unwrap().len(), 2);
         assert_eq!(t.read(&th.id, m.id - 1, 10).unwrap()[0].author, "planner");
 
@@ -222,6 +277,11 @@ mod tests {
         t.post(&th.id, "worker-L1", "message", "relance").unwrap();
         assert_eq!(t.get(&th.id).unwrap().unwrap().status, "open");
         assert!(t.post("nope", "x", "message", "y").is_err());
-        assert_eq!(t.list("all", Some("1"), 10).unwrap()[0].last_body.as_deref(), Some("relance"));
+        assert_eq!(
+            t.list("all", Some("1"), 10).unwrap()[0]
+                .last_body
+                .as_deref(),
+            Some("relance")
+        );
     }
 }

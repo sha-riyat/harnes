@@ -48,8 +48,14 @@ pub fn start(st: Shared) {
                     .iter()
                     .filter(|a| !a.pid.is_some_and(|p| known.contains(&p)))
                     .map(|a| {
-                        let mut s = harnes_lookout::model::Session::new("harnes", &a.provider, &a.key, "");
-                        s.name = a.key.split_once('-').map(|(_, n)| n).unwrap_or(&a.key).to_string();
+                        let mut s =
+                            harnes_lookout::model::Session::new("harnes", &a.provider, &a.key, "");
+                        s.name = a
+                            .key
+                            .split_once('-')
+                            .map(|(_, n)| n)
+                            .unwrap_or(&a.key)
+                            .to_string();
                         s.status = status_of(a.state);
                         s.pid = a.pid;
                         s.harnes_key = Some(a.key.clone());

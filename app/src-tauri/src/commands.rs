@@ -14,8 +14,16 @@ fn e(err: impl std::fmt::Display) -> String {
 pub fn shell_spec(title: &str) -> SpawnSpec {
     SpawnSpec {
         title: title.into(),
-        program: if cfg!(windows) { "powershell.exe".into() } else { "bash".into() },
-        args: if cfg!(windows) { vec!["-NoLogo".into()] } else { vec![] },
+        program: if cfg!(windows) {
+            "powershell.exe".into()
+        } else {
+            "bash".into()
+        },
+        args: if cfg!(windows) {
+            vec!["-NoLogo".into()]
+        } else {
+            vec![]
+        },
         cols: 120,
         rows: 32,
         ..Default::default()
@@ -23,20 +31,37 @@ pub fn shell_spec(title: &str) -> SpawnSpec {
 }
 
 pub fn short_id() -> String {
-    let n = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
+    let n = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
     format!("{:06x}", (n as u64) & 0xffffff)
 }
 
 /// New shell or Claude session in a project (default: the active one).
 #[tauri::command]
-pub fn pane_spawn(st: State<'_, Shared>, kind: String, cols: u16, rows: u16, project: Option<String>) -> Res<PaneInfo> {
+pub fn pane_spawn(
+    st: State<'_, Shared>,
+    kind: String,
+    cols: u16,
+    rows: u16,
+    project: Option<String>,
+) -> Res<PaneInfo> {
     let p = st.pick(project.as_deref())?;
     if kind == "claude" {
         let key = format!("claude-{}", short_id());
         let id = crate::crew_ctl::spawn_claude(st.inner(), &p, &key, "claude", None, None, None)?;
         return st.panes.get(&id).map(|x| x.info()).map_err(e);
     }
-    let info = st.panes.spawn(SpawnSpec { cwd: Some(p.root.clone()), cols, rows, ..shell_spec("shell") }).map_err(e)?;
+    let info = st
+        .panes
+        .spawn(SpawnSpec {
+            cwd: Some(p.root.clone()),
+            cols,
+            rows,
+            ..shell_spec("shell")
+        })
+        .map_err(e)?;
     st.tag_pane(&info.id, &p.id);
     let _ = st.app.emit("projects-changed", ());
     Ok(info)
@@ -48,8 +73,17 @@ pub fn pane_write(st: State<'_, Shared>, id: String, data: String) -> Res<()> {
 }
 
 #[tauri::command]
-pub fn pane_resize(st: State<'_, Shared>, id: String, cols: u16, rows: u16, cell_w: u32, cell_h: u32) -> Res<()> {
-    st.panes.resize(&id, cols, rows, cell_w, cell_h).map_err(e)?;
+pub fn pane_resize(
+    st: State<'_, Shared>,
+    id: String,
+    cols: u16,
+    rows: u16,
+    cell_w: u32,
+    cell_h: u32,
+) -> Res<()> {
+    st.panes
+        .resize(&id, cols, rows, cell_w, cell_h)
+        .map_err(e)?;
     st.dirty.lock().insert(id);
     Ok(())
 }
@@ -65,7 +99,9 @@ pub fn pane_scroll(st: State<'_, Shared>, id: String, delta: isize) -> Res<()> {
 pub fn pane_close(st: State<'_, Shared>, id: String) -> Res<()> {
     st.panes.close(&id).map_err(e)?;
     st.pane_project.write().remove(&id);
-    st.agents.write().retain(|_, a| a.pane.as_deref() != Some(id.as_str()));
+    st.agents
+        .write()
+        .retain(|_, a| a.pane.as_deref() != Some(id.as_str()));
     let _ = st.app.emit("projects-changed", ());
     Ok(())
 }
@@ -81,7 +117,10 @@ pub fn pane_list(st: State<'_, Shared>) -> Vec<Value> {
         .map(|p| {
             let mut v = json!(p);
             v["project"] = json!(owners.get(&p.id));
-            if let Some(a) = agents.values().find(|a| a.pane.as_deref() == Some(p.id.as_str())) {
+            if let Some(a) = agents
+                .values()
+                .find(|a| a.pane.as_deref() == Some(p.id.as_str()))
+            {
                 v["key"] = json!(a.key);
                 v["role"] = json!(a.role);
                 v["provider"] = json!(a.provider);

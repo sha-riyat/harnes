@@ -65,7 +65,12 @@ pub struct Report {
 }
 
 impl Report {
-    pub fn build(results: Vec<TestResult>, unresolved: Vec<Unresolved>, errors: Vec<String>, env_error: bool) -> Self {
+    pub fn build(
+        results: Vec<TestResult>,
+        unresolved: Vec<Unresolved>,
+        errors: Vec<String>,
+        env_error: bool,
+    ) -> Self {
         let count = |s: Status| results.iter().filter(|r| r.status == s).count();
         let summary = Summary {
             total: results.len(),
@@ -93,7 +98,14 @@ impl Report {
             _ => "config-error",
         }
         .to_string();
-        Self { status, exit_code, summary, results, unresolved, errors }
+        Self {
+            status,
+            exit_code,
+            summary,
+            results,
+            unresolved,
+            errors,
+        }
     }
 
     pub fn describe(&self) -> String {
@@ -103,7 +115,12 @@ impl Report {
             self.exit_code, self.status, s.total, s.passed, s.failed, s.unresolved, s.errors
         );
         for r in self.results.iter().filter(|r| r.status != Status::Passed) {
-            out.push_str(&format!("\n- {} › {} : {}", r.file, r.name, r.error.as_deref().unwrap_or("?")));
+            out.push_str(&format!(
+                "\n- {} › {} : {}",
+                r.file,
+                r.name,
+                r.error.as_deref().unwrap_or("?")
+            ));
         }
         for e in &self.errors {
             out.push_str(&format!("\n- {e}"));
@@ -117,7 +134,16 @@ pub fn dir(root: &Path) -> PathBuf {
 }
 
 pub fn slug(s: &str) -> String {
-    let mut out: String = s.chars().map(|c| if c.is_alphanumeric() { c.to_ascii_lowercase() } else { '-' }).collect();
+    let mut out: String = s
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect();
     while out.contains("--") {
         out = out.replace("--", "-");
     }
@@ -125,7 +151,13 @@ pub fn slug(s: &str) -> String {
 }
 
 /// Markdown page for a failed test: error, step, screen as text, screenshot.
-pub fn write_trace(root: &Path, r: &TestResult, step_desc: &str, screen: &str, screenshot: Option<&Path>) -> Option<String> {
+pub fn write_trace(
+    root: &Path,
+    r: &TestResult,
+    step_desc: &str,
+    screen: &str,
+    screenshot: Option<&Path>,
+) -> Option<String> {
     let d = dir(root).join("results");
     std::fs::create_dir_all(&d).ok()?;
     let p = d.join(format!("{}.md", slug(&format!("{}-{}", r.file, r.name))));
@@ -141,8 +173,17 @@ pub fn write_trace(root: &Path, r: &TestResult, step_desc: &str, screen: &str, s
         screen
     );
     if let Some(s) = screenshot {
-        md.push_str(&format!("\n![capture]({})\n", s.file_name().and_then(|n| n.to_str()).unwrap_or("")));
+        md.push_str(&format!(
+            "\n![capture]({})\n",
+            s.file_name().and_then(|n| n.to_str()).unwrap_or("")
+        ));
     }
     std::fs::write(&p, md).ok()?;
-    Some(p.strip_prefix(root).unwrap_or(&p).display().to_string().replace('\\', "/"))
+    Some(
+        p.strip_prefix(root)
+            .unwrap_or(&p)
+            .display()
+            .to_string()
+            .replace('\\', "/"),
+    )
 }

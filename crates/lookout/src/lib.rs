@@ -9,7 +9,7 @@ pub mod adapters;
 pub mod model;
 
 use adapters::Adapter;
-use model::{now_ms, Event, EventKind, HistoryPoint, Session, SourceHealth, Snapshot, Status};
+use model::{now_ms, Event, EventKind, HistoryPoint, Session, Snapshot, SourceHealth, Status};
 use std::collections::{HashMap, VecDeque};
 
 const EVENT_CAPACITY: usize = 1000;
@@ -37,7 +37,13 @@ impl Default for Collector {
 
 impl Collector {
     pub fn new(adapters: Vec<Box<dyn Adapter>>) -> Self {
-        Self { adapters, sessions: HashMap::new(), health: vec![], events: VecDeque::new(), history: VecDeque::new() }
+        Self {
+            adapters,
+            sessions: HashMap::new(),
+            health: vec![],
+            events: VecDeque::new(),
+            history: VecDeque::new(),
+        }
     }
 
     fn push_event(&mut self, e: Event) {
@@ -54,11 +60,26 @@ impl Collector {
         for a in &self.adapters {
             match a.poll() {
                 Ok(Some(list)) => {
-                    health.push(SourceHealth { source: a.id().into(), state: "ok".into(), sessions: list.len(), error: None });
+                    health.push(SourceHealth {
+                        source: a.id().into(),
+                        state: "ok".into(),
+                        sessions: list.len(),
+                        error: None,
+                    });
                     next.extend(list.into_iter().map(|s| (s.id.clone(), s)));
                 }
-                Ok(None) => health.push(SourceHealth { source: a.id().into(), state: "not-set-up".into(), sessions: 0, error: None }),
-                Err(e) => health.push(SourceHealth { source: a.id().into(), state: "error".into(), sessions: 0, error: Some(format!("{e:#}")) }),
+                Ok(None) => health.push(SourceHealth {
+                    source: a.id().into(),
+                    state: "not-set-up".into(),
+                    sessions: 0,
+                    error: None,
+                }),
+                Err(e) => health.push(SourceHealth {
+                    source: a.id().into(),
+                    state: "error".into(),
+                    sessions: 0,
+                    error: Some(format!("{e:#}")),
+                }),
             }
         }
         for s in extra {
@@ -70,7 +91,14 @@ impl Collector {
         let mut fresh = vec![];
         for (id, s) in &next {
             match self.sessions.get(id) {
-                None => fresh.push(Event { at, session_id: id.clone(), session_name: s.name.clone(), kind: EventKind::Appeared, from: None, to: Some(s.status) }),
+                None => fresh.push(Event {
+                    at,
+                    session_id: id.clone(),
+                    session_name: s.name.clone(),
+                    kind: EventKind::Appeared,
+                    from: None,
+                    to: Some(s.status),
+                }),
                 Some(old) if old.status != s.status => fresh.push(Event {
                     at,
                     session_id: id.clone(),
@@ -84,7 +112,14 @@ impl Collector {
         }
         for (id, old) in &self.sessions {
             if !next.contains_key(id) {
-                fresh.push(Event { at, session_id: id.clone(), session_name: old.name.clone(), kind: EventKind::Ended, from: Some(old.status), to: None });
+                fresh.push(Event {
+                    at,
+                    session_id: id.clone(),
+                    session_name: old.name.clone(),
+                    kind: EventKind::Ended,
+                    from: Some(old.status),
+                    to: None,
+                });
             }
         }
         for e in &fresh {
@@ -117,8 +152,16 @@ impl Collector {
             Status::Finished => 5,
         };
         let mut sessions: Vec<Session> = self.sessions.values().cloned().collect();
-        sessions.sort_by(|a, b| rank(&a.status).cmp(&rank(&b.status)).then(a.status_since.cmp(&b.status_since)));
-        Snapshot { generated_at: now_ms(), sessions, sources: self.health.clone() }
+        sessions.sort_by(|a, b| {
+            rank(&a.status)
+                .cmp(&rank(&b.status))
+                .then(a.status_since.cmp(&b.status_since))
+        });
+        Snapshot {
+            generated_at: now_ms(),
+            sessions,
+            sources: self.health.clone(),
+        }
     }
 
     pub fn events(&self, limit: usize) -> Vec<Event> {

@@ -91,7 +91,10 @@ pub enum Step {
 
 impl Step {
     pub fn is_primitive(&self) -> bool {
-        matches!(self, Step::Open(_) | Step::Click(_) | Step::Fill(_) | Step::Press(_) | Step::Wait(_))
+        matches!(
+            self,
+            Step::Open(_) | Step::Click(_) | Step::Fill(_) | Step::Press(_) | Step::Wait(_)
+        )
     }
 }
 
@@ -111,7 +114,10 @@ fn steps_from_maps<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<Step>, 
     let raw: Vec<serde_json::Value> = Deserialize::deserialize(d)?;
     raw.into_iter()
         .enumerate()
-        .map(|(i, v)| serde_json::from_value(v).map_err(|e| serde::de::Error::custom(format!("étape {} : {e}", i + 1))))
+        .map(|(i, v)| {
+            serde_json::from_value(v)
+                .map_err(|e| serde::de::Error::custom(format!("étape {} : {e}", i + 1)))
+        })
         .collect()
 }
 
@@ -155,13 +161,16 @@ pub const CONFIG_FILE: &str = "harnes-e2e.yaml";
 
 pub fn load_config(root: &Path) -> Result<Config> {
     let path = root.join(CONFIG_FILE);
-    let raw = std::fs::read_to_string(&path).with_context(|| format!("{} introuvable", path.display()))?;
+    let raw = std::fs::read_to_string(&path)
+        .with_context(|| format!("{} introuvable", path.display()))?;
     serde_yaml::from_str(&raw).with_context(|| format!("config invalide : {}", path.display()))
 }
 
 pub fn load_test(path: &Path) -> Result<TestSpec> {
-    let raw = std::fs::read_to_string(path).with_context(|| format!("lecture {}", path.display()))?;
-    let spec: TestSpec = serde_yaml::from_str(&raw).with_context(|| format!("spec invalide : {}", path.display()))?;
+    let raw =
+        std::fs::read_to_string(path).with_context(|| format!("lecture {}", path.display()))?;
+    let spec: TestSpec = serde_yaml::from_str(&raw)
+        .with_context(|| format!("spec invalide : {}", path.display()))?;
     if spec.steps.is_empty() {
         bail!("{} : aucune étape", path.display());
     }
@@ -171,12 +180,18 @@ pub fn load_test(path: &Path) -> Result<TestSpec> {
 /// All `*.e2e.yaml` / `*.e2e.yml` under `tests/`, sorted.
 pub fn discover(root: &Path) -> Vec<PathBuf> {
     fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
-        let Ok(rd) = std::fs::read_dir(dir) else { return };
+        let Ok(rd) = std::fs::read_dir(dir) else {
+            return;
+        };
         for e in rd.flatten() {
             let p = e.path();
             if p.is_dir() {
                 walk(&p, out);
-            } else if p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.ends_with(".e2e.yaml") || n.ends_with(".e2e.yml")) {
+            } else if p
+                .file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n.ends_with(".e2e.yaml") || n.ends_with(".e2e.yml"))
+            {
                 out.push(p);
             }
         }

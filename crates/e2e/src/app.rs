@@ -20,13 +20,20 @@ fn host_port(url: &str) -> Option<String> {
     if authority.contains(':') {
         Some(authority.to_string())
     } else {
-        Some(format!("{authority}:{}", if url.starts_with("https") { 443 } else { 80 }))
+        Some(format!(
+            "{authority}:{}",
+            if url.starts_with("https") { 443 } else { 80 }
+        ))
     }
 }
 
 pub fn reachable(url: &str) -> bool {
-    let Some(hp) = host_port(url) else { return false };
-    let Ok(mut addrs) = hp.to_socket_addrs() else { return false };
+    let Some(hp) = host_port(url) else {
+        return false;
+    };
+    let Ok(mut addrs) = hp.to_socket_addrs() else {
+        return false;
+    };
     addrs.any(|a| TcpStream::connect_timeout(&a, Duration::from_millis(300)).is_ok())
 }
 
@@ -36,7 +43,10 @@ impl AppProcess {
             return Ok(Self { child: None });
         }
         let Some(cmd) = cfg.command.as_deref() else {
-            bail!("{} ne répond pas et aucune `app.command` n'est configurée", cfg.url);
+            bail!(
+                "{} ne répond pas et aucune `app.command` n'est configurée",
+                cfg.url
+            );
         };
         let mut c = if cfg!(windows) {
             let mut c = Command::new("cmd");
@@ -47,15 +57,27 @@ impl AppProcess {
             c.args(["-c", cmd]);
             c
         };
-        let mut child = c.current_dir(root).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
+        let mut child = c
+            .current_dir(root)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?;
         let start = Instant::now();
         while !reachable(&cfg.url) {
             if let Some(status) = child.try_wait()? {
-                bail!("`{cmd}` s'est arrêté ({status}) avant que {} réponde", cfg.url);
+                bail!(
+                    "`{cmd}` s'est arrêté ({status}) avant que {} réponde",
+                    cfg.url
+                );
             }
             if start.elapsed() > Duration::from_millis(cfg.ready_timeout_ms) {
                 let _ = child.kill();
-                bail!("{} ne répond pas après {} ms", cfg.url, cfg.ready_timeout_ms);
+                bail!(
+                    "{} ne répond pas après {} ms",
+                    cfg.url,
+                    cfg.ready_timeout_ms
+                );
             }
             std::thread::sleep(Duration::from_millis(200));
         }
@@ -90,7 +112,13 @@ mod tests {
 
     #[test]
     fn parses_host_port() {
-        assert_eq!(host_port("http://localhost:4173/x").as_deref(), Some("localhost:4173"));
-        assert_eq!(host_port("https://example.com").as_deref(), Some("example.com:443"));
+        assert_eq!(
+            host_port("http://localhost:4173/x").as_deref(),
+            Some("localhost:4173")
+        );
+        assert_eq!(
+            host_port("https://example.com").as_deref(),
+            Some("example.com:443")
+        );
     }
 }

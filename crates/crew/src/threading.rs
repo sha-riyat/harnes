@@ -21,7 +21,9 @@ impl RunThreads {
     pub fn open_run(&self, run: &str, task: &str) {
         if let Some(t) = &self.0 {
             let title: String = task.chars().take(80).collect();
-            if t.ensure(&run_thread(run), &title, "run", Some(run), "harnes").is_ok() {
+            if t.ensure(&run_thread(run), &title, "run", Some(run), "harnes")
+                .is_ok()
+            {
                 let _ = t.post(&run_thread(run), "user", "message", task);
             }
         }
@@ -38,7 +40,15 @@ impl RunThreads {
         let Some(t) = &self.0 else { return };
         for lot in &plan.lots {
             let id = lot_thread(run, &lot.id);
-            if t.ensure(&id, &format!("{} · {}", lot.id, lot.title), "lot", Some(run), "planner").is_ok() {
+            if t.ensure(
+                &id,
+                &format!("{} · {}", lot.id, lot.title),
+                "lot",
+                Some(run),
+                "planner",
+            )
+            .is_ok()
+            {
                 let brief = format!(
                     "Lot {} ({}). Fichiers : {}\n{}\nAcceptation : {}",
                     lot.id,
@@ -55,8 +65,17 @@ impl RunThreads {
     pub fn fixes(&self, run: &str, author: &str, fixes: &[(String, Vec<Fix>)]) {
         let Some(t) = &self.0 else { return };
         for (lot, list) in fixes {
-            let body = list.iter().map(|f| format!("- {} : {} -> {}", f.r#where, f.problem, f.fix)).collect::<Vec<_>>().join("\n");
-            let _ = t.post(&lot_thread(run, lot), author, "message", &format!("Corrections demandées :\n{body}"));
+            let body = list
+                .iter()
+                .map(|f| format!("- {} : {} -> {}", f.r#where, f.problem, f.fix))
+                .collect::<Vec<_>>()
+                .join("\n");
+            let _ = t.post(
+                &lot_thread(run, lot),
+                author,
+                "message",
+                &format!("Corrections demandées :\n{body}"),
+            );
         }
     }
 
@@ -65,7 +84,11 @@ impl RunThreads {
         let Some(t) = &self.0 else { return };
         if let Ok(list) = t.list("open", Some(run), 200) {
             for th in list {
-                let s = if th.kind == "run" { summary } else { "lot terminé" };
+                let s = if th.kind == "run" {
+                    summary
+                } else {
+                    "lot terminé"
+                };
                 let _ = t.close(&th.id, "teacher", Some(s));
             }
         }

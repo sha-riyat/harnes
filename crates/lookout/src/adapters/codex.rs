@@ -13,7 +13,9 @@ pub struct Codex;
 const FINISHED_AFTER_MS: u64 = 30 * 60 * 1000;
 
 fn codex_home() -> PathBuf {
-    std::env::var_os("CODEX_HOME").map(PathBuf::from).unwrap_or_else(|| home().join(".codex"))
+    std::env::var_os("CODEX_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home().join(".codex"))
 }
 
 fn day_dirs(root: &Path) -> Vec<PathBuf> {
@@ -34,7 +36,9 @@ fn day_dirs(root: &Path) -> Vec<PathBuf> {
 pub fn read_rollout(path: &Path) -> Option<Session> {
     use std::io::BufRead;
     let mut first = String::new();
-    std::io::BufReader::new(std::fs::File::open(path).ok()?).read_line(&mut first).ok()?;
+    std::io::BufReader::new(std::fs::File::open(path).ok()?)
+        .read_line(&mut first)
+        .ok()?;
     let meta: Value = serde_json::from_str(&first).ok()?;
     let p = &meta["payload"];
     if meta["type"] != "session_meta" {
@@ -45,7 +49,9 @@ pub fn read_rollout(path: &Path) -> Option<Session> {
     s.name = format!("codex {}", &id[..id.len().min(8)]);
     let mut status = Status::Idle;
     for line in tail_lines(path, 256 * 1024) {
-        let Ok(v) = serde_json::from_str::<Value>(&line) else { continue };
+        let Ok(v) = serde_json::from_str::<Value>(&line) else {
+            continue;
+        };
         if v["type"] != "event_msg" {
             continue;
         }
@@ -89,7 +95,10 @@ impl Adapter for Codex {
         for day in day_dirs(&root) {
             for e in std::fs::read_dir(day).into_iter().flatten().flatten() {
                 let p = e.path();
-                if p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("rollout-") && n.ends_with(".jsonl")) {
+                if p.file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.starts_with("rollout-") && n.ends_with(".jsonl"))
+                {
                     if let Some(s) = read_rollout(&p) {
                         out.push(s);
                     }

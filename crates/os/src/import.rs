@@ -14,7 +14,10 @@ pub fn import(lib: &Library, src: &Path) -> Result<Vec<String>> {
     } else if src.join("manifest.yaml").is_file() {
         ids.push(from_dir(lib, src)?);
     } else if src.is_dir() {
-        let mut entries: Vec<PathBuf> = std::fs::read_dir(src)?.flatten().map(|e| e.path()).collect();
+        let mut entries: Vec<PathBuf> = std::fs::read_dir(src)?
+            .flatten()
+            .map(|e| e.path())
+            .collect();
         entries.sort();
         for p in entries {
             if p.extension().is_some_and(|e| e.eq_ignore_ascii_case("zip")) {
@@ -44,7 +47,11 @@ fn pack_id(manifest: &str) -> Result<String> {
         id: String,
     }
     let id = serde_yaml::from_str::<M>(manifest)?.id;
-    if id.is_empty() || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+    if id.is_empty()
+        || !id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
         bail!("bad pack id {id:?}");
     }
     Ok(id)
@@ -77,12 +84,15 @@ fn from_dir(lib: &Library, dir: &Path) -> Result<String> {
 /// A zip holds one or more packs; each is the folder around a `manifest.yaml`.
 fn from_zip(lib: &Library, path: &Path) -> Result<Vec<String>> {
     let file = std::fs::File::open(path)?;
-    let mut zip = zip::ZipArchive::new(file).with_context(|| format!("{} is not a zip", path.display()))?;
+    let mut zip =
+        zip::ZipArchive::new(file).with_context(|| format!("{} is not a zip", path.display()))?;
     let tmp = lib.dir.join(format!(".import-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&tmp);
     for i in 0..zip.len() {
         let mut entry = zip.by_index(i)?;
-        let Some(rel) = entry.enclosed_name() else { bail!("unsafe path in {}", path.display()) };
+        let Some(rel) = entry.enclosed_name() else {
+            bail!("unsafe path in {}", path.display())
+        };
         let out = tmp.join(rel);
         if entry.is_dir() {
             std::fs::create_dir_all(&out)?;
@@ -115,7 +125,8 @@ mod tests {
         let zip_path = src.dir.with_extension("zip");
         let mut w = zip::ZipWriter::new(std::fs::File::create(&zip_path).unwrap());
         let opt = zip::write::SimpleFileOptions::default();
-        w.start_file("pricing-os-v0.1.0/pricing-os/manifest.yaml", opt).unwrap();
+        w.start_file("pricing-os-v0.1.0/pricing-os/manifest.yaml", opt)
+            .unwrap();
         w.write_all(b"id: pricing-os\npurpose: Price\n").unwrap();
         w.finish().unwrap();
         assert_eq!(import(&dst, &zip_path).unwrap(), vec!["pricing-os"]);

@@ -20,5 +20,9 @@ fn main() {
         out.push_str(&format!("    ({name:?}, include_bytes!({path:?})),\n"));
     }
     out.push_str("];\n");
-    fs::write(PathBuf::from(env::var("OUT_DIR").unwrap()).join("bundled.rs"), out).unwrap();
+    fs::write(
+        PathBuf::from(env::var("OUT_DIR").unwrap()).join("bundled.rs"),
+        out,
+    )
+    .unwrap();
 }

@@ -24,13 +24,16 @@ pub fn os_pack(id: String) -> Result<Value, String> {
 
 #[tauri::command]
 pub fn os_read(id: String, path: String) -> Result<String, String> {
-    Library::open_default().read(&id, &path).map_err(|e| e.to_string())
+    Library::open_default()
+        .read(&id, &path)
+        .map_err(|e| e.to_string())
 }
 
 /// Imports packs, then refreshes every open project's HARNESS.md so agents see them.
 #[tauri::command]
 pub fn os_import(st: State<'_, Shared>, path: String) -> Result<Vec<String>, String> {
-    let ids = harnes_os::import(&Library::open_default(), std::path::Path::new(path.trim())).map_err(|e| format!("{e:#}"))?;
+    let ids = harnes_os::import(&Library::open_default(), std::path::Path::new(path.trim()))
+        .map_err(|e| format!("{e:#}"))?;
     for p in st.projects.read().iter() {
         let _ = harnes_crew::setup::equip(&p.root, &ctx_bin(), false);
     }

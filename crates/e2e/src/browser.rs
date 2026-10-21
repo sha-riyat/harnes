@@ -76,9 +76,17 @@ pub fn find_browser(configured: Option<&Path>) -> Result<PathBuf> {
             r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
         ]
     } else if cfg!(target_os = "macos") {
-        &["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"]
+        &[
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+        ]
     } else {
-        &["/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/microsoft-edge"]
+        &[
+            "/usr/bin/google-chrome",
+            "/usr/bin/chromium",
+            "/usr/bin/chromium-browser",
+            "/usr/bin/microsoft-edge",
+        ]
     };
     candidates
         .iter()
@@ -96,8 +104,17 @@ pub struct Session {
 }
 
 impl Session {
-    pub async fn launch(exe: &Path, base_url: &str, headed: bool, timeout: Duration) -> Result<Self> {
-        let profile = std::env::temp_dir().join(format!("harnes-e2e-{}-{}", std::process::id(), rand_suffix()));
+    pub async fn launch(
+        exe: &Path,
+        base_url: &str,
+        headed: bool,
+        timeout: Duration,
+    ) -> Result<Self> {
+        let profile = std::env::temp_dir().join(format!(
+            "harnes-e2e-{}-{}",
+            std::process::id(),
+            rand_suffix()
+        ));
         let mut cfg = BrowserConfig::builder()
             .chrome_executable(exe)
             .user_data_dir(&profile)
@@ -112,7 +129,13 @@ impl Session {
             .with_context(|| format!("lancement de {}", exe.display()))?;
         let handler = tokio::spawn(async move { while handler.next().await.is_some() {} });
         let page = browser.new_page("about:blank").await?;
-        Ok(Self { browser, page, handler, base_url: base_url.trim_end_matches('/').to_string(), timeout })
+        Ok(Self {
+            browser,
+            page,
+            handler,
+            base_url: base_url.trim_end_matches('/').to_string(),
+            timeout,
+        })
     }
 
     pub fn url_for(&self, path: &str) -> String {
@@ -125,8 +148,13 @@ impl Session {
 
     async fn js<T: for<'de> Deserialize<'de>>(&self, expr: &str) -> Result<T> {
         let code = format!("{PAGE_JS}\n{expr}");
-        let v = self.page.evaluate(code).await.map_err(|e| anyhow!("évaluation JS : {e}"))?;
-        v.into_value::<T>().map_err(|e| anyhow!("résultat JS : {e}"))
+        let v = self
+            .page
+            .evaluate(code)
+            .await
+            .map_err(|e| anyhow!("évaluation JS : {e}"))?;
+        v.into_value::<T>()
+            .map_err(|e| anyhow!("résultat JS : {e}"))
     }
 
     pub async fn snapshot(&self) -> Result<Snapshot> {
@@ -206,7 +234,10 @@ impl Session {
     }
 
     pub async fn screenshot(&self, path: &Path) -> Result<()> {
-        let png = self.page.screenshot(chromiumoxide::page::ScreenshotParams::builder().build()).await?;
+        let png = self
+            .page
+            .screenshot(chromiumoxide::page::ScreenshotParams::builder().build())
+            .await?;
         if let Some(d) = path.parent() {
             std::fs::create_dir_all(d)?;
         }
@@ -254,5 +285,8 @@ fn verdict(e: &Expect, f: &Found) -> Option<String> {
 }
 
 fn rand_suffix() -> u128 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0)
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0)
 }

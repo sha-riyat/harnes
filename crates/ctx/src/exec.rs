@@ -64,9 +64,13 @@ fn command_for(language: &str, code: &str) -> Result<Command> {
             c.args(["-e", code]);
             c
         }
-        other => bail!("unsupported language: {other} (use shell, powershell, cmd, python or node)"),
+        other => {
+            bail!("unsupported language: {other} (use shell, powershell, cmd, python or node)")
+        }
     };
-    c.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    c.stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
     Ok(c)
 }
 

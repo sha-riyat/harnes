@@ -9,9 +9,18 @@ const TAIL: usize = 10;
 /// Lines that usually matter in build/test output.
 fn is_signal(line: &str) -> bool {
     let l = line.to_ascii_lowercase();
-    ["error", "fail", "panic", "exception", "warning", "traceback", "assert", "fatal"]
-        .iter()
-        .any(|k| l.contains(k))
+    [
+        "error",
+        "fail",
+        "panic",
+        "exception",
+        "warning",
+        "traceback",
+        "assert",
+        "fatal",
+    ]
+    .iter()
+    .any(|k| l.contains(k))
 }
 
 /// Inline small outputs; store, index and summarise large ones.
@@ -29,7 +38,14 @@ pub fn digest(store: &Store, source: &str, content: &str, intent: Option<&str>) 
     );
 
     out.push_str("\n--- head ---\n");
-    out.push_str(&lines.iter().take(HEAD).copied().collect::<Vec<_>>().join("\n"));
+    out.push_str(
+        &lines
+            .iter()
+            .take(HEAD)
+            .copied()
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
 
     let signals: Vec<String> = lines
         .iter()
@@ -50,11 +66,20 @@ pub fn digest(store: &Store, source: &str, content: &str, intent: Option<&str>) 
     }
 
     if let Some(q) = intent.filter(|q| !q.trim().is_empty()) {
-        let hits: Vec<_> = store.search(q, 8)?.into_iter().filter(|h| h.id == id).take(5).collect();
+        let hits: Vec<_> = store
+            .search(q, 8)?
+            .into_iter()
+            .filter(|h| h.id == id)
+            .take(5)
+            .collect();
         if !hits.is_empty() {
             out.push_str(&format!("\n--- matches for \"{q}\" ---\n"));
             for h in hits {
-                out.push_str(&format!("line {}: {}\n", h.line, h.snippet.replace('\n', " ")));
+                out.push_str(&format!(
+                    "line {}: {}\n",
+                    h.line,
+                    h.snippet.replace('\n', " ")
+                ));
             }
         }
     }

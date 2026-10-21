@@ -22,7 +22,10 @@ pub trait Adapter: Send + Sync {
 }
 
 pub fn home() -> PathBuf {
-    std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")).map(PathBuf::from).unwrap_or_default()
+    std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(PathBuf::from)
+        .unwrap_or_default()
 }
 
 /// Is a process alive? Windows: real check; elsewhere: /proc or assume yes.
@@ -31,7 +34,9 @@ pub fn alive(pid: u32) -> bool {
     unsafe {
         use windows_sys::Win32::{
             Foundation::{CloseHandle, STILL_ACTIVE},
-            System::Threading::{GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION},
+            System::Threading::{
+                GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+            },
         };
         let h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
         if h.is_null() {
@@ -62,7 +67,9 @@ pub fn mtime_ms(p: &std::path::Path) -> u64 {
 /// Reads at most the last `max` bytes of a file as lines.
 pub fn tail_lines(p: &std::path::Path, max: u64) -> Vec<String> {
     use std::io::{Read, Seek, SeekFrom};
-    let Ok(mut f) = std::fs::File::open(p) else { return vec![] };
+    let Ok(mut f) = std::fs::File::open(p) else {
+        return vec![];
+    };
     let len = f.metadata().map(|m| m.len()).unwrap_or(0);
     let start = len.saturating_sub(max);
     if f.seek(SeekFrom::Start(start)).is_err() {

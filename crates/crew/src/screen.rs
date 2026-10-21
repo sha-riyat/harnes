@@ -56,10 +56,23 @@ pub fn detect(screen: &str) -> Option<ScreenPrompt> {
         i -= 1;
         if option(lines[i]).is_none() {
             let l = clean(lines[i]).to_lowercase();
-            if l.ends_with("(y/n)") || l.ends_with("[y/n]") || l.ends_with("[y/n]?") || l.ends_with("(y/n)?") {
+            if l.ends_with("(y/n)")
+                || l.ends_with("[y/n]")
+                || l.ends_with("[y/n]?")
+                || l.ends_with("(y/n)?")
+            {
                 return Some(ScreenPrompt {
                     question: clean(lines[i]).to_string(),
-                    choices: vec![Choice { keys: "y\r".into(), label: "Oui".into() }, Choice { keys: "n\r".into(), label: "Non".into() }],
+                    choices: vec![
+                        Choice {
+                            keys: "y\r".into(),
+                            label: "Oui".into(),
+                        },
+                        Choice {
+                            keys: "n\r".into(),
+                            label: "Non".into(),
+                        },
+                    ],
                 });
             }
             continue;
@@ -71,7 +84,8 @@ pub fn detect(screen: &str) -> Option<ScreenPrompt> {
             start -= 1;
         }
         let opts: Vec<(u32, String)> = (start..=end).filter_map(|k| option(lines[k])).collect();
-        let sequential = opts.windows(2).all(|w| w[1].0 == w[0].0 + 1) && opts.first().map(|o| o.0) == Some(1);
+        let sequential =
+            opts.windows(2).all(|w| w[1].0 == w[0].0 + 1) && opts.first().map(|o| o.0) == Some(1);
         if opts.len() >= 2 && sequential {
             let question = (0..start)
                 .rev()
@@ -82,7 +96,14 @@ pub fn detect(screen: &str) -> Option<ScreenPrompt> {
             let at = (start..=end).position(|k| pointed(lines[k])).unwrap_or(0);
             return Some(ScreenPrompt {
                 question,
-                choices: opts.into_iter().enumerate().map(|(j, (_, label))| Choice { keys: choose(at, j), label }).collect(),
+                choices: opts
+                    .into_iter()
+                    .enumerate()
+                    .map(|(j, (_, label))| Choice {
+                        keys: choose(at, j),
+                        label,
+                    })
+                    .collect(),
             });
         }
         i = start;
@@ -108,8 +129,17 @@ mod tests {
         let p = detect(screen).expect("menu");
         assert_eq!(p.question, "Do you want to proceed?");
         assert_eq!(p.choices.len(), 3);
-        assert_eq!(p.choices[1], Choice { keys: "\u{1b}[B\r".into(), label: "Yes, and don't ask again".into() });
-        assert_eq!(p.choices[0].keys, "\r", "the pointed option only needs Enter");
+        assert_eq!(
+            p.choices[1],
+            Choice {
+                keys: "\u{1b}[B\r".into(),
+                label: "Yes, and don't ask again".into()
+            }
+        );
+        assert_eq!(
+            p.choices[0].keys, "\r",
+            "the pointed option only needs Enter"
+        );
     }
 
     #[test]
@@ -121,8 +151,14 @@ mod tests {
 
     #[test]
     fn reads_yes_no_prompt_and_ignores_plain_lists() {
-        assert_eq!(detect("Overwrite file? (y/N)").unwrap().choices[0].keys, "y\r");
-        assert!(detect("Steps done:\n1. lint\nnothing else").is_none(), "a single item is not a menu");
+        assert_eq!(
+            detect("Overwrite file? (y/N)").unwrap().choices[0].keys,
+            "y\r"
+        );
+        assert!(
+            detect("Steps done:\n1. lint\nnothing else").is_none(),
+            "a single item is not a menu"
+        );
         assert!(detect("2. second\n3. third").is_none(), "menus start at 1");
     }
 }

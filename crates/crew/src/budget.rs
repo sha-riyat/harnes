@@ -24,8 +24,14 @@ pub struct Tune {
     pub effort: &'static str,
 }
 
-pub const SONNET_MEDIUM: Tune = Tune { model: "sonnet", effort: "medium" };
-pub const SONNET_HIGH: Tune = Tune { model: "sonnet", effort: "high" };
+pub const SONNET_MEDIUM: Tune = Tune {
+    model: "sonnet",
+    effort: "medium",
+};
+pub const SONNET_HIGH: Tune = Tune {
+    model: "sonnet",
+    effort: "high",
+};
 
 /// Reviewers that look for problems in a deep review, before the verifier.
 pub const FINDERS: u32 = 3;
@@ -62,7 +68,11 @@ impl Pace {
     /// From the window's use and its reset time (epoch seconds).
     pub fn new(week: f64, week_reset: u64, five_hour: f64, now: u64) -> Pace {
         let left = week_reset.saturating_sub(now) as f64 / (7.0 * 86_400.0);
-        Pace { week, week_elapsed: (1.0 - left).clamp(0.0, 1.0), five_hour }
+        Pace {
+            week,
+            week_elapsed: (1.0 - left).clamp(0.0, 1.0),
+            five_hour,
+        }
     }
 
     /// The week runs ahead of a straight line to its reset, or the 5-hour window is nearly spent.
@@ -90,6 +100,9 @@ mod tests {
         let half = now + 7 * 86_400 / 2; // reset in 3.5 days: half the week gone
         assert!(!Pace::new(0.50, half, 0.2, now).eco());
         assert!(Pace::new(0.65, half, 0.2, now).eco(), "ahead of the line");
-        assert!(Pace::new(0.10, half, 0.9, now).eco(), "5-hour window nearly spent");
+        assert!(
+            Pace::new(0.10, half, 0.9, now).eco(),
+            "5-hour window nearly spent"
+        );
     }
 }

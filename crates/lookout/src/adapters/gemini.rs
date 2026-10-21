@@ -17,13 +17,24 @@ impl Adapter for GeminiCli {
 
     fn poll(&self) -> Result<Option<Vec<Session>>> {
         let root = home().join(".gemini").join("tmp");
-        let Ok(projects) = std::fs::read_dir(&root) else { return Ok(None) };
+        let Ok(projects) = std::fs::read_dir(&root) else {
+            return Ok(None);
+        };
         let mut out = vec![];
         for proj in projects.flatten() {
-            let cwd = std::fs::read_to_string(proj.path().join(".project_root")).unwrap_or_default().trim().to_string();
-            for e in std::fs::read_dir(proj.path().join("chats")).into_iter().flatten().flatten() {
+            let cwd = std::fs::read_to_string(proj.path().join(".project_root"))
+                .unwrap_or_default()
+                .trim()
+                .to_string();
+            for e in std::fs::read_dir(proj.path().join("chats"))
+                .into_iter()
+                .flatten()
+                .flatten()
+            {
                 let p = e.path();
-                let Some(name) = p.file_stem().and_then(|n| n.to_str()) else { continue };
+                let Some(name) = p.file_stem().and_then(|n| n.to_str()) else {
+                    continue;
+                };
                 if !name.starts_with("session-") {
                     continue;
                 }
@@ -32,7 +43,12 @@ impl Adapter for GeminiCli {
                     continue;
                 }
                 let dir_name = proj.file_name().to_string_lossy().into_owned();
-                let mut s = Session::new(self.id(), "gemini", name, if cwd.is_empty() { &dir_name } else { &cwd });
+                let mut s = Session::new(
+                    self.id(),
+                    "gemini",
+                    name,
+                    if cwd.is_empty() { &dir_name } else { &cwd },
+                );
                 s.name = format!("gemini {}", s.project);
                 s.status = if age < WORKING_WINDOW_MS {
                     Status::Working

@@ -53,7 +53,10 @@ fn definitions() -> Value {
 
 impl Server {
     pub fn new(root: PathBuf) -> Self {
-        Self { root, st: State::default() }
+        Self {
+            root,
+            st: State::default(),
+        }
     }
 
     async fn ensure_session(&mut self) -> Result<&Session> {
@@ -63,25 +66,55 @@ impl Server {
                 self.st.app = Some(AppProcess::start(&cfg.app, &self.root)?);
             }
             let exe = find_browser(cfg.browser.as_deref())?;
-            self.st.session = Some(Session::launch(&exe, &cfg.app.url, cfg.headed, Duration::from_millis(cfg.timeout_ms)).await?);
+            self.st.session = Some(
+                Session::launch(
+                    &exe,
+                    &cfg.app.url,
+                    cfg.headed,
+                    Duration::from_millis(cfg.timeout_ms),
+                )
+                .await?,
+            );
         }
         Ok(self.st.session.as_ref().expect("session"))
     }
 
     async fn screen(&self) -> Result<String> {
-        let s = self.st.session.as_ref().ok_or_else(|| anyhow!("pas de session : appelle e2e_open ou e2e_prepare"))?;
+        let s = self
+            .st
+            .session
+            .as_ref()
+            .ok_or_else(|| anyhow!("pas de session : appelle e2e_open ou e2e_prepare"))?;
         Ok(s.snapshot().await?.render())
     }
 
     /// Replaces a snapshot-id locator by a stable one before recording it.
     async fn stable(&self, loc: &Locator) -> Result<Locator> {
-        let Some(id) = &loc.id else { return Ok(loc.clone()) };
-        let s = self.st.session.as_ref().ok_or_else(|| anyhow!("pas de session"))?;
+        let Some(id) = &loc.id else {
+            return Ok(loc.clone());
+        };
+        let s = self
+            .st
+            .session
+            .as_ref()
+            .ok_or_else(|| anyhow!("pas de session"))?;
         let snap = s.snapshot().await?;
-        let n = snap.nodes.iter().find(|n| &n.id == id).ok_or_else(|| anyhow!("nœud {id} absent de l'écran"))?;
+        let n = snap
+            .nodes
+            .iter()
+            .find(|n| &n.id == id)
+            .ok_or_else(|| anyhow!("nœud {id} absent de l'écran"))?;
         Ok(match &n.testid {
-            Some(t) => Locator { testid: Some(t.clone()), ..Default::default() },
-            None => Locator { role: Some(n.role.clone()), name: Some(n.name.clone()), exact: true, ..Default::default() },
+            Some(t) => Locator {
+                testid: Some(t.clone()),
+                ..Default::default()
+            },
+            None => Locator {
+                role: Some(n.role.clone()),
+                name: Some(n.name.clone()),
+                exact: true,
+                ..Default::default()
+            },
         })
     }
 
@@ -89,10 +122,18 @@ impl Server {
         self.ensure_session().await?;
         let recorded = match &step {
             Step::Click(l) => Step::Click(self.stable(l).await?),
-            Step::Fill(f) => Step::Fill(Fill { target: self.stable(&f.target).await?, text: f.text.clone() }),
+            Step::Fill(f) => Step::Fill(Fill {
+                target: self.stable(&f.target).await?,
+                text: f.text.clone(),
+            }),
             other => other.clone(),
         };
-        self.st.session.as_ref().expect("session").perform(&step).await?;
+        self.st
+            .session
+            .as_ref()
+            .expect("session")
+            .perform(&step)
+            .await?;
         if self.st.target.is_some() {
             self.st.recording.push(recorded);
         }
@@ -101,66 +142,144 @@ impl Server {
     }
 
     async fn call(&mut self, name: &str, a: &Value) -> Result<String> {
-        let s = |k: &str| a.get(k).and_then(Value::as_str).map(String::from).ok_or_else(|| anyhow!("argument manquant : {k}"));
-        let loc = |k: &str| -> Result<Locator> { Ok(serde_json::from_value(a.get(k).cloned().ok_or_else(|| anyhow!("argument manquant : {k}"))?)?) };
+        let s = |k: &str| {
+            a.get(k)
+                .and_then(Value::as_str)
+                .map(String::from)
+                .ok_or_else(|| anyhow!("argument manquant : {k}"))
+        };
+        let loc = |k: &str| -> Result<Locator> {
+            Ok(serde_json::from_value(
+                a.get(k)
+                    .cloned()
+                    .ok_or_else(|| anyhow!("argument manquant : {k}"))?,
+            )?)
+        };
         match name {
             "e2e_init" => {
                 let w = crate::init(&self.root, &s("url")?, s("command").ok().as_deref())?;
-                Ok(if w.is_empty() { "déjà initialisé".into() } else { format!("écrit : {}", w.join(", ")) })
+                Ok(if w.is_empty() {
+                    "déjà initialisé".into()
+                } else {
+                    format!("écrit : {}", w.join(", "))
+                })
             }
             "e2e_run" => {
-                let files = a.get("files").and_then(Value::as_array).map(|v| v.iter().filter_map(Value::as_str).map(PathBuf::from).collect()).unwrap_or_default();
-                let r = runner::run(&self.root, runner::RunOptions { files, headed: false }).await;
+                let files = a
+                    .get("files")
+                    .and_then(Value::as_array)
+                    .map(|v| {
+                        v.iter()
+                            .filter_map(Value::as_str)
+                            .map(PathBuf::from)
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let r = runner::run(
+                    &self.root,
+                    runner::RunOptions {
+                        files,
+                        headed: false,
+                    },
+                )
+                .await;
                 let mut out = r.describe();
                 for u in &r.unresolved {
-                    out.push_str(&format!("\nÀ résoudre : e2e_prepare {{file: \"{}\", step: {}}} — « {} » ({})", u.file, u.step, u.act, u.reason));
+                    out.push_str(&format!(
+                        "\nÀ résoudre : e2e_prepare {{file: \"{}\", step: {}}} — « {} » ({})",
+                        u.file, u.step, u.act, u.reason
+                    ));
                 }
                 Ok(out)
             }
             "e2e_open" => {
                 let path = s("path").unwrap_or_else(|_| "/".into());
                 self.ensure_session().await?;
-                self.st.session.as_ref().expect("session").perform(&Step::Open(path)).await?;
+                self.st
+                    .session
+                    .as_ref()
+                    .expect("session")
+                    .perform(&Step::Open(path))
+                    .await?;
                 self.screen().await
             }
             "e2e_prepare" => {
                 let file = s("file")?;
-                let step = a.get("step").and_then(Value::as_u64).ok_or_else(|| anyhow!("argument manquant : step"))? as usize;
+                let step = a
+                    .get("step")
+                    .and_then(Value::as_u64)
+                    .ok_or_else(|| anyhow!("argument manquant : step"))?
+                    as usize;
                 let (_, test) = runner::load(&self.root, &file)?;
-                let Some(Step::Act(goal)) = test.steps.get(step).cloned() else { bail!("l'étape {step} de {file} n'est pas une étape `act`") };
+                let Some(Step::Act(goal)) = test.steps.get(step).cloned() else {
+                    bail!("l'étape {step} de {file} n'est pas une étape `act`")
+                };
                 if let Some(old) = self.st.session.take() {
                     old.close().await;
                 }
                 self.ensure_session().await?;
                 let session = self.st.session.as_ref().expect("session");
-                runner::run_steps(&self.root, session, &file, &test, Some(step)).await.map_err(|(i, m, _)| anyhow!("étape {i} avant l'act a échoué : {m}"))?;
+                runner::run_steps(&self.root, session, &file, &test, Some(step))
+                    .await
+                    .map_err(|(i, m, _)| anyhow!("étape {i} avant l'act a échoué : {m}"))?;
                 self.st.recording.clear();
                 self.st.target = Some((file, step));
                 Ok(format!("Objectif à réaliser : « {goal} »\nRéalise-le avec e2e_click / e2e_fill / e2e_press / e2e_goto, vérifie avec e2e_check, puis e2e_save.\n\n{}", self.screen().await?))
             }
             "e2e_observe" => self.screen().await,
             "e2e_click" => self.act(Step::Click(loc("target")?)).await,
-            "e2e_fill" => self.act(Step::Fill(Fill { target: loc("target")?, text: s("text")? })).await,
+            "e2e_fill" => {
+                self.act(Step::Fill(Fill {
+                    target: loc("target")?,
+                    text: s("text")?,
+                }))
+                .await
+            }
             "e2e_press" => self.act(Step::Press(s("key")?)).await,
             "e2e_goto" => self.act(Step::Open(s("path")?)).await,
             "e2e_check" => {
-                let e: Expect = serde_json::from_value(a.get("expect").cloned().unwrap_or_default())?;
+                let e: Expect =
+                    serde_json::from_value(a.get("expect").cloned().unwrap_or_default())?;
                 self.ensure_session().await?.check(&e).await?;
                 Ok("OK".into())
             }
             "e2e_save" => {
-                let (file, step) = self.st.target.clone().ok_or_else(|| anyhow!("rien à enregistrer : appelle d'abord e2e_prepare"))?;
+                let (file, step) =
+                    self.st.target.clone().ok_or_else(|| {
+                        anyhow!("rien à enregistrer : appelle d'abord e2e_prepare")
+                    })?;
                 let (_, test) = runner::load(&self.root, &file)?;
-                let Some(Step::Act(goal)) = test.steps.get(step).cloned() else { bail!("étape {step} introuvable") };
+                let Some(Step::Act(goal)) = test.steps.get(step).cloned() else {
+                    bail!("étape {step} introuvable")
+                };
                 let key = cache::key(&file, &test.name, step, &goal);
-                let res = Resolution { test: test.name.clone(), act: goal, actions: self.st.recording.clone(), recorded_at: cache::now() };
+                let res = Resolution {
+                    test: test.name.clone(),
+                    act: goal,
+                    actions: self.st.recording.clone(),
+                    recorded_at: cache::now(),
+                };
                 let p = cache::put(&self.root, &key, &res)?;
                 self.st.target = None;
-                let r = runner::run(&self.root, runner::RunOptions { files: vec![PathBuf::from(&file)], headed: false }).await;
-                Ok(format!("{} action(s) enregistrée(s) dans {}\nVérification : {}", res.actions.len(), p.display(), r.describe()))
+                let r = runner::run(
+                    &self.root,
+                    runner::RunOptions {
+                        files: vec![PathBuf::from(&file)],
+                        headed: false,
+                    },
+                )
+                .await;
+                Ok(format!(
+                    "{} action(s) enregistrée(s) dans {}\nVérification : {}",
+                    res.actions.len(),
+                    p.display(),
+                    r.describe()
+                ))
             }
             "e2e_screenshot" => {
-                let p = self.root.join(s("path").unwrap_or_else(|_| ".harnes/e2e/screenshot.png".into()));
+                let p = self
+                    .root
+                    .join(s("path").unwrap_or_else(|_| ".harnes/e2e/screenshot.png".into()));
                 self.ensure_session().await?.screenshot(&p).await?;
                 Ok(format!("capture : {}", p.display()))
             }
@@ -190,11 +309,20 @@ impl Server {
             "ping" => Ok(json!({})),
             "tools/list" => Ok(json!({"tools": definitions()})),
             "tools/call" => {
-                let name = msg.pointer("/params/name").and_then(Value::as_str).unwrap_or("").to_string();
-                let args = msg.pointer("/params/arguments").cloned().unwrap_or(json!({}));
+                let name = msg
+                    .pointer("/params/name")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string();
+                let args = msg
+                    .pointer("/params/arguments")
+                    .cloned()
+                    .unwrap_or(json!({}));
                 Ok(match self.call(&name, &args).await {
                     Ok(t) => json!({"content": [{"type": "text", "text": t}]}),
-                    Err(e) => json!({"content": [{"type": "text", "text": format!("erreur : {e:#}")}], "isError": true}),
+                    Err(e) => {
+                        json!({"content": [{"type": "text", "text": format!("erreur : {e:#}")}], "isError": true})
+                    }
                 })
             }
             _ => Err(json!({"code": -32601, "message": format!("method not found: {method}")})),
@@ -214,7 +342,9 @@ impl Server {
             }
             let reply = match serde_json::from_str::<Value>(&line) {
                 Ok(m) => self.handle(&m).await,
-                Err(e) => Some(json!({"jsonrpc": "2.0", "id": null, "error": {"code": -32700, "message": e.to_string()}})),
+                Err(e) => Some(
+                    json!({"jsonrpc": "2.0", "id": null, "error": {"code": -32700, "message": e.to_string()}}),
+                ),
             };
             if let Some(r) = reply {
                 out.write_all(format!("{r}\n").as_bytes()).await?;

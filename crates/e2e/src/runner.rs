@@ -19,7 +19,11 @@ pub struct RunOptions {
 }
 
 fn rel(root: &Path, p: &Path) -> String {
-    p.strip_prefix(root).unwrap_or(p).display().to_string().replace('\\', "/")
+    p.strip_prefix(root)
+        .unwrap_or(p)
+        .display()
+        .to_string()
+        .replace('\\', "/")
 }
 
 /// Runs everything and writes `.harnes/e2e/report.json`. Never panics on test errors.
@@ -30,13 +34,20 @@ pub async fn run(root: &Path, opts: RunOptions) -> Report {
     };
     let d = report::dir(root);
     let _ = std::fs::create_dir_all(&d);
-    let _ = std::fs::write(d.join("report.json"), serde_json::to_string_pretty(&report).unwrap_or_default());
+    let _ = std::fs::write(
+        d.join("report.json"),
+        serde_json::to_string_pretty(&report).unwrap_or_default(),
+    );
     report
 }
 
 async fn run_inner(root: &Path, opts: &RunOptions) -> Result<Report, (String, bool)> {
     let cfg = spec::load_config(root).map_err(|e| (format!("{e:#}"), false))?;
-    let files = if opts.files.is_empty() { spec::discover(root) } else { opts.files.iter().map(|f| root.join(f)).collect() };
+    let files = if opts.files.is_empty() {
+        spec::discover(root)
+    } else {
+        opts.files.iter().map(|f| root.join(f)).collect()
+    };
     if files.is_empty() {
         return Err(("aucun test trouvé dans tests/**/*.e2e.yaml".into(), false));
     }
@@ -56,9 +67,14 @@ async fn run_inner(root: &Path, opts: &RunOptions) -> Result<Report, (String, bo
             }
         };
         // Fresh browser per test: no shared cookies or storage.
-        let session = Session::launch(&exe, &cfg.app.url, opts.headed || cfg.headed, Duration::from_millis(cfg.timeout_ms))
-            .await
-            .map_err(|e| (format!("navigateur : {e:#}"), true))?;
+        let session = Session::launch(
+            &exe,
+            &cfg.app.url,
+            opts.headed || cfg.headed,
+            Duration::from_millis(cfg.timeout_ms),
+        )
+        .await
+        .map_err(|e| (format!("navigateur : {e:#}"), true))?;
         let (res, unres) = run_test(root, &session, &rel_file, &spec).await;
         results.push(res);
         unresolved.extend(unres);
@@ -71,16 +87,29 @@ async fn run_inner(root: &Path, opts: &RunOptions) -> Result<Report, (String, bo
 /// Expands a step into what actually runs: `act` becomes its cached actions.
 pub fn expand(root: &Path, file: &str, spec: &TestSpec, index: usize) -> Option<Vec<Step>> {
     match &spec.steps[index] {
-        Step::Act(a) => cache::get(root, &cache::key(file, &spec.name, index, a)).map(|r| r.actions),
+        Step::Act(a) => {
+            cache::get(root, &cache::key(file, &spec.name, index, a)).map(|r| r.actions)
+        }
         other => Some(vec![other.clone()]),
     }
 }
 
 /// Runs steps `[0, upto)` (all when `None`). Used by the runner and by the
 /// MCP server to bring the app to the state just before an `act` step.
-pub async fn run_steps(root: &Path, s: &Session, file: &str, spec: &TestSpec, upto: Option<usize>) -> Result<usize, (usize, String, bool)> {
+pub async fn run_steps(
+    root: &Path,
+    s: &Session,
+    file: &str,
+    spec: &TestSpec,
+    upto: Option<usize>,
+) -> Result<usize, (usize, String, bool)> {
     let mut replayed = 0;
-    for (i, step) in spec.steps.iter().enumerate().take(upto.unwrap_or(spec.steps.len())) {
+    for (i, step) in spec
+        .steps
+        .iter()
+        .enumerate()
+        .take(upto.unwrap_or(spec.steps.len()))
+    {
         let Some(actions) = expand(root, file, spec, i) else {
             return Err((i, "étape `act` pas encore résolue".into(), true));
         };
@@ -100,7 +129,12 @@ pub async fn run_steps(root: &Path, s: &Session, file: &str, spec: &TestSpec, up
     Ok(replayed)
 }
 
-async fn run_test(root: &Path, s: &Session, file: &str, spec: &TestSpec) -> (TestResult, Vec<Unresolved>) {
+async fn run_test(
+    root: &Path,
+    s: &Session,
+    file: &str,
+    spec: &TestSpec,
+) -> (TestResult, Vec<Unresolved>) {
     let start = Instant::now();
     let mut res = TestResult {
         file: file.to_string(),
@@ -120,12 +154,21 @@ async fn run_test(root: &Path, s: &Session, file: &str, spec: &TestSpec) -> (Tes
             res.error = Some(msg.clone());
             if let (true, Step::Act(a)) = (act_problem, &spec.steps[i]) {
                 res.status = Status::Unresolved;
-                unresolved.push(Unresolved { file: file.into(), test: spec.name.clone(), step: i, act: a.clone(), reason: msg });
+                unresolved.push(Unresolved {
+                    file: file.into(),
+                    test: spec.name.clone(),
+                    step: i,
+                    act: a.clone(),
+                    reason: msg,
+                });
             } else {
                 res.status = Status::Failed;
             }
             let screen = s.snapshot().await.map(|sn| sn.render()).unwrap_or_default();
-            let shot = report::dir(root).join("results").join(format!("{}.png", report::slug(&format!("{file}-{}", spec.name))));
+            let shot = report::dir(root).join("results").join(format!(
+                "{}.png",
+                report::slug(&format!("{file}-{}", spec.name))
+            ));
             let shot = s.screenshot(&shot).await.ok().map(|_| shot);
             let desc = serde_json::to_string(&spec.steps[i]).unwrap_or_default();
             res.trace = report::write_trace(root, &res, &desc, &screen, shot.as_deref());

@@ -36,7 +36,9 @@ pub fn definitions() -> Vec<Value> {
 }
 
 fn arg<'a>(args: &'a Value, key: &str) -> Result<&'a str> {
-    args.get(key).and_then(Value::as_str).ok_or_else(|| anyhow!("missing argument: {key}"))
+    args.get(key)
+        .and_then(Value::as_str)
+        .ok_or_else(|| anyhow!("missing argument: {key}"))
 }
 
 /// `None` when the tool is not an OS tool.
@@ -45,12 +47,19 @@ pub fn call(lib: &Library, name: &str, args: &Value) -> Result<Option<String>> {
         "os_list" => {
             let packs = lib.list();
             if packs.is_empty() {
-                return Ok(Some(format!("no OS packs installed in {}", lib.dir.display())));
+                return Ok(Some(format!(
+                    "no OS packs installed in {}",
+                    lib.dir.display()
+                )));
             }
             packs
                 .iter()
                 .map(|p| {
-                    let roles = if p.roles.is_empty() { String::new() } else { format!(" [{}]", p.roles.join(", ")) };
+                    let roles = if p.roles.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" [{}]", p.roles.join(", "))
+                    };
                     format!("{}{roles}: {}", p.id, p.purpose)
                 })
                 .collect::<Vec<_>>()
@@ -63,7 +72,10 @@ pub fn call(lib: &Library, name: &str, args: &Value) -> Result<Option<String>> {
             if hits.is_empty() {
                 "no pack matches; call os_list".into()
             } else {
-                hits.iter().map(|h| format!("{:.2} {} · {} -> {}", h.score, h.os, h.intent, h.route)).collect::<Vec<_>>().join("\n")
+                hits.iter()
+                    .map(|h| format!("{:.2} {} · {} -> {}", h.score, h.os, h.intent, h.route))
+                    .collect::<Vec<_>>()
+                    .join("\n")
             }
         }
         "os_read" => lib.read(arg(args, "id")?, arg(args, "path")?)?,

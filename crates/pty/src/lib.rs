@@ -30,7 +30,10 @@ pub struct PaneManager {
 
 impl PaneManager {
     pub fn new(sink: EventSink) -> Self {
-        Self { panes: RwLock::new(HashMap::new()), sink }
+        Self {
+            panes: RwLock::new(HashMap::new()),
+            sink,
+        }
     }
 
     pub fn spawn(&self, spec: SpawnSpec) -> Result<PaneInfo> {
@@ -41,7 +44,11 @@ impl PaneManager {
     }
 
     pub fn get(&self, id: &str) -> Result<Arc<Pane>> {
-        self.panes.read().get(id).cloned().ok_or_else(|| anyhow!("unknown pane {id}"))
+        self.panes
+            .read()
+            .get(id)
+            .cloned()
+            .ok_or_else(|| anyhow!("unknown pane {id}"))
     }
 
     pub fn list(&self) -> Vec<PaneInfo> {

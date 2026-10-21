@@ -56,7 +56,10 @@ impl Frame {
     pub fn text(&self) -> String {
         let mut s = String::new();
         for row in self.cells.chunks(self.cols.max(1) as usize) {
-            let line: String = row.iter().map(|c| char::from_u32(c.cp).filter(|_| c.cp != 0).unwrap_or(' ')).collect();
+            let line: String = row
+                .iter()
+                .map(|c| char::from_u32(c.cp).filter(|_| c.cp != 0).unwrap_or(' '))
+                .collect();
             s.push_str(line.trim_end());
             s.push('\n');
         }
@@ -94,7 +97,11 @@ impl Terminal {
         let mut writer: Box<Option<Writer>> = Box::new(None);
         let ud = writer.as_mut() as *mut Option<Writer> as *mut c_void;
         unsafe { ffi::hv_set_writer(raw, write_trampoline, ud) };
-        Some(Self { raw, writer, buf: Vec::new() })
+        Some(Self {
+            raw,
+            writer,
+            buf: Vec::new(),
+        })
     }
 
     /// Bytes the terminal must send back to the PTY (query replies).
@@ -122,14 +129,29 @@ impl Terminal {
         loop {
             let cap = self.buf.capacity();
             let r = unsafe {
-                ffi::hv_snapshot(self.raw, self.buf.as_mut_ptr(), cap, &mut cols, &mut rows, &mut cursor, &mut bg, force as i32)
+                ffi::hv_snapshot(
+                    self.raw,
+                    self.buf.as_mut_ptr(),
+                    cap,
+                    &mut cols,
+                    &mut rows,
+                    &mut cursor,
+                    &mut bg,
+                    force as i32,
+                )
             };
             match r {
                 1 => {
                     let n = cols as usize * rows as usize;
                     // SAFETY: the shim wrote exactly cols*rows cells.
                     unsafe { self.buf.set_len(n) };
-                    return Some(Frame { cols, rows, cursor, default_bg: bg, cells: self.buf.clone() });
+                    return Some(Frame {
+                        cols,
+                        rows,
+                        cursor,
+                        default_bg: bg,
+                        cells: self.buf.clone(),
+                    });
                 }
                 -2 => self.buf.reserve(cols as usize * rows as usize),
                 _ => return None,
