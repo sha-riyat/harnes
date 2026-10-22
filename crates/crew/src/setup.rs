@@ -1,5 +1,6 @@
 //! Equips a project for harnes: agents, settings, MCP registration, CLAUDE.md import.
 
+use crate::budget::{Tune, OPUS_MEDIUM, SONNET_HIGH};
 use anyhow::{Context, Result};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
@@ -44,6 +45,78 @@ fn write_if(
     Ok(())
 }
 
+/// Rewrites only `model:` and `effort:` in an existing agent's frontmatter.
+/// The body stays untouched, so a project keeps its custom instructions while
+/// picking up the current model policy without needing `force`.
+fn sync_tune(path: &Path, tune: Tune, rep: &mut SetupReport, root: &Path) -> Result<()> {
+    if !path.exists() {
+        return Ok(());
+    }
+    let text = std::fs::read_to_string(path)?;
+    let mut lines: Vec<String> = text.lines().map(str::to_string).collect();
+    let mut in_front = false;
+    let mut changed = false;
+    for line in &mut lines {
+        let trimmed = line.trim();
+        if trimmed == "---" {
+            if in_front {
+                break;
+            }
+            in_front = true;
+            continue;
+        }
+        if !in_front {
+            continue;
+        }
+        let Some((key, _)) = trimmed.split_once(':') else {
+            continue;
+        };
+        let value = match key {
+            "model" => tune.model,
+            "effort" => tune.effort,
+            _ => continue,
+        };
+        let next = format!("{key}: {value}");
+        if line != &next {
+            *line = next;
+            changed = true;
+        }
+    }
+    if !changed {
+        return Ok(());
+    }
+    let mut out = lines.join("\n");
+    if text.ends_with('\n') {
+        out.push('\n');
+    }
+    std::fs::write(path, out).with_context(|| format!("write {}", path.display()))?;
+    let rel = path
+        .strip_prefix(root)
+        .unwrap_or(path)
+        .display()
+        .to_string();
+    rep.kept.retain(|kept| kept != &rel);
+    rep.written.push(rel);
+    Ok(())
+}
+
+/// Writes a managed agent, then aligns an existing file's model policy.
+fn write_agent(
+    path: &Path,
+    content: &str,
+    tune: Tune,
+    force: bool,
+    rep: &mut SetupReport,
+    root: &Path,
+) -> Result<()> {
+    let existed = path.exists();
+    write_if(path, content, force, rep, root)?;
+    if existed && !force {
+        sync_tune(path, tune, rep, root)?;
+    }
+    Ok(())
+}
+
 /// Merges `harnes-ctx` into `.mcp.json`, keeping other servers.
 fn register_mcp(root: &Path, ctx_bin: &Path, rep: &mut SetupReport) -> Result<()> {
     let path = root.join(".mcp.json");
@@ -82,14 +155,50 @@ fn register_mcp(root: &Path, ctx_bin: &Path, rep: &mut SetupReport) -> Result<()
 pub fn equip(root: &Path, ctx_bin: &Path, force: bool) -> Result<SetupReport> {
     let mut rep = SetupReport::default();
     let agents = root.join(".claude").join("agents");
-    write_if(&agents.join("planner.md"), PLANNER, force, &mut rep, root)?;
-    write_if(&agents.join("worker.md"), WORKER, force, &mut rep, root)?;
-    write_if(&agents.join("reviewer.md"), REVIEWER, force, &mut rep, root)?;
-    write_if(&agents.join("teacher.md"), TEACHER, force, &mut rep, root)?;
-    write_if(&agents.join("scout.md"), SCOUT, force, &mut rep, root)?;
-    write_if(
+    write_agent(
+        &agents.join("planner.md"),
+        PLANNER,
+        OPUS_MEDIUM,
+        force,
+        &mut rep,
+        root,
+    )?;
+    write_agent(
+        &agents.join("worker.md"),
+        WORKER,
+        SONNET_HIGH,
+        force,
+        &mut rep,
+        root,
+    )?;
+    write_agent(
+        &agents.join("reviewer.md"),
+        REVIEWER,
+        SONNET_HIGH,
+        force,
+        &mut rep,
+        root,
+    )?;
+    write_agent(
+        &agents.join("teacher.md"),
+        TEACHER,
+        SONNET_HIGH,
+        force,
+        &mut rep,
+        root,
+    )?;
+    write_agent(
+        &agents.join("scout.md"),
+        SCOUT,
+        SONNET_HIGH,
+        force,
+        &mut rep,
+        root,
+    )?;
+    write_agent(
         &agents.join("orchestrator.md"),
         ORCHESTRATOR,
+        SONNET_HIGH,
         force,
         &mut rep,
         root,
@@ -186,6 +295,36 @@ mod tests {
         assert!(md.starts_with("# Mine"));
         let guards = std::fs::read_to_string(dir.join(".harnes/guards.json")).unwrap();
         assert!(guards.contains("deny-destructive-command"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn equip_refreshes_the_model_policy_without_touching_prompts() {
+        let dir = std::env::temp_dir().join(format!("harnes-setup-policy-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let agents = dir.join(".claude").join("agents");
+        std::fs::create_dir_all(&agents).unwrap();
+        std::fs::write(
+            agents.join("planner.md"),
+            "---\nname: planner\nmodel: sonnet\neffort: high\n---\n\nMon planner.\n",
+        )
+        .unwrap();
+        std::fs::write(
+            agents.join("scout.md"),
+            "---\nname: scout\nmodel: haiku\neffort: high\n---\n\nMon scout.\n",
+        )
+        .unwrap();
+
+        equip(&dir, Path::new("C:/bin/harnes-ctx.exe"), false).unwrap();
+
+        let planner = std::fs::read_to_string(agents.join("planner.md")).unwrap();
+        assert!(planner.contains("model: opus"));
+        assert!(planner.contains("effort: medium"));
+        assert!(planner.contains("Mon planner."));
+        let scout = std::fs::read_to_string(agents.join("scout.md")).unwrap();
+        assert!(scout.contains("model: sonnet"));
+        assert!(scout.contains("effort: high"));
+        assert!(scout.contains("Mon scout."));
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

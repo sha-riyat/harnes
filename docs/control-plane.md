@@ -16,6 +16,8 @@ Claude Code resolves the `opus` and `sonnet` aliases to the latest models,
 currently Opus 5.5 and Sonnet 5.5. The engine passes them as `--model` and
 `--effort`; interactive orchestrator panes use the same explicit flags so an
 older project-local agent definition cannot silently keep an Opus session.
+When `equip` runs on an existing project it rewrites only the `model:` and
+`effort:` lines of the managed agent frontmatter and leaves the prompts intact.
 
 ## Event log and typed run view
 
