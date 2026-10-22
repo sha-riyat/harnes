@@ -1,6 +1,7 @@
-//! How much model each step of a run gets. The orchestrator picks the run's
-//! mode; the weekly pace can lighten it so the week's allowance lasts until
-//! its reset. Opus is kept for the steps where a miss costs the most.
+//! The model policy for every crew role: the Planner alone runs on Opus, in
+//! medium effort; the orchestrator, Teacher, Workers, reviewers and scouts run
+//! on Sonnet, in high effort. The run's mode and the weekly pace never change
+//! that split.
 
 use crate::Role;
 use serde::{Deserialize, Serialize};
@@ -18,31 +19,37 @@ pub enum Mode {
 }
 
 /// Model and effort for one agent, in place of its definition's defaults.
+///
+/// `opus` and `sonnet` are Claude Code aliases for the latest models, currently
+/// Opus 5.5 and Sonnet 5.5. Keeping the aliases avoids pinning a dated API id
+/// that would go stale with the next patch release.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Tune {
     pub model: &'static str,
     pub effort: &'static str,
 }
 
-pub const SONNET_MEDIUM: Tune = Tune {
-    model: "sonnet",
+pub const OPUS_MEDIUM: Tune = Tune {
+    model: "opus",
     effort: "medium",
 };
 pub const SONNET_HIGH: Tune = Tune {
     model: "sonnet",
     effort: "high",
 };
+/// Interactive Claude panes (the orchestrator included) are launched outside
+/// the role engine, so they use the same non-Planner policy explicitly.
+pub const SESSION: Tune = SONNET_HIGH;
 
 /// Reviewers that look for problems in a deep review, before the verifier.
 pub const FINDERS: u32 = 3;
 
-/// The override for `role`, if any. `eco` is set when the week runs ahead of pace.
-pub fn tune(mode: Mode, eco: bool, role: Role) -> Option<Tune> {
-    match (mode, role) {
-        (Mode::Light, Role::Worker) => Some(SONNET_MEDIUM),
-        (Mode::Light, Role::Reviewer) => Some(SONNET_HIGH),
-        (_, Role::Planner | Role::Teacher | Role::Reviewer) if eco => Some(SONNET_HIGH),
-        _ => None,
+/// The model policy for `role`. It is deliberately independent of the run mode
+/// and of eco weeks: only the Planner gets Opus.
+pub fn tune(role: Role) -> Tune {
+    match role {
+        Role::Planner => OPUS_MEDIUM,
+        Role::Teacher | Role::Worker | Role::Reviewer => SONNET_HIGH,
     }
 }
 
@@ -86,11 +93,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn light_runs_and_eco_weeks_spare_opus() {
-        assert_eq!(tune(Mode::Full, false, Role::Reviewer), None);
-        assert_eq!(tune(Mode::Light, false, Role::Reviewer), Some(SONNET_HIGH));
-        assert_eq!(tune(Mode::Full, true, Role::Teacher), Some(SONNET_HIGH));
-        assert_eq!(tune(Mode::Full, true, Role::Worker), None);
+    fn only_the_planner_gets_opus() {
+        assert_eq!(tune(Role::Planner), OPUS_MEDIUM);
+        assert_eq!(tune(Role::Teacher), SONNET_HIGH);
+        assert_eq!(tune(Role::Worker), SONNET_HIGH);
+        assert_eq!(tune(Role::Reviewer), SONNET_HIGH);
         assert_eq!(effective(Mode::Deep, true), Mode::Full);
     }
 

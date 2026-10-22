@@ -1,6 +1,6 @@
 //! The review step, and what a run measures about it. A normal review is one
-//! agent; a deep one has several Sonnet reviewers look independently, then an
-//! Opus verifier keeps only what they agree on or what it confirms itself.
+//! Sonnet high reviewer; a deep one has several look independently, then a
+//! Sonnet high verifier keeps only what they agree on or what it confirms.
 
 use crate::{
     budget::{self, Mode},
@@ -144,7 +144,7 @@ impl<H: AgentHost> Engine<H> {
                     Role::Reviewer,
                     &p,
                     &out,
-                    Some(budget::SONNET_HIGH),
+                    Some(budget::tune(Role::Reviewer)),
                 )
                 .await
                 .map(|_| self.rel(&out))
@@ -159,8 +159,8 @@ impl<H: AgentHost> Engine<H> {
             bail!("revue renforcée : aucun relecteur n'a rendu de verdict");
         }
         let prompt = prompts::verifier(&run.task, &found, &self.rel(&path)) + &notes;
-        // The verifier keeps the role's own model (Opus) unless the week is short.
-        let tune = budget::tune(Mode::Full, self.eco, Role::Reviewer);
+        // The verifier follows the same policy as every reviewer: Sonnet high.
+        let tune = Some(budget::tune(Role::Reviewer));
         self.agent_tuned(
             run,
             &format!("reviewer-{round}-verify"),

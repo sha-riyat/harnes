@@ -1,7 +1,7 @@
 //! Full crew loop against a fake host that plays the agents.
 
 use harnes_crew::{
-    budget::{Mode, Tune},
+    budget::{Mode, Tune, OPUS_MEDIUM, SONNET_HIGH},
     engine::{AgentHost, Engine},
     hooks::{HookServer, Registry},
     AgentState, CrewEvent, Phase, Role,
@@ -137,6 +137,12 @@ async fn plan_work_review_fix_pass() {
         roles,
         ["planner", "teacher", "worker", "worker", "reviewer", "worker", "reviewer", "teacher"]
     );
+    let tunes = host.tunes.lock().clone();
+    assert_eq!(tunes[0], Some(OPUS_MEDIUM), "only the Planner gets Opus");
+    assert!(
+        tunes[1..].iter().all(|t| *t == Some(SONNET_HIGH)),
+        "every other role gets Sonnet high: {tunes:?}"
+    );
     assert!(
         spawned[5].ends_with("worker-L1-r1"),
         "fix goes to L1: {spawned:?}"
@@ -255,7 +261,7 @@ async fn quick(name: &str, mode: Mode) -> (Arc<FakeHost>, PathBuf, harnes_crew::
 }
 
 #[tokio::test]
-async fn light_run_is_one_worker_and_a_sonnet_review() {
+async fn light_run_is_one_worker_and_a_sonnet_high_review() {
     let (host, root, out) = quick("light", Mode::Light).await;
     assert!(out.gate.ready);
     let roles: Vec<String> = host
@@ -265,11 +271,7 @@ async fn light_run_is_one_worker_and_a_sonnet_review() {
         .map(|k| k.split('-').nth(1).unwrap().to_string())
         .collect();
     assert_eq!(roles, ["worker", "reviewer"], "no planner, no Teacher");
-    assert!(host
-        .tunes
-        .lock()
-        .iter()
-        .all(|t| t.map(|t| t.model) == Some("sonnet")));
+    assert!(host.tunes.lock().iter().all(|t| *t == Some(SONNET_HIGH)));
     let metrics: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(root.join(".harnes/runs/7/metrics.json")).unwrap(),
     )

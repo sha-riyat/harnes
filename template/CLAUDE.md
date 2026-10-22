@@ -4,14 +4,14 @@ Ce projet est piloté par l'application **harnes** (Rust + Tauri). L'application
 
 | Rôle | Agent | Modèle | Effort | Sortie |
 |---|---|---|---|---|
-| Orchestrateur | `orchestrator` | Opus | medium | parle à l'utilisateur, pilote le run |
-| Planner | `planner` | Opus | medium | `plan.json` |
-| Teacher | `teacher` | Opus | medium | `bar.json`, `gate-<n>.json` |
-| Workers | `worker` | Sonnet | high | `reports/<lot>.json` |
-| Scouts | `scout` | Haiku | high | sous-agents rapides |
-| Reviewer | `reviewer` | Opus | medium | `review-<n>.json` |
+| Orchestrateur | `orchestrator` | Sonnet 5.5 | high | parle à l'utilisateur, pilote le run |
+| Planner | `planner` | Opus 5.5 | medium | `plan.json` |
+| Teacher | `teacher` | Sonnet 5.5 | high | `bar.json`, `gate-<n>.json` |
+| Workers | `worker` | Sonnet 5.5 | high | `reports/<lot>.json` |
+| Scouts | `scout` | Sonnet 5.5 | high | sous-agents rapides |
+| Reviewer | `reviewer` | Sonnet 5.5 | high | `review-<n>.json` |
 
-Le mode du run change ces modèles : `light` (un worker Sonnet medium, revue Sonnet, sans planner ni Teacher), `full`, `deep` (trois relecteurs Sonnet puis un vérificateur Opus). En économie, quand la semaine dépasse son rythme, planner, Teacher et Reviewer passent en Sonnet.
+Le Planner est le seul rôle sur Opus 5.5 (medium) ; tout le reste tourne sur Sonnet 5.5 (high). Le mode du run ne change pas ce choix : `light` (un worker Sonnet high, revue Sonnet high, sans planner ni Teacher), `full`, `deep` (trois relecteurs Sonnet high puis un vérificateur Sonnet high). En économie, quand la semaine dépasse son rythme, seule la revue renforcée est coupée ; le Planner reste sur Opus 5.5 medium.
 
 ## Fils de discussion
 Les agents communiquent par **fils** (MCP harnes-ctx : `thread_list`, `thread_read`, `thread_post`, `thread_create`, `thread_close`) : un fil `run-<id>` par run et un fil `lot-<id>-<lot>` par lot. Lis le fil de ton lot avant de commencer, pose-y tes questions, résume-y ton travail avant de finir. Un sous-agent signe avec `as` (ex. `scout`). Les fils clos restent consultables.

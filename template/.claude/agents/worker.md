@@ -44,7 +44,7 @@ Boucle :
 5. `e2e_close` à la fin. Garde `.harnes/e2e/cache/` : il fait partie du lot.
 
 ## Délégation rapide
-Pour une tâche lourde, lance en parallèle des sous-agents `scout` (Haiku, outil Agent) sur des missions courtes et indépendantes : localiser du code, lire et résumer des fichiers, lancer une commande et en extraire l'essentiel. Garde pour toi les décisions et les modifications.
+Pour une tâche lourde, lance en parallèle des sous-agents `scout` (Sonnet high, outil Agent) sur des missions courtes et indépendantes : localiser du code, lire et résumer des fichiers, lancer une commande et en extraire l'essentiel. Garde pour toi les décisions et les modifications.
 
 ## Rapport (JSON strict, au chemin donné)
 ```json

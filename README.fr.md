@@ -49,13 +49,13 @@ Ponytail, Caveman et TasteSkill v2 (`design-taste-frontend`) restent des skills 
 
 | Rôle | Modèle | Travail | Sortie |
 |---|---|---|---|
-| Orchestrateur | Opus · medium | Votre seul interlocuteur. Transforme vos messages en runs (`crew_start`), suit les fils, vérifie que les résultats sont intégrés, vous fait son rapport. | ses réponses |
-| Planner | Opus · medium | Découpe la tâche en lots et en vagues. Deux lots d'une même vague ne partagent jamais de fichier. | `plan.json` |
-| Teacher | Opus · medium | Fixe la barre avant le travail : critères, preuve exigée pour chacun, moment où vous impliquer. | `bar.json` |
-| Worker × N | Sonnet · high | Réalise un lot, puis écrit et lance son propre test e2e. | `reports/<lot>-r<n>.json` |
-| Reviewer | Opus · medium | Relit le diff face au plan et aux vrais résultats e2e. | `review-<n>.json` |
-| Teacher (gate) | Opus · medium | Confronte la barre aux résultats, puis renvoie le travail ou vous dit qu'il est prêt. | `gate-<n>.json` |
-| scout | Haiku · high | Sous-agent que tout rôle lance pour de courtes tâches en parallèle : trouver du code, résumer des fichiers, lancer une commande. | sa réponse |
+| Orchestrateur | Sonnet 5.5 · high | Votre seul interlocuteur. Transforme vos messages en runs (`crew_start`), suit les fils, vérifie que les résultats sont intégrés, vous fait son rapport. | ses réponses |
+| Planner | Opus 5.5 · medium | Découpe la tâche en lots et en vagues. Deux lots d'une même vague ne partagent jamais de fichier. | `plan.json` |
+| Teacher | Sonnet 5.5 · high | Fixe la barre avant le travail : critères, preuve exigée pour chacun, moment où vous impliquer. | `bar.json` |
+| Worker × N | Sonnet 5.5 · high | Réalise un lot, puis écrit et lance son propre test e2e. | `reports/<lot>-r<n>.json` |
+| Reviewer | Sonnet 5.5 · high | Relit le diff face au plan et aux vrais résultats e2e. | `review-<n>.json` |
+| Teacher (gate) | Sonnet 5.5 · high | Confronte la barre aux résultats, puis renvoie le travail ou vous dit qu'il est prêt. | `gate-<n>.json` |
+| scout | Sonnet 5.5 · high | Sous-agent que tout rôle lance pour de courtes tâches en parallèle : trouver du code, résumer des fichiers, lancer une commande. | sa réponse |
 
 ### La boucle
 
@@ -95,13 +95,13 @@ en continu : proxy (compression des tool_result, usage) · hooks (état des agen
 
 ### La revue et l'enveloppe de la semaine
 
-La boucle de revue est faite pour aboutir en peu de tours et ne dépenser Opus que là où un oubli coûte le plus.
+La boucle de revue est faite pour aboutir en peu de tours, avec Opus réservé au planning.
 
-- **Trois modes**, choisis par l'orchestrateur avec `crew_start` : `light` (un worker Sonnet et une revue Sonnet, sans planner ni Teacher séparé), `full`, et `deep` (trois relecteurs Sonnet cherchent chacun de leur côté, puis un vérificateur Opus garde ce qu'au moins deux signalent ou ce qu'il confirme lui-même). Un run que le Teacher classe à risque `high` (CI, auth, paiement, migrations, secrets, ou chemins marqués sensibles dans `REVIEW.md`) a la revue renforcée et vous demande de relire le diff.
+- **Trois modes**, choisis par l'orchestrateur avec `crew_start` : `light` (un worker Sonnet high et une revue Sonnet high, sans planner ni Teacher séparé), `full`, et `deep` (trois relecteurs Sonnet high cherchent chacun de leur côté, puis un vérificateur Sonnet high garde ce qu'au moins deux signalent ou ce qu'il confirme lui-même). Un run que le Teacher classe à risque `high` (CI, auth, paiement, migrations, secrets, ou chemins marqués sensibles dans `REVIEW.md`) a la revue renforcée et vous demande de relire le diff.
 - **Gravités.** Chaque problème est `important`, `nit` ou `pre-existing`, avec un `fichier:ligne` comme preuve. Seuls les `important` repartent vers un worker ; les nits sont abandonnés, car un agent auteur les corrige tous au prix d'un tour ; les bugs déjà là avant le run vont dans le fil du run.
 - **Convergence.** Dès le deuxième tour, le relecteur ne lit que ce que les corrections ont changé, face à ses verdicts précédents, ne répète aucun problème et nomme une fois toute une classe de bug. Après trois tours, le run s'arrête et l'orchestrateur propose une autre approche au lieu de relancer le même run.
 - **`REVIEW.md`** (facultatif, écrit par vous à la racine du projet) : ce qu'est un échec par zone, les chemins à ignorer, les chemins sensibles.
-- **Vos limites, lues en direct.** Chaque réponse d'Anthropic qui passe par le proxy d'un projet porte l'usage du compte : la fenêtre de 5 h et la semaine, en part utilisée, avec leurs heures de reset. harnes les lit là, donc rien à configurer, et l'onglet usage les dessine face à une ligne droite jusqu'au reset. Quand la semaine va plus vite que cette ligne, ou que la fenêtre de 5 h dépasse 85 %, les runs démarrent en économie : planner, Teacher et relecteur passent en Sonnet, et il n'y a plus de revue renforcée. Une fois la fenêtre de 5 h épuisée, aucun run ne démarre avant son reset.
+- **Vos limites, lues en direct.** Chaque réponse d'Anthropic qui passe par le proxy d'un projet porte l'usage du compte : la fenêtre de 5 h et la semaine, en part utilisée, avec leurs heures de reset. harnes les lit là, donc rien à configurer, et l'onglet usage les dessine face à une ligne droite jusqu'au reset. Quand la semaine va plus vite que cette ligne, ou que la fenêtre de 5 h dépasse 85 %, les runs démarrent en économie : la revue renforcée est coupée, mais le Planner reste sur Opus medium et tous les autres rôles restent sur Sonnet high. Une fois la fenêtre de 5 h épuisée, aucun run ne démarre avant son reset.
 - **Mesuré.** Chaque run laisse `metrics.json` (mode, tours, problèmes par gravité, réponse des workers à chaque correction : corrigé, faux, voulu, sans importance). L'onglet usage montre les revues par run, la part qui passe du premier coup, les problèmes bloquants et la part de problèmes faux.
 - Les workers ne préchargent plus TasteSkill : ils ne le chargent que pour une page web publique.
 

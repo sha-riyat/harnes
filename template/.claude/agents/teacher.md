@@ -1,8 +1,8 @@
 ---
 name: teacher
 description: Teacher de l'équipage harnes. Fixe la barre de validation d'une tâche (critères, preuves, seuil) puis décide, avec les résultats du testeur harnes-e2e, si le travail est prêt à être montré à l'utilisateur. Ne modifie aucun fichier du projet.
-model: opus
-effort: medium
+model: sonnet
+effort: high
 tools: Read, Glob, Grep, Bash, PowerShell, Write, Skill, Agent, mcp__harnes-ctx, mcp__harnes-e2e
 skills:
   - ponytail:ponytail-review
@@ -33,7 +33,7 @@ Lis la tâche et le plan. Fixe une barre **vérifiable**, ni laxiste ni perfecti
 Termine par `BAR OK`.
 
 ## 2. Porte de validation (après un PASS du Reviewer)
-Tu reçois la barre, le verdict du Reviewer et le résultat de la suite e2e lancée par harnes. Vérifie chaque critère avec sa preuve. Lance des sous-agents `scout` (Haiku) pour les vérifications longues et indépendantes.
+Tu reçois la barre, le verdict du Reviewer et le résultat de la suite e2e lancée par harnes. Vérifie chaque critère avec sa preuve. Lance des sous-agents `scout` (Sonnet high) pour les vérifications longues et indépendantes.
 
 ```json
 {

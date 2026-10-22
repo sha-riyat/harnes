@@ -196,7 +196,14 @@ pub fn spawn_claude(
     if let Some(r) = resume {
         args.extend(["--resume".into(), r.into()]);
     }
+    // Enforce the policy even when a project keeps an older agent definition:
+    // only the Planner uses Opus; interactive panes use Sonnet high.
+    let session = harnes_crew::budget::SESSION;
     args.extend([
+        "--model".into(),
+        session.model.into(),
+        "--effort".into(),
+        session.effort.into(),
         "--permission-mode".into(),
         "auto".into(),
         "--settings".into(),

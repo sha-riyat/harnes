@@ -76,7 +76,7 @@ pub struct Engine<H: AgentHost> {
     pub threads: crate::threading::RunThreads,
     /// How heavy this run is (picked by the orchestrator).
     pub mode: Mode,
-    /// The week runs ahead of its allowance: spare Opus.
+    /// The week runs ahead of its allowance: skip deep reviews.
     pub eco: bool,
     /// Unified event log. None keeps the crew usable in tests and headless.
     pub telemetry: Option<Arc<harnes_telemetry::Telemetry>>,
@@ -611,7 +611,7 @@ impl<H: AgentHost> Engine<H> {
     }
 
     /// Starts one agent and waits until it has written a valid `out` file.
-    /// Its model follows the run's mode and the week's pace.
+    /// The Planner alone gets Opus; every other role gets Sonnet high.
     pub(crate) async fn agent<T: DeserializeOwned>(
         &self,
         run: &Run,
@@ -620,7 +620,7 @@ impl<H: AgentHost> Engine<H> {
         prompt: &str,
         out: &Path,
     ) -> Result<T> {
-        let tune = budget::tune(budget::effective(self.mode, self.eco), self.eco, role);
+        let tune = Some(budget::tune(role));
         self.agent_tuned(run, name, role, prompt, out, tune).await
     }
 
@@ -649,7 +649,7 @@ impl<H: AgentHost> Engine<H> {
         out: &Path,
         cwd: Option<&Path>,
     ) -> Result<T> {
-        let tune = budget::tune(budget::effective(self.mode, self.eco), self.eco, role);
+        let tune = Some(budget::tune(role));
         self.agent_tuned_at(run, name, role, prompt, out, tune, cwd)
             .await
     }

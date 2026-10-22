@@ -47,7 +47,7 @@ impl AgentHost for PaneHost {
     ) -> anyhow::Result<String> {
         let (st, p) = (&self.0, &self.2);
         let mut launch = self.1.launch(role, prompt, settings)?;
-        // The run's mode or the week's pace can pick another model than the role's own.
+        // The Planner is the only role on Opus; all others run Sonnet high.
         if let (Some(t), "claude") = (tune, launch.provider.as_str()) {
             let at = launch.args.len().saturating_sub(1); // before the prompt
             launch.args.splice(

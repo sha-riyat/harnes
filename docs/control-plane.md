@@ -4,6 +4,19 @@ harnes keeps the run's decisions and evidence in files and SQLite inside
 `.harnes/`. This page describes the contracts, where each file lives and what
 the cockpit can do with it. Everything is local and provider-independent.
 
+## Model policy
+
+The Planner is the only role on Opus 5.5, at `medium` effort. The orchestrator,
+Teacher, Workers, reviewers (including the deep-review finders and verifier)
+and scouts run on Sonnet 5.5, at `high` effort. This split is fixed: `light`,
+`full`, `deep` and eco weeks do not move another role to Opus. Eco only skips
+deep reviews.
+
+Claude Code resolves the `opus` and `sonnet` aliases to the latest models,
+currently Opus 5.5 and Sonnet 5.5. The engine passes them as `--model` and
+`--effort`; interactive orchestrator panes use the same explicit flags so an
+older project-local agent definition cannot silently keep an Opus session.
+
 ## Event log and typed run view
 
 - Schema: `harnes.event.v1`
