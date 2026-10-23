@@ -74,6 +74,10 @@ pub struct Event {
     pub evidence: Vec<String>,
     #[serde(default)]
     pub redacted: bool,
+    /// One user prompt and everything the agent did until the next one
+    /// (Beacon's `prompt.id`): filter on it to read a whole turn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turn: Option<String>,
 }
 
 fn observed() -> String {
@@ -205,6 +209,7 @@ pub struct Filter {
     pub path: Option<String>,
     pub since: Option<u64>,
     pub limit: usize,
+    pub turn: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -231,6 +236,8 @@ pub struct Telemetry {
     root: PathBuf,
     jsonl: PathBuf,
     conn: Mutex<Connection>,
+    /// Current turn per agent session, set by each user prompt.
+    turns: Mutex<std::collections::HashMap<String, String>>,
 }
 
 impl Telemetry {
@@ -257,10 +264,19 @@ impl Telemetry {
              CREATE INDEX IF NOT EXISTS events_role ON events(run, role);
              CREATE INDEX IF NOT EXISTS events_path ON events(path);",
         )?;
+        // Databases from before turn ids get the column in place.
+        let has_turn = conn
+            .prepare("SELECT 1 FROM pragma_table_info('events') WHERE name = 'turn'")?
+            .exists([])?;
+        if !has_turn {
+            conn.execute_batch("ALTER TABLE events ADD COLUMN turn TEXT;")?;
+        }
+        conn.execute_batch("CREATE INDEX IF NOT EXISTS events_turn ON events(turn);")?;
         Ok(Self {
             root: root.to_path_buf(),
             jsonl,
             conn: Mutex::new(conn),
+            turns: Mutex::default(),
         })
     }
 
@@ -271,17 +287,34 @@ impl Telemetry {
     /// Redacts, seals, indexes and appends one event.
     pub fn append(&self, event: Event) -> Result<Event> {
         let mut e = redact_event(event);
+        // A prompt opens a turn; every later event of the session belongs to it.
+        if e.turn.is_none() {
+            if let Some(session) = e.session.clone() {
+                let mut turns = self.turns.lock();
+                if e.kind == "agent.prompt.submitted" || !turns.contains_key(&session) {
+                    let mut h = Sha256::new();
+                    h.update(session.as_bytes());
+                    h.update(e.at.to_string().as_bytes());
+                    let d = h.finalize();
+                    turns.insert(
+                        session.clone(),
+                        d.iter().take(5).map(|b| format!("{b:02x}")).collect(),
+                    );
+                }
+                e.turn = turns.get(&session).cloned();
+            }
+        }
         e = e.seal();
         {
             let c = self.conn.lock();
             let inserted = c.execute(
                 "INSERT OR IGNORE INTO events(id, at, project, run, session, role, lot, kind, provider, model, tool, path, command, status,
-                  input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, bytes, summary, detail, fidelity, evidence, redacted)
-                 VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25)",
+                  input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, bytes, summary, detail, fidelity, evidence, redacted, turn)
+                 VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26)",
                 params![
                     e.id, e.at as i64, e.project, e.run, e.session, e.role, e.lot, e.kind, e.provider, e.model, e.tool, e.path, e.command,
                     e.status, e.input_tokens as i64, e.output_tokens as i64, e.cache_read_tokens as i64, e.cache_write_tokens as i64,
-                    e.cost_usd, e.bytes as i64, e.summary, e.detail.to_string(), e.fidelity, serde_json::to_string(&e.evidence)?, e.redacted as i32
+                    e.cost_usd, e.bytes as i64, e.summary, e.detail.to_string(), e.fidelity, serde_json::to_string(&e.evidence)?, e.redacted as i32, e.turn
                 ],
             )?;
             if inserted > 0 {
@@ -305,10 +338,10 @@ impl Telemetry {
         let limit = if f.limit == 0 { 500 } else { f.limit.min(5000) } as i64;
         let mut st = c.prepare(
             "SELECT id, at, project, run, session, role, lot, kind, provider, model, tool, path, command, status,
-                    input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, bytes, summary, detail, fidelity, evidence, redacted
+                    input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, bytes, summary, detail, fidelity, evidence, redacted, turn
              FROM events
              WHERE (?1 IS NULL OR run = ?1) AND (?2 IS NULL OR kind = ?2) AND (?3 IS NULL OR role = ?3)
-               AND (?4 IS NULL OR path LIKE ?4) AND (?5 IS NULL OR at >= ?5)
+               AND (?4 IS NULL OR path LIKE ?4) AND (?5 IS NULL OR at >= ?5) AND (?7 IS NULL OR turn = ?7)
              ORDER BY at DESC, id DESC LIMIT ?6",
         )?;
         let rows = st.query_map(
@@ -318,7 +351,8 @@ impl Telemetry {
                 f.role,
                 f.path,
                 f.since.map(|v| v as i64),
-                limit
+                limit,
+                f.turn
             ],
             row_event,
         )?;
@@ -406,7 +440,7 @@ impl Telemetry {
         let c = self.conn.lock();
         Ok(c.query_row(
             "SELECT id, at, project, run, session, role, lot, kind, provider, model, tool, path, command, status,
-                    input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, bytes, summary, detail, fidelity, evidence, redacted
+                    input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, bytes, summary, detail, fidelity, evidence, redacted, turn
              FROM events WHERE id = ?1",
             [id],
             row_event,
@@ -445,6 +479,7 @@ fn row_event(r: &rusqlite::Row) -> rusqlite::Result<Event> {
         fidelity: r.get(22)?,
         evidence: serde_json::from_str(&evidence).unwrap_or_default(),
         redacted: r.get::<_, i32>(24)? != 0,
+        turn: r.get(25)?,
     })
 }
 
@@ -531,6 +566,58 @@ mod tests {
         let _ = std::fs::remove_dir_all(&d);
         std::fs::create_dir_all(&d).unwrap();
         d
+    }
+
+    #[test]
+    fn a_prompt_opens_a_turn_and_the_filter_returns_it_whole() {
+        let root = temp("turns");
+        let t = Telemetry::open(&root).unwrap();
+        let ev = |kind: &str, at: u64, session: &str| {
+            let mut e = Event::new("r", "p", kind).summary(format!("{kind}@{at}"));
+            e.session = Some(session.into());
+            e.at = at;
+            e
+        };
+        for e in [
+            ev("agent.prompt.submitted", 1, "s1"),
+            ev("tool.invoked", 2, "s1"),
+            ev("file.modified", 3, "s1"),
+            ev("agent.prompt.submitted", 10, "s1"),
+            ev("tool.invoked", 11, "s1"),
+            ev("tool.invoked", 12, "s2"),
+        ] {
+            t.append(e).unwrap();
+        }
+        let all = t.recent("r", 50).unwrap();
+        let turn_of = |summary: &str| all.iter().find(|e| e.summary == summary).unwrap().turn.clone().unwrap();
+        assert_eq!(turn_of("agent.prompt.submitted@1"), turn_of("file.modified@3"));
+        assert_ne!(turn_of("agent.prompt.submitted@1"), turn_of("tool.invoked@11"), "a new prompt, a new turn");
+        assert_ne!(turn_of("tool.invoked@11"), turn_of("tool.invoked@12"), "another session");
+        let first = t.query(&Filter { turn: Some(turn_of("tool.invoked@2")), limit: 50, ..Default::default() }).unwrap();
+        assert_eq!(first.len(), 3, "the prompt, the tool call and the file");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_database_from_before_turn_ids_is_migrated_in_place() {
+        let root = temp("migrate");
+        std::fs::create_dir_all(root.join(".harnes")).unwrap();
+        let c = Connection::open(root.join(".harnes").join("telemetry.db")).unwrap();
+        c.execute_batch(
+            "CREATE TABLE events(id TEXT PRIMARY KEY, at INTEGER NOT NULL, project TEXT NOT NULL, run TEXT NOT NULL,
+               session TEXT, role TEXT NOT NULL DEFAULT '', lot TEXT, kind TEXT NOT NULL, provider TEXT, model TEXT, tool TEXT, path TEXT, command TEXT, status TEXT,
+               input_tokens INTEGER NOT NULL DEFAULT 0, output_tokens INTEGER NOT NULL DEFAULT 0, cache_read_tokens INTEGER NOT NULL DEFAULT 0, cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+               cost_usd REAL NOT NULL DEFAULT 0, bytes INTEGER NOT NULL DEFAULT 0, summary TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '{}',
+               fidelity TEXT NOT NULL DEFAULT 'observed', evidence TEXT NOT NULL DEFAULT '[]', redacted INTEGER NOT NULL DEFAULT 0);
+             INSERT INTO events(id, at, project, run, kind) VALUES('old', 1, 'p', 'r', 'run.started');",
+        )
+        .unwrap();
+        drop(c);
+        let t = Telemetry::open(&root).unwrap();
+        assert_eq!(t.recent("r", 10).unwrap().len(), 1, "the old row is still there");
+        t.append(Event::new("r", "p", "run.completed")).unwrap();
+        assert_eq!(t.recent("r", 10).unwrap().len(), 2);
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
