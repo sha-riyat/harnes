@@ -201,6 +201,30 @@ impl Worktrees {
                 )?;
             }
         }
+        // The same for OpenCode (free-model agents): its MCP commands are
+        // arrays, and a lone "." means the project, not the worktree.
+        if !wt.path.join("opencode.json").exists() {
+            if let Ok(text) = std::fs::read_to_string(self.root.join("opencode.json")) {
+                if let Ok(mut doc) = serde_json::from_str::<serde_json::Value>(&text) {
+                    if let Some(servers) = doc.get_mut("mcp").and_then(|v| v.as_object_mut()) {
+                        for server in servers.values_mut() {
+                            if let Some(cmd) =
+                                server.get_mut("command").and_then(|v| v.as_array_mut())
+                            {
+                                for part in cmd.iter_mut().filter(|p| p.as_str() == Some(".")) {
+                                    *part =
+                                        serde_json::Value::String(self.root.display().to_string());
+                                }
+                            }
+                        }
+                    }
+                    std::fs::write(
+                        wt.path.join("opencode.json"),
+                        serde_json::to_string_pretty(&doc)? + "\n",
+                    )?;
+                }
+            }
+        }
         Ok(())
     }
 
@@ -250,6 +274,12 @@ impl Worktrees {
             let _ = git(&wt.path, &["checkout", "--", ".mcp.json"]);
         } else if mcp.exists() {
             let _ = std::fs::remove_file(mcp);
+        }
+        let opencode = wt.path.join("opencode.json");
+        if tracked("opencode.json") {
+            let _ = git(&wt.path, &["checkout", "--", "opencode.json"]);
+        } else if opencode.exists() {
+            let _ = std::fs::remove_file(opencode);
         }
         let claude_md = wt.path.join("CLAUDE.md");
         if claude_md.exists() && !tracked("CLAUDE.md") {
@@ -385,6 +415,11 @@ mod tests {
         std::fs::write(root.join(".claude/agents/worker.md"), "role").unwrap();
         std::fs::write(root.join("CLAUDE.md"), "harness").unwrap();
         std::fs::write(root.join(".mcp.json"), r#"{"mcpServers":{}}"#).unwrap();
+        std::fs::write(
+            root.join("opencode.json"),
+            r#"{"mcp":{"harnes-ctx":{"type":"local","command":["x","--root","."]}}}"#,
+        )
+        .unwrap();
 
         let w = Worktrees::load(&root);
         assert!(w.active());
@@ -394,6 +429,11 @@ mod tests {
         assert!(wt.path.join(".claude/agents/worker.md").exists());
         assert!(wt.path.join("CLAUDE.md").exists());
         assert!(wt.path.join(".mcp.json").exists());
+        let oc = std::fs::read_to_string(wt.path.join("opencode.json")).unwrap();
+        assert!(
+            !oc.contains("\".\""),
+            "the lone . now points at the project: {oc}"
+        );
         std::fs::write(wt.path.join("a.txt"), "two").unwrap();
         assert!(w.changed_files(&wt).unwrap().contains(&"a.txt".to_string()));
         w.finish(&wt, "harnes: L1").unwrap();
@@ -401,7 +441,14 @@ mod tests {
         assert!(root.join(".claude/agents/worker.md").exists());
         assert!(sh(
             &root,
-            &["ls-files", "--", ".mcp.json", "CLAUDE.md", ".claude"]
+            &[
+                "ls-files",
+                "--",
+                ".mcp.json",
+                "CLAUDE.md",
+                ".claude",
+                "opencode.json"
+            ]
         )
         .is_empty());
         assert!(!wt.path.exists());
