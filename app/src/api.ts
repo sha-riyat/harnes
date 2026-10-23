@@ -284,6 +284,27 @@ export interface OsDetail {
   oracle: string;
 }
 
+export type Profile = "claude" | "mixed" | "max-eco";
+export interface ProfileInfo {
+  config: { profile: Profile; auto_escalate: boolean; models: string[]; digest: boolean };
+  effective: Profile;
+  opencode: boolean;
+  live: string[];
+  usable: string[];
+}
+export interface TrustFinding {
+  id: string;
+  severity: "info" | "warn" | "high" | "critical";
+  file: string;
+  message: string;
+  fingerprint: string;
+  blocks: boolean;
+}
+export interface TrustReport {
+  findings: TrustFinding[];
+  blocked: boolean;
+}
+
 /** The account's limits as Anthropic reports them (0..1 used, resets in epoch seconds). */
 export interface Budget {
   limits: { five_hour: number; five_hour_reset: number; seven_day: number; seven_day_reset: number; status: string; seen: number };
@@ -293,6 +314,10 @@ export interface Budget {
 
 export const api = {
   budgetGet: () => invoke<Budget | null>("budget_get"),
+  profileGet: () => invoke<ProfileInfo>("profile_get", {}),
+  profileSet: (profile: Profile, more: { autoEscalate?: boolean; digest?: boolean; models?: string[] } = {}) => invoke<ProfileInfo>("profile_set", { profile, ...more }),
+  trustReport: () => invoke<TrustReport>("trust_report", {}),
+  trustAccept: () => invoke<TrustReport>("trust_accept", {}),
   osList: () => invoke<{ dir: string; packs: OsPack[] }>("os_list"),
   osPack: (id: string) => invoke<OsDetail>("os_pack", { id }),
   osRead: (id: string, path: string) => invoke<string>("os_read", { id, path }),

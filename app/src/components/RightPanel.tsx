@@ -4,6 +4,7 @@ import Icon from "../ui/Icon";
 import { icons as D } from "../ui/icons";
 import { panelTab, setPanelOpen, setPanelTab, type PanelTab } from "../ui/state";
 import ThreadsTab from "./ThreadsTab";
+import ProfileCard from "./ProfileCard";
 import WeekCard from "./WeekCard";
 
 const fmt = (n?: number) => (n === undefined ? "–" : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : `${n}`);
@@ -45,6 +46,7 @@ function UsageTab() {
   return (
     <div class="rp-body">
       <WeekCard />
+      <ProfileCard />
       <div class="figures">
         <For each={rows()}>
           {([label, v]) => (

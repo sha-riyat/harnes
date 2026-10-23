@@ -63,3 +63,10 @@
 .week-line b { color: var(--text); font-weight: 500; }
 .rp-body .figures + .figures { margin-top: 12px; }
 .btn.sm { height: 24px; padding: 0 8px; font-size: 12px; }
+.week + .week { margin-top: 4px; }
+.finds { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 12.5px; color: var(--text-2); }
+.finds li { display: grid; gap: 2px; padding-left: 10px; border-left: 2px solid var(--text); }
+.week.trust { padding: 10px 12px; border: 1px solid var(--text); }
+.check { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--text-2); }
+.check input { margin-top: 2px; accent-color: var(--text); }
+.seg button[aria-checked="true"] { background: var(--text); color: var(--ink); }
