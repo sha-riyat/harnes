@@ -179,7 +179,34 @@ impl Pane {
         self.term.lock().snapshot(force)
     }
 
+    /// Stops the agent and everything it started (shells, test runners, dev
+    /// servers). Killing only the child would leave those orphans running.
     pub fn kill(&self) {
         let _ = self.killer.lock().kill();
+        if let Some(pid) = self.info.pid {
+            kill_tree(pid);
+        }
+    }
+}
+
+/// Kills `pid` and its descendants. Best effort: the process may be gone already.
+fn kill_tree(pid: u32) {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const NO_WINDOW: u32 = 0x0800_0000;
+        let _ = std::process::Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .creation_flags(NO_WINDOW)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status();
+    }
+    #[cfg(not(windows))]
+    {
+        // The pty child leads its own session: its pid is the process group.
+        let _ = std::process::Command::new("kill")
+            .args(["-KILL", &format!("-{pid}")])
+            .status();
     }
 }
