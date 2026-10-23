@@ -187,10 +187,9 @@ pub fn spawn_claude(
         st.hooks.settings_for_root(key, Some(&p.root)).to_string(),
     )
     .map_err(|e| e.to_string())?;
-    let mut env = agent_env(p, key);
+    let mut env = agent_env(p, key, &st.hooks.api_url());
     if agent == Some("orchestrator") {
         env.push(("HARNES_ROLE".into(), "orchestrator".into()));
-        env.push(("HARNES_API".into(), st.hooks.api_url()));
     }
     let mut args: Vec<String> = vec![];
     if let Some(a) = agent {

@@ -97,6 +97,7 @@ pub fn pane_scroll(st: State<'_, Shared>, id: String, delta: isize) -> Res<()> {
 
 #[tauri::command]
 pub fn pane_close(st: State<'_, Shared>, id: String) -> Res<()> {
+    st.cancel_asks_of_pane(&id);
     st.panes.close(&id).map_err(e)?;
     st.pane_project.write().remove(&id);
     st.agents

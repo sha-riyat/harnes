@@ -59,6 +59,93 @@ pub fn install(st: &Shared) {
             );
             let _ = app.emit("permission-request", ask);
         }));
+    // Typed questions from agents (`ask_user`).
+    let (app, shared) = (st.app.clone(), st.clone());
+    st.hooks.asks.set_sink(std::sync::Arc::new(move |pending| {
+        record_question(
+            &shared,
+            &pending.agent,
+            "question.asked",
+            "pending",
+            &pending.card.question,
+            &pending.id,
+        );
+        let _ = app.emit("ask-request", pending);
+    }));
+}
+
+/// Records a typed question or its answer next to the agent's run. Only what
+/// the agent asked is kept; a free-text answer is not stored.
+fn record_question(st: &Shared, agent: &str, kind: &str, status: &str, summary: &str, id: &str) {
+    let Some(p) = st.project_of_key(agent) else {
+        return;
+    };
+    let role = st
+        .agents
+        .read()
+        .get(agent)
+        .map(|a| a.role.clone())
+        .unwrap_or_default();
+    let run = p.run_slot.lock().clone().unwrap_or_default();
+    let _ = p.telemetry.append(
+        harnes_telemetry::Event::new(&run, &p.id, kind)
+            .role(role)
+            .tool("ask_user")
+            .status(status)
+            .summary(summary.to_string())
+            .evidence(vec![id.to_string()]),
+    );
+}
+
+/// Typed questions waiting for the user.
+#[tauri::command]
+pub fn asks_pending(st: State<'_, Shared>) -> Value {
+    json!(st.hooks.asks.pending())
+}
+
+#[tauri::command]
+pub fn ask_answer(
+    st: State<'_, Shared>,
+    id: String,
+    choice: Option<String>,
+    text: Option<String>,
+) -> Result<(), String> {
+    let pending = st.hooks.asks.pending().into_iter().find(|p| p.id == id);
+    st.hooks.asks.answer(
+        &id,
+        harnes_crew::ask::Answer {
+            choice: choice.clone(),
+            text: text.clone(),
+        },
+    )?;
+    if let Some(p) = pending {
+        let what = match (&choice, &text) {
+            (Some(c), _) => format!("réponse : {c}"),
+            (_, Some(t)) => format!("réponse libre ({} caractères)", t.chars().count()),
+            _ => "réponse".into(),
+        };
+        record_question(&st, &p.agent, "question.answered", "ok", &what, &id);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn ask_decline(st: State<'_, Shared>, id: String) -> Result<(), String> {
+    let pending = st.hooks.asks.pending().into_iter().find(|p| p.id == id);
+    if !st.hooks.asks.decline(&id) {
+        return Err("question expirée".into());
+    }
+    if let Some(p) = pending {
+        record_question(
+            &st,
+            &p.agent,
+            "question.declined",
+            "declined",
+            "l'utilisateur n'a pas répondu",
+            &id,
+        );
+    }
+    Ok(())
 }
 
 /// Runs on every fresh frame of an agent pane (from the frame pump).

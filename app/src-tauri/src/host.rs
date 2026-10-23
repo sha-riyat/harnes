@@ -8,8 +8,10 @@ use tauri::Emitter;
 
 /// Environment for every agent pane: the project's proxy, tool search on,
 /// identity for threads (`HARNES_AGENT`) and project for crew control.
-pub fn agent_env(p: &Project, key: &str) -> Vec<(String, String)> {
+pub fn agent_env(p: &Project, key: &str, api: &str) -> Vec<(String, String)> {
     vec![
+        // Where agents reach harnes: crew control and `ask_user`.
+        ("HARNES_API".into(), api.into()),
         ("ENABLE_TOOL_SEARCH".into(), "true".into()),
         ("HARNES_AGENT".into(), key.into()),
         ("HARNES_PROJECT".into(), p.id.clone()),
@@ -72,7 +74,7 @@ impl AgentHost for PaneHost {
             program: launch.program,
             args: launch.args,
             cwd: Some(dir),
-            env: agent_env(p, key),
+            env: agent_env(p, key, &st.hooks.api_url()),
             cols: 120,
             rows: 32,
         })?;
@@ -153,7 +155,7 @@ impl AgentHost for PaneHost {
             program,
             args,
             cwd: Some(dir),
-            env: agent_env(p, key),
+            env: agent_env(p, key, &st.hooks.api_url()),
             cols: 120,
             rows: 32,
         })?;
@@ -189,6 +191,7 @@ impl AgentHost for PaneHost {
         let st = &self.0;
         // Keep the pane a moment so the user sees the final message.
         let (shared, pane) = (st.clone(), pane.to_string());
+        st.cancel_asks_of_pane(&pane);
         st.agents
             .write()
             .retain(|_, a| a.pane.as_deref() != Some(pane.as_str()));

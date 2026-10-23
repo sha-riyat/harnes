@@ -217,6 +217,20 @@ impl AppState {
         self.project(&id)
     }
 
+    /// An agent whose pane goes away can no longer read an answer: free its questions.
+    pub fn cancel_asks_of_pane(&self, pane: &str) {
+        let keys: Vec<String> = self
+            .agents
+            .read()
+            .values()
+            .filter(|a| a.pane.as_deref() == Some(pane))
+            .map(|a| a.key.clone())
+            .collect();
+        for key in keys {
+            self.hooks.asks.cancel_agent(&key);
+        }
+    }
+
     pub fn tag_pane(&self, pane: &str, project: &str) {
         self.pane_project
             .write()

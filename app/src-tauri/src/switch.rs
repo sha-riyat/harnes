@@ -82,10 +82,9 @@ pub fn spawn_on(
     let launch = providers
         .launch_session(provider, &full, std::path::Path::new(""))
         .map_err(|e| format!("{e:#}"))?;
-    let mut env = agent_env(p, key);
+    let mut env = agent_env(p, key, &st.hooks.api_url());
     if agent.is_some() {
         env.push(("HARNES_ROLE".into(), "orchestrator".into()));
-        env.push(("HARNES_API".into(), st.hooks.api_url()));
     }
     let info = st
         .panes
