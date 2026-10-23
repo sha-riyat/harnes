@@ -119,6 +119,8 @@ pub struct HookServer {
     pub registry: Arc<Registry>,
     /// Permission requests waiting for the user (answered from the UI).
     pub permissions: Arc<crate::permissions::Broker>,
+    /// Typed questions from agents (`ask_user`), answered from the UI.
+    pub asks: Arc<crate::ask::Asks>,
     control: Arc<std::sync::OnceLock<ControlFn>>,
     guard: Arc<Mutex<Option<GuardFn>>>,
 }
@@ -137,6 +139,8 @@ impl HookServer {
         let ctl = control.clone();
         let permissions: Arc<crate::permissions::Broker> = Arc::default();
         let (perm, reg2) = (permissions.clone(), registry.clone());
+        let asks: Arc<crate::ask::Asks> = Arc::default();
+        let (ask_broker, reg3) = (asks.clone(), registry.clone());
         let state = Arc::new(HookState {
             registry: registry.clone(),
             guard: guard.clone(),
@@ -152,6 +156,23 @@ impl HookServer {
                         let out = perm.request(&key, v).await;
                         reg.set(&key, AgentState::Working, false);
                         out
+                    }
+                }),
+            )
+            .route(
+                "/ask/{key}",
+                post(move |Path(key): Path<String>, body: Bytes| {
+                    let (asks, reg) = (ask_broker.clone(), reg3.clone());
+                    async move {
+                        let raw: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
+                        // The agent waits for the user: it is blocked on them, not working.
+                        reg.set(&key, AgentState::Blocked, false);
+                        let out = match asks.request(&key, &raw).await {
+                            Ok(o) => o.json(),
+                            Err(e) => json!({"error": e}),
+                        };
+                        reg.set(&key, AgentState::Working, false);
+                        out.to_string()
                     }
                 }),
             )
@@ -177,6 +198,7 @@ impl HookServer {
             port,
             registry,
             permissions,
+            asks,
             control,
             guard,
         })

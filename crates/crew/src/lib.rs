@@ -1,6 +1,7 @@
 //! Crew orchestration: project setup, agent state from Claude Code hooks,
 //! and the Planner -> Workers -> Reviewer loop.
 
+pub mod ask;
 pub mod budget;
 pub mod context;
 pub mod e2e;
