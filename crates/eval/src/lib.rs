@@ -6,6 +6,8 @@
 //! The runner is deliberately small and reproducible: no model call, no hidden
 //! judge, a ledger of time and exit codes.
 
+pub mod passk;
+
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{
