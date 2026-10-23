@@ -15,6 +15,7 @@ members = [
     "crates/worktree",
     "crates/memory",
     "crates/eval",
+    "crates/free",
     "app/src-tauri",
 ]
 
@@ -57,6 +58,7 @@ harnes-guards = { path = "crates/guards" }
 harnes-worktree = { path = "crates/worktree" }
 harnes-memory = { path = "crates/memory" }
 harnes-eval = { path = "crates/eval" }
+harnes-free = { path = "crates/free" }
 
 [profile.release]
 lto = "thin"

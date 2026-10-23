@@ -1464,6 +1464,7 @@ dependencies = [
  "harnes-crew",
  "harnes-ctx",
  "harnes-eval",
+ "harnes-free",
  "harnes-guards",
  "harnes-lookout",
  "harnes-memory",
@@ -1492,6 +1493,7 @@ dependencies = [
  "axum",
  "futures-util",
  "harnes-e2e",
+ "harnes-free",
  "harnes-guards",
  "harnes-memory",
  "harnes-os",
@@ -1501,6 +1503,7 @@ dependencies = [
  "parking_lot",
  "serde",
  "serde_json",
+ "sha2",
  "tokio",
  "tracing",
 ]
@@ -1510,8 +1513,10 @@ name = "harnes-ctx"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "harnes-free",
  "harnes-memory",
  "harnes-os",
+ "harnes-telemetry",
  "harnes-threads",
  "parking_lot",
  "rusqlite",
@@ -1546,6 +1551,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "harnes-free"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "harnes-telemetry",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "harnes-guards"
 version = "0.1.0"
 dependencies = [
@@ -1555,6 +1570,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]

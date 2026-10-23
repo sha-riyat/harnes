@@ -1,0 +1,12 @@
+[package]
+name = "harnes-free"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Free OpenCode models for harnes: profiles, routing policy and a safe non-interactive runner"
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+harnes-telemetry.workspace = true
