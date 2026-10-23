@@ -55,7 +55,7 @@ Ponytail, Caveman et TasteSkill v2 (`design-taste-frontend`) restent des skills 
 | Worker × N | Sonnet 5.5 · high | Réalise un lot, puis écrit et lance son propre test e2e. | `reports/<lot>-r<n>.json` |
 | Reviewer | Sonnet 5.5 · high | Relit le diff face au plan et aux vrais résultats e2e. | `review-<n>.json` |
 | Teacher (gate) | Sonnet 5.5 · high | Confronte la barre aux résultats, puis renvoie le travail ou vous dit qu'il est prêt. | `gate-<n>.json` |
-| scout | Sonnet 5.5 · high | Sous-agent que tout rôle lance pour de courtes tâches en parallèle : trouver du code, résumer des fichiers, lancer une commande. | sa réponse |
+| scout | Haiku 5.5 · high | Sous-agent que tout rôle lance pour de courtes tâches en parallèle : trouver du code, résumer des fichiers, lancer une commande. | sa réponse |
 
 ### La boucle
 
@@ -180,6 +180,9 @@ La vue de run est typée (`harnes.view.v1`), jamais du HTML généré par le mod
 - **Mémoire.** Un run propose des candidats adossés à des preuves ; seul un humain peut en promouvoir un. `HARNES_MEMORY_REVIEW=1` active l'outil de revue et `HARNES_MEMORY_WRITE=0` désactive les écritures.
 - **HarnessSpec et évals.** `.harnes/harness.json` décrit les huit composants du harnais et ses budgets. `.harnes/evals/*.yaml` contient les suites déterministes ; les résultats vont dans `.harnes/evals/results/` et `.harnes/eval-ledger.json`.
 - **Réglage.** `tune_plan` propose un balayage d'un seul composant après une baseline ; on garde un changement seulement si la même suite gagne ou reste neutre. Il n'appelle jamais de modèle lui-même.
+- **Confiance.** Avant tout démarrage, harnes lit les `.claude/settings*.json` et `.mcp.json` du dossier. Une config qui redirige l'API, lance un hook ou un utilitaire, ou démarre des serveurs MCP sans demander bloque tout lancement jusqu'à ce que vous l'ayez lue et acceptée (liée au hash du fichier).
+- **Isolation des rôles.** Les Workers ne peuvent pas lire la barre ni les verdicts qui les jugent ; les relecteurs d'une revue renforcée ne se lisent pas entre eux. Un agent muet pendant un tiers du délai est arrêté, et fermer un panneau tue ce qu'il a lancé.
+- **Modèles gratuits (OpenCode).** Un modèle gratuit propose, un modèle payant vérifie. Le profil par défaut, `claude`, n'envoie rien à un tiers ; `mixed` donne aux modèles gratuits les relecteurs d'une revue renforcée et le premier essai des petites tâches ; `max-eco` ajoute le premier essai des lots non sensibles. Seuls les modèles sans rétention sont autorisés sauf si vous en ajoutez, un relecteur gratuit doit laisser les fichiers intacts, et tout échec relance l'étape sur Claude. `ctx_digest` permet à n'importe quel agent d'obtenir d'un modèle gratuit un court résumé d'une grosse sortie.
 
 Contrats, fichiers et exemples complets : [docs/control-plane.md](docs/control-plane.md).
 

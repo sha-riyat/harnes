@@ -31,6 +31,22 @@ Each pack contains the upstream `LICENSE-ECC`, a `NOTICE`, and a
 - No Beacon source code or Go binary is bundled. harnes does not require
   Beacon, and there is no runtime dependency on it.
 
+## Method reference: ECC security guide
+
+- Upstream: <https://github.com/affaan-m/ECC> (`the-security-guide.md`), MIT
+- Use: the idea of reading a project's own Claude Code config before running it
+  (the two CVEs it cites), role isolation of judges, a heartbeat for stalled
+  agents, and capped memory injection informed `harnes_guards::trust`, the
+  built-in isolation rules, the stall check and `Memory::context`. No text or
+  code from the guide is copied.
+
+## Used, not bundled: OpenCode
+
+- Upstream: <https://opencode.ai> (the `opencode` CLI, installed by the user)
+- Use: harnes starts it as an external program for free-model steps
+  (`crates/free`). Nothing of OpenCode is bundled, and harnes does not require
+  it: without it every step runs on Claude.
+
 ## Method reference: Harness 2.0
 
 - Upstream: <https://github.com/google-research/harness2>

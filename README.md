@@ -55,7 +55,7 @@ Ponytail, Caveman and TasteSkill v2 (`design-taste-frontend`) remain Claude Code
 | Worker × N | Sonnet 5.5 · high | Implements one lot, then writes and runs its own e2e test. | `reports/<lot>-r<n>.json` |
 | Reviewer | Sonnet 5.5 · high | Reviews the diff against the plan and the real e2e results. | `review-<n>.json` |
 | Teacher (gate) | Sonnet 5.5 · high | Checks the bar against the results, then sends the work back or tells you it is ready. | `gate-<n>.json` |
-| scout | Sonnet 5.5 · high | Subagent any role starts for short parallel tasks: finding code, summarising files, running a command. | its reply |
+| scout | Haiku 5.5 · high | Subagent any role starts for short parallel tasks: finding code, summarising files, running a command. | its reply |
 
 ### The loop
 
@@ -180,6 +180,9 @@ The run view is typed (`harnes.view.v1`), never model-generated HTML. It reads `
 - **Memory.** A run proposes evidence-backed candidates; only a human can promote one. `HARNES_MEMORY_REVIEW=1` enables the review tool and `HARNES_MEMORY_WRITE=0` disables writes.
 - **HarnessSpec and evals.** `.harnes/harness.json` describes the eight harness components and budgets. `.harnes/evals/*.yaml` holds deterministic suites; results go to `.harnes/evals/results/` and `.harnes/eval-ledger.json`.
 - **Tuning.** `tune_plan` proposes a one-component-at-a-time sweep after a baseline; keep a change only when the same suite wins or is neutral. It never calls a model itself.
+- **Trust.** Before anything starts, harnes reads the folder's own `.claude/settings*.json` and `.mcp.json`. A config that redirects the API, runs a hook or helper, or starts MCP servers unasked stops every launch until you have read it and accepted it (tied to the file's hash).
+- **Role isolation.** Workers cannot read the bar or the verdicts they are judged by; the finders of a deep review cannot read each other. An agent that goes quiet for a third of the timeout is stopped, and closing a pane kills what it started.
+- **Free models (OpenCode).** A free model proposes, a paid one checks. The default profile, `claude`, sends nothing to a third party; `mixed` gives free models the finders of a deep review and the first try of small tasks; `max-eco` adds the first try of non-sensitive lots. Only zero-retention models are allowed unless you add others, a free reviewer must leave the files untouched, and any failure reruns the step on Claude. `ctx_digest` lets any agent get a short summary of a large output from one.
 
 Full contracts, files and examples: [docs/control-plane.md](docs/control-plane.md).
 

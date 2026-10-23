@@ -7,10 +7,11 @@ the cockpit can do with it. Everything is local and provider-independent.
 ## Model policy
 
 The Planner is the only role on Opus 5.5, at `medium` effort. The orchestrator,
-Teacher, Workers, reviewers (including the deep-review finders and verifier)
-and scouts run on Sonnet 5.5, at `high` effort. This split is fixed: `light`,
-`full`, `deep` and eco weeks do not move another role to Opus. Eco only skips
-deep reviews.
+Teacher, Workers and reviewers (including the deep-review finders and
+verifier) run on Sonnet 5.5, at `high` effort. Scouts, which only look things
+up, run on Haiku 5.5, at `high` effort. This split is fixed: `light`, `full`,
+`deep` and eco weeks do not move another role to Opus. Eco only skips deep
+reviews.
 
 Claude Code resolves the `opus` and `sonnet` aliases to the latest models,
 currently Opus 5.5 and Sonnet 5.5. The engine passes them as `--model` and
@@ -206,6 +207,145 @@ variant on the same suite, save both results, then compare with
 or is neutral and simpler. Tuning comes after the eval and worktree machinery
 because it needs a stable baseline. No model is called by `tune_plan` itself.
 
+## Trust: what a project's own config can run
+
+Claude Code reads `.claude/settings*.json` and `.mcp.json` from the folder it
+opens in. A repository can use them to redirect the API (and the key with it),
+run a command through a hook or helper, or start an MCP server unasked. Two
+published Claude Code CVEs were of this kind (project code ran before the trust
+dialog; a project overrode `ANTHROPIC_BASE_URL`), and harnes opens arbitrary
+folders and routes every agent through its own proxy, so it reads that config
+before anything starts (`harnes_guards::trust`).
+
+| Finding | Severity | Why |
+|---|---|---|
+| `redirects-the-api` | critical (remote URL) / high (loopback) | `ANTHROPIC_BASE_URL` and the like in `env`: requests, and the key, go elsewhere or skip the proxy |
+| `sets-credentials` | high | the project picks the account |
+| `runs-a-helper` | high | `apiKeyHelper`, `awsAuthRefresh`… run a command at start |
+| `runs-a-hook` | high | a project hook that is not harnes' own runs outside the guards |
+| `auto-starts-mcp-servers` | high | `enableAllProjectMcpServers` is on and `.mcp.json` declares servers beyond `harnes-*` |
+| `bypasses-permissions` | high | `defaultMode: bypassPermissions` |
+| `other-mcp-server` | warn | informational |
+
+High and critical findings stop every launch (a crew run, the orchestrator, a
+Claude session) until the user has read them and accepted them in the usage
+tab. Accepting is tied to a hash of the file: any later change asks again
+(`.harnes/trust.json`). harnes' own template is clean, and since this version
+it sets `enableAllProjectMcpServers` to `false`; its two servers are listed in
+`enabledMcpjsonServers`.
+
+## Role isolation
+
+A judge must not be tuned to its candidate. `guards.json` rules can name
+`roles`, taken from the agent's key (`worker`, `reviewer`, `reviewer-finder`,
+`reviewer-verifier`, `teacher-bar`, `teacher-gate`). Four built-in rules come
+after the user's own (turn them off with `"builtins": false`):
+
+- workers cannot read `bar.json`, `review-*.json` or `gate-*.json` (Read, Grep,
+  Glob, or a shell command that names them);
+- the finders of a deep review cannot read each other's verdicts; the verifier
+  can read them all.
+
+Harness2 saw an agent fetch the rubric it was graded on. This closes the same
+door.
+
+## Liveness
+
+- **Heartbeat.** Every hook event is a sign of life. An agent that reports
+  `working` and sends nothing for a third of the agent timeout (20 minutes at
+  most) is stopped and its step fails, instead of waiting out the whole hour.
+  An agent waiting for the user is not stalled. Providers without hooks are
+  only timed out.
+- **Closing a pane** kills the agent and everything it started (`taskkill /T`
+  on Windows, the process group elsewhere). On Windows the pseudo-console
+  already ends most children: this covers the ones that detach.
+
+## Turns
+
+Every event of an agent session carries a `turn` id, opened by each user prompt
+(Beacon's `prompt.id`). `Filter.turn` returns one whole turn: the prompt, every
+tool call, every file and every approval until the next prompt.
+
+## Harness fingerprint and budgets
+
+- `harnes_crew::harness::fingerprint` hashes the spec, the role prompts, the
+  guard rules and `CLAUDE.md`. Every run stores it in `metrics.json` and in
+  `harness.fp`. If the harness changes while a run is interrupted, the resumed
+  run says so and is marked `harness_changed`: its numbers mix two harnesses and
+  should not be compared.
+- `always_on_tokens` in `harness.json` is checked at each agent start against
+  what the agent loads before it does anything (its prompt, `CLAUDE.md` and what
+  that imports, about 4 bytes to a token). Going over it is a `budget.exceeded`
+  event; `harness_get` returns both numbers.
+
+## Free models (OpenCode)
+
+A free model proposes, a paid one checks. The profile, per project in
+`.harnes/profile.json` (the usage tab sets it), decides who may see the code:
+
+| Profile | What goes to a free model |
+|---|---|
+| `claude` (default) | nothing: no third party sees the project |
+| `mixed` | the finders of a deep review; the first try of small tasks (light runs) |
+| `max-eco` | also the first try of every worker whose lot is not sensitive |
+
+`mixed` becomes `max-eco` when the week runs ahead of its limits and
+`auto_escalate` is on; a project is never moved off `claude` without the user.
+
+What is never routed: the planner, the Teacher, the verifier, the orchestrator,
+a retry after a review, a run the Teacher rated high risk, and any lot whose
+files look sensitive (credentials, `.github/`, auth, payment, migrations, keys).
+A free worker needs a worktree, so its mistakes stay on a branch a Claude
+reviewer reads. A free finder only reads, and harnes proves it: the working tree
+(git status and diff) must be the same after as before, or its answer is
+discarded.
+
+Fallback is the rule: no OpenCode, a model that is not offered, an error, a
+silence of 15 minutes, a bad edit: the step runs again on Claude, so a free
+model can cost time but never a result. Each case is a `route.free` or
+`route.fallback` event.
+
+Only models whose provider keeps nothing and does not train are allowed by
+default (`glm-5.3-flash-free`, `deepseek-v4.1-flash-free`, `space-bunny-free`,
+`longcat-2.5-preview-free`, per OpenCode Zen's own page). Others may keep or
+reuse what they get; they run only if the user adds them to `models`. harnes
+asks `opencode models opencode` and uses the intersection, so a withdrawn model
+is simply skipped.
+
+`ctx_digest` (MCP, harnes-ctx) gives any agent a short summary of a large
+output, stored id or file, written by a free model when the profile allows it
+(`digest: true`); the full text stays one `ctx_retrieve` away. Secrets are
+masked before anything leaves, sensitive files are refused, and any failure
+returns the deterministic head, tail and error lines. Under `claude` it never
+sends anything out.
+
+The prompt goes to OpenCode in a file, never on a command line (an npm shim runs
+through `cmd.exe`, where quoting cannot be trusted). `equip` writes the project's
+`opencode.json` with the two harnes MCP servers and refuses `webfetch`, keeping
+the user's own keys; lot worktrees get a copy, never committed.
+
+Limits, said plainly: the project's guards run through Claude Code hooks, which
+OpenCode does not have, so a free agent runs without them. That is why it only
+gets work that is isolated (a worktree, or read-only and proven so) and verified
+afterwards. This path was built against OpenCode's documented CLI and tested
+with a stand-in binary; it has not run against a real OpenCode install.
+
+## Experience library
+
+`harnes_eval::passk` makes a harness change measurable:
+
+- `run_k` runs a suite `k` times (1 to 10): pass@1 (the average), pass^k (all `k`
+  pass) and the flaky tasks. One run says little about a flaky check.
+- `decide` keeps a change only if it wins, or ties and is simpler, and never if
+  a task that always passed now fails.
+- `record` appends the verdict, with both fingerprints and the numbers, to
+  `.harnes/experiments/library.jsonl`. `tune_plan` lists the variants already
+  rejected on the same model, so a sweep does not pay for them twice.
+
+harnes does not run Harness2's Propose-Probe-Compose loop: each probe is a real
+agent run on a real task, and that cost should be a deliberate act, not a
+default. These pieces are what make its results trustworthy when you do.
+
 ## ECC packs
 
 `crates/os/packs/ecc-*.zip` adds three curated method packs:
@@ -239,5 +379,10 @@ harnes originals. Not all 311 ECC skills are imported.
 | `.harnes/eval-ledger.json` | cumulative eval counters |
 | `.harnes/experiments/` | tune plans and comparisons |
 | `.harnes/context/` | provider hand-offs |
+| `.harnes/profile.json` | models profile: `claude`, `mixed` or `max-eco`, allowed free models |
+| `.harnes/trust.json` | project-config findings the user accepted, by file hash |
+| `.harnes/experiments/library.jsonl` | what was tried, with fingerprints and numbers |
+| `.harnes/runs/<run>/harness.fp` | the harness the run started with |
+| `opencode.json` | harnes MCP servers for OpenCode, written when a profile uses it |
 
 `.harnes/.gitignore` contains `*`: run artefacts are local by default.
