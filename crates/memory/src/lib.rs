@@ -11,6 +11,10 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, path::Path};
 
+/// Most records one `context` call returns, and the most characters it adds.
+pub const MAX_INJECTED: usize = 6;
+pub const MAX_CONTEXT_CHARS: usize = 8_000;
+
 pub fn now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -288,19 +292,53 @@ impl Memory {
         Ok(rows.filter_map(|r| r.ok()).collect())
     }
 
-    /// Compact block suitable for a planner or worker prompt.
+    /// Compact block suitable for a planner or worker prompt. Capped on purpose:
+    /// every injected line is paid by every agent that reads it, and more
+    /// memory is not better memory (ECC caps injection at 6 items).
     pub fn context(&self, query: &str, limit: usize) -> Result<String> {
-        let records = self.search(query, limit)?;
+        let records = self.search(query, limit.min(MAX_INJECTED))?;
         if records.is_empty() {
             return Ok(String::new());
         }
-        let mut s = String::from("## Mémoire approuvée du projet\n\n");
+        let total = records.len();
+        let mut s = String::from(
+            "## Mémoire approuvée du projet
+
+",
+        );
+        let mut shown = 0;
         for r in records {
-            s.push_str(&format!("### {} ({})\n{}\n", r.title, r.kind, r.body));
+            let mut block = format!(
+                "### {} ({})
+{}
+",
+                r.title, r.kind, r.body
+            );
             if !r.applicability.trim().is_empty() {
-                s.push_str(&format!("Quand : {}\n", r.applicability));
+                block.push_str(&format!(
+                    "Quand : {}
+",
+                    r.applicability
+                ));
             }
-            s.push_str(&format!("Provenance : {}\n\n", r.provenance));
+            block.push_str(&format!(
+                "Provenance : {}
+
+",
+                r.provenance
+            ));
+            if shown > 0 && s.len() + block.len() > MAX_CONTEXT_CHARS {
+                break;
+            }
+            s.push_str(&block);
+            shown += 1;
+        }
+        if shown < total {
+            s.push_str(&format!(
+                "({} autre(s) omis : précise la requête pour les voir.)
+",
+                total - shown
+            ));
         }
         Ok(s)
     }
@@ -488,6 +526,51 @@ mod tests {
             .unwrap();
         m.review(c2.id, "reject", "bruit", None).unwrap();
         assert!(m.search("noise", 10).unwrap().is_empty());
+    }
+
+    #[test]
+    fn injected_memory_is_capped() {
+        let m = Memory::in_memory("p").unwrap();
+        for i in 0..10 {
+            let c = m
+                .create_candidate(
+                    "r",
+                    "gotcha",
+                    &format!("lesson {i}"),
+                    &format!("keyword {}", "x".repeat(2_000)),
+                    "",
+                    &[],
+                    &[],
+                    "test",
+                    0.9,
+                )
+                .unwrap();
+            m.review(c.id, "approve", "ok", None).unwrap();
+        }
+        let block = m.context("keyword", 50).unwrap();
+        assert!(
+            block.matches("### lesson").count() <= MAX_INJECTED,
+            "{block}"
+        );
+        assert!(block.len() <= MAX_CONTEXT_CHARS + 600, "{}", block.len());
+        assert!(block.contains("omis"), "says what was left out");
+        // A single long record is still shown: the cap trims, it never empties.
+        let one = Memory::in_memory("p").unwrap();
+        let c = one
+            .create_candidate(
+                "r",
+                "gotcha",
+                "big",
+                &"y".repeat(20_000),
+                "",
+                &[],
+                &[],
+                "test",
+                0.9,
+            )
+            .unwrap();
+        one.review(c.id, "approve", "ok", None).unwrap();
+        assert!(one.context("y", 5).unwrap().contains("### big"));
     }
 
     #[test]
