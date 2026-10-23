@@ -589,11 +589,35 @@ mod tests {
             t.append(e).unwrap();
         }
         let all = t.recent("r", 50).unwrap();
-        let turn_of = |summary: &str| all.iter().find(|e| e.summary == summary).unwrap().turn.clone().unwrap();
-        assert_eq!(turn_of("agent.prompt.submitted@1"), turn_of("file.modified@3"));
-        assert_ne!(turn_of("agent.prompt.submitted@1"), turn_of("tool.invoked@11"), "a new prompt, a new turn");
-        assert_ne!(turn_of("tool.invoked@11"), turn_of("tool.invoked@12"), "another session");
-        let first = t.query(&Filter { turn: Some(turn_of("tool.invoked@2")), limit: 50, ..Default::default() }).unwrap();
+        let turn_of = |summary: &str| {
+            all.iter()
+                .find(|e| e.summary == summary)
+                .unwrap()
+                .turn
+                .clone()
+                .unwrap()
+        };
+        assert_eq!(
+            turn_of("agent.prompt.submitted@1"),
+            turn_of("file.modified@3")
+        );
+        assert_ne!(
+            turn_of("agent.prompt.submitted@1"),
+            turn_of("tool.invoked@11"),
+            "a new prompt, a new turn"
+        );
+        assert_ne!(
+            turn_of("tool.invoked@11"),
+            turn_of("tool.invoked@12"),
+            "another session"
+        );
+        let first = t
+            .query(&Filter {
+                turn: Some(turn_of("tool.invoked@2")),
+                limit: 50,
+                ..Default::default()
+            })
+            .unwrap();
         assert_eq!(first.len(), 3, "the prompt, the tool call and the file");
         let _ = std::fs::remove_dir_all(&root);
     }
@@ -614,7 +638,11 @@ mod tests {
         .unwrap();
         drop(c);
         let t = Telemetry::open(&root).unwrap();
-        assert_eq!(t.recent("r", 10).unwrap().len(), 1, "the old row is still there");
+        assert_eq!(
+            t.recent("r", 10).unwrap().len(),
+            1,
+            "the old row is still there"
+        );
         t.append(Event::new("r", "p", "run.completed")).unwrap();
         assert_eq!(t.recent("r", 10).unwrap().len(), 2);
         let _ = std::fs::remove_dir_all(&root);
