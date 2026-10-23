@@ -61,6 +61,7 @@ pub fn trace_events(
             path,
             since: None,
             limit: limit.unwrap_or(300),
+            turn: None,
         })
         .map_err(e)?;
     serde_json::to_value(events).map_err(e)
@@ -235,9 +236,25 @@ pub fn memory_propose(
 pub fn harness_get(st: State<'_, Shared>) -> Result<Value, String> {
     let p = st.active_or_err()?;
     let spec = harnes_crew::harness::HarnessSpec::ensure(&p.root, "claude").map_err(e)?;
-    Ok(
-        json!({"spec": spec, "components": spec.flat(), "path": harnes_crew::harness::path(&p.root).display().to_string()}),
-    )
+    // What each role carries before it starts, against the budget.
+    let always_on: serde_json::Map<String, Value> =
+        ["planner", "teacher", "worker", "reviewer", "orchestrator"]
+            .iter()
+            .map(|r| {
+                (
+                    r.to_string(),
+                    json!(harnes_crew::harness::always_on_tokens(&p.root, r)),
+                )
+            })
+            .collect();
+    Ok(json!({
+        "spec": spec,
+        "components": spec.flat(),
+        "path": harnes_crew::harness::path(&p.root).display().to_string(),
+        "fingerprint": harnes_crew::harness::fingerprint(&p.root),
+        "always_on": always_on,
+        "budget": spec.budgets.always_on_tokens,
+    }))
 }
 
 #[tauri::command]
@@ -345,7 +362,18 @@ pub fn tune_plan(
                 plan.component
             )),
     );
-    Ok(json!({"plan": plan, "path": path.display().to_string()}))
+    // Variants the library already rejected on this model need no second try.
+    let model_name = model.as_deref().unwrap_or("sonnet");
+    let skip: Vec<String> = plan
+        .variants
+        .iter()
+        .filter(|v| {
+            harnes_eval::passk::already_rejected(&p.root, &plan.component, &v.id, model_name)
+                .is_some()
+        })
+        .map(|v| v.id.clone())
+        .collect();
+    Ok(json!({"plan": plan, "path": path.display().to_string(), "already_rejected": skip}))
 }
 
 #[tauri::command]

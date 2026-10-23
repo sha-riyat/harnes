@@ -4,6 +4,7 @@ mod attention;
 mod budget;
 mod commands;
 mod crew_ctl;
+mod experiments;
 mod host;
 mod lookout;
 mod methods;
@@ -11,6 +12,7 @@ mod persist;
 mod projects;
 mod pump;
 mod runs;
+mod safety;
 mod state;
 mod switch;
 mod trace;
@@ -78,6 +80,10 @@ fn main() {
             runs::memory_review,
             runs::memory_propose,
             runs::harness_get,
+            safety::profile_get,
+            safety::profile_set,
+            safety::trust_report,
+            safety::trust_accept,
             runs::harness_save,
             runs::guards_get,
             runs::guards_save,
@@ -85,6 +91,9 @@ fn main() {
             runs::eval_list,
             runs::eval_run,
             runs::tune_plan,
+            experiments::eval_run_k,
+            experiments::experiment_record,
+            experiments::experiment_library,
             runs::worktree_list,
             runs::worktree_remove,
             runs::handoffs,

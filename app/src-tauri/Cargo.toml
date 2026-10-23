@@ -27,6 +27,7 @@ harnes-guards.workspace = true
 harnes-memory.workspace = true
 harnes-worktree.workspace = true
 harnes-eval.workspace = true
+harnes-free.workspace = true
 tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true

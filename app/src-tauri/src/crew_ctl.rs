@@ -26,6 +26,8 @@ pub fn start_crew(
     if let Some(why) = crate::budget::blocked(st) {
         return Err(why);
     }
+    // Nothing starts in a folder whose own config redirects the API or runs code.
+    harnes_guards::trust::check(&p.root)?;
     let mut slot = p.crew.cancel.lock();
     if slot.is_some() {
         return Err("un run est déjà en cours dans ce projet".into());
@@ -172,6 +174,7 @@ pub fn spawn_claude(
     resume: Option<&str>,
     prompt: Option<String>,
 ) -> Result<String, String> {
+    harnes_guards::trust::check(&p.root)?;
     let settings = p
         .root
         .join(".harnes")
