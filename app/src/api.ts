@@ -58,6 +58,8 @@ export interface Gate {
 }
 
 export interface CrewEvent {
+  /** Stamped when the event reaches the interface. */
+  at?: number;
   run: string;
   phase: Phase;
   round: number;

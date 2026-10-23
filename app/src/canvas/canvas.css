@@ -1,0 +1,27 @@
+[data-mode="light"].cv-root { --cv-bg: #ececec; --cv-surface: #fff; --cv-hover: #e2e2e2; --cv-active: #d8d8d8; --cv-fg: #111; --cv-fg2: #444; --cv-mu: #777; --cv-line: #d0d0d0; }
+[data-mode="dark"].cv-root { --cv-bg: #060606; --cv-surface: #131313; --cv-hover: #1c1c1c; --cv-active: #262626; --cv-fg: #f2f2f2; --cv-fg2: #b4b4b4; --cv-mu: #7a7a7a; --cv-line: #2a2a2a; }
+/* Design canvas chrome. Quiet on purpose: a plain field, thin boundaries, small
+   fixed controls. The previews bring their own look. */
+.cv-root { position: fixed; inset: 0; overflow: clip; background: var(--cv-bg); color: var(--cv-fg); cursor: default; overscroll-behavior: none; outline: none; user-select: none; -webkit-user-select: none; }
+.cv-root:focus-visible { outline: 1px solid var(--cv-fg2); outline-offset: -3px; }
+.cv-layer { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; will-change: auto; }
+.cv-layer.cv-anim { transition: transform 0.2s ease; }
+.cv-item { position: absolute; left: 0; top: 0; }
+.cv-bar { display: flex; align-items: center; gap: 8px; margin-top: -30px; padding-bottom: 4px; font: 500 12px/1 var(--font-sans); }
+.cv-handle { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; color: var(--cv-mu); cursor: default; touch-action: none; }
+.cv-handle:hover { color: var(--cv-fg); background: var(--cv-hover); }
+.cv-handle:focus-visible, .cv-name:focus-visible, .cv-hud button:focus-visible, .cv-theme button:focus-visible { outline: 2px solid var(--cv-fg2); outline-offset: 1px; }
+.cv-name { padding: 3px 4px; border: 0; border-radius: 4px; background: none; color: var(--cv-fg2); font: inherit; cursor: default; white-space: nowrap; }
+.cv-name:hover { color: var(--cv-fg); }
+.cv-fallback { width: 280px; padding: 3px 6px; border: 1px solid var(--cv-line); border-radius: 4px; background: var(--cv-surface); color: var(--cv-fg); font: inherit; user-select: text; -webkit-user-select: text; }
+.cv-copied { color: var(--cv-mu); font-size: 11px; min-width: 40px; }
+.cv-body { position: relative; overflow: hidden; border-radius: 14px; outline: 1px solid var(--cv-line); user-select: text; -webkit-user-select: text; }
+
+.cv-hud { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 2px; padding: 4px; border: 1px solid var(--cv-line); border-radius: 12px; background: var(--cv-surface); z-index: 10000; }
+.cv-hud button, .cv-theme button { height: 28px; min-width: 28px; padding: 0 10px; border: 0; border-radius: 8px; background: none; color: var(--cv-fg2); font: 500 12px var(--font-sans); cursor: default; }
+.cv-hud button:hover, .cv-theme button:hover { background: var(--cv-hover); color: var(--cv-fg); }
+.cv-hud output { min-width: 44px; text-align: center; font: 12px var(--font-mono); color: var(--cv-mu); }
+.cv-sep { width: 1px; height: 16px; margin: 0 4px; background: var(--cv-line); }
+.cv-theme { position: fixed; right: 16px; top: 16px; display: flex; gap: 2px; padding: 3px; border: 1px solid var(--cv-line); border-radius: 12px; background: var(--cv-surface); z-index: 10000; }
+.cv-theme button.on { background: var(--cv-active); color: var(--cv-fg); }
+.cv-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

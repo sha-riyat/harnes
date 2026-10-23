@@ -1,8 +1,6 @@
 // A Phosphor icon drawn in currentColor.
 
-import type { IconData } from "./icons";
-
-export default function Icon(props: { icon: IconData; size?: number; label?: string; class?: string }) {
+export default function Icon(props: { icon: string; size?: number; label?: string; class?: string }) {
   return (
     <svg
       class={`icon ${props.class ?? ""}`}

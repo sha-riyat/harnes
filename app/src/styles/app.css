@@ -1,0 +1,65 @@
+/* The app's look: shadcn token names on a neutral palette, one hue (--signal) for
+   what needs the user. Dark is the default; light follows data-mode (set from the
+   theme setting) or, before that is known, the system. */
+@import "./base.css";
+
+:root {
+  --radius: 0.5rem;
+  --background: #1b1b1b; --foreground: #f5f5f5; --card: #1f1f1f; --card-foreground: #f5f5f5;
+  --popover: #222; --popover-foreground: #f5f5f5; --primary: #f5f5f5; --primary-foreground: #131313;
+  --secondary: #262626; --secondary-foreground: #f5f5f5; --muted: #232323; --muted-foreground: #a3a3a3;
+  --accent: #2a2a2a; --accent-foreground: #f5f5f5; --destructive: #e5566f; --border: #2c2c2c; --input: #3a3a3a; --ring: #6b6b6b;
+  --signal: #4ade80; --signal-foreground: #04140a; --frame: #111; --term-bg: #0a0a0a;
+  color-scheme: dark;
+}
+:root[data-mode="light"] {
+  --background: #fff; --foreground: #131313; --card: #fff; --card-foreground: #131313;
+  --popover: #fff; --popover-foreground: #131313; --primary: #131313; --primary-foreground: #fafafa;
+  --secondary: #f0f0f0; --secondary-foreground: #131313; --muted: #f4f4f4; --muted-foreground: #5f5f5f;
+  --accent: #ececec; --accent-foreground: #131313; --destructive: #c4242a; --border: #e8e8e8; --input: #cfcfcf; --ring: #a3a3a3;
+  --signal: #15803d; --signal-foreground: #fff; --frame: #f6f6f6; --term-bg: #fafafa;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-mode]) {
+    --background: #fff; --foreground: #131313; --card: #fff; --card-foreground: #131313;
+    --popover: #fff; --popover-foreground: #131313; --primary: #131313; --primary-foreground: #fafafa;
+    --secondary: #f0f0f0; --secondary-foreground: #131313; --muted: #f4f4f4; --muted-foreground: #5f5f5f;
+    --accent: #ececec; --accent-foreground: #131313; --destructive: #c4242a; --border: #e8e8e8; --input: #cfcfcf; --ring: #a3a3a3;
+    --signal: #15803d; --signal-foreground: #fff; --frame: #f6f6f6; --term-bg: #fafafa;
+    color-scheme: light;
+  }
+}
+
+@layer base {
+  html, body, #root { height: 100%; margin: 0; overflow: hidden; }
+  body { background: var(--frame); color: var(--foreground); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  * { border-color: var(--border); }
+  ::selection { background: color-mix(in srgb, var(--foreground) 85%, transparent); color: var(--background); }
+  button { cursor: default; }
+  .num { font-variant-numeric: tabular-nums; }
+}
+
+/* Terminal canvas */
+.term { flex: 1; min-height: 0; padding: 8px 10px; outline: none; overflow: hidden; background: var(--term-bg); cursor: text; }
+.term canvas { display: block; }
+
+/* Agent messages (the small Markdown renderer builds these classes) */
+.md > * { margin: 0; }
+.md > * + * { margin-top: 10px; }
+.md p { white-space: pre-wrap; }
+.md strong { font-weight: 600; }
+.md em { font-style: italic; }
+.md code { font-family: var(--font-mono); font-size: 12.5px; padding: 1px 5px; border-radius: 5px; background: var(--muted); }
+.md pre { padding: 10px 12px; border-radius: 10px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.5; background: var(--muted); overflow-x: auto; white-space: pre; }
+.md ul, .md ol { padding-left: 20px; }
+.md ul { list-style: none; padding-left: 16px; }
+.md ul > li::before { content: "–"; margin-left: -16px; width: 16px; display: inline-block; color: var(--muted-foreground); }
+.md li + li { margin-top: 4px; }
+.md blockquote { padding-left: 12px; border-left: 2px solid var(--border); color: var(--muted-foreground); white-space: pre-wrap; }
+.md hr { border: 0; border-top: 1px solid var(--border); }
+.md .md-h { font-weight: 600; }
+.md .md-h1 { font-size: 16px; }
+.md .md-h2 { font-size: 15px; }
+.md a { text-decoration: underline; text-underline-offset: 2px; }
+.md .md-ref { font-family: var(--font-mono); font-size: 12.5px; }

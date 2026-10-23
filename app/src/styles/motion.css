@@ -1,0 +1,93 @@
+/* Motion for what the crew does. Subtle by rule: transform and opacity only,
+   under 300ms for anything the eye follows, one easing, no gradients, and a
+   reduced-motion fallback that keeps the content and drops the travel. */
+:root {
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* A new line, message or card arrives: it rises 6px and fades in. */
+@keyframes m-rise { from { opacity: 0; transform: translateY(6px) scale(0.992); } to { opacity: 1; transform: none; } }
+.m-rise { animation: m-rise 240ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 55ms); }
+
+/* A chip or a mark appears: it grows from 0.95, never from nothing. */
+@keyframes m-pop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: none; } }
+.m-pop { animation: m-pop 200ms var(--ease-spring) both; animation-delay: calc(var(--i, 0) * 55ms); }
+
+/* A stroke draws itself: checks, connectors, the branch joining main. */
+@keyframes m-draw { to { stroke-dashoffset: 0; } }
+.m-draw { stroke-dasharray: var(--len, 24); stroke-dashoffset: var(--len, 24); animation: m-draw var(--dur, 260ms) var(--ease-out) forwards; }
+
+/* The line an agent is writing now: text uncovered left to right, then a caret. */
+@keyframes m-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.m-reveal { display: inline-block; white-space: nowrap; animation: m-reveal calc(var(--n, 20) * 24ms) steps(var(--n, 20), end) both; }
+@keyframes m-caret { 50% { opacity: 0; } }
+.m-caret::after { content: ""; display: inline-block; width: 1px; height: 1em; margin-left: 2px; vertical-align: -0.15em; background: currentColor; animation: m-caret 1s steps(1) infinite; }
+
+/* Working: a slow breath on the dot, not a spinner. */
+@keyframes m-breathe { 50% { opacity: 0.35; } }
+.m-breathe { animation: m-breathe 1.6s ease-in-out infinite; }
+
+/* Typing: three dots lifting in turn. */
+@keyframes m-dot { 0%, 60%, 100% { opacity: 0.25; transform: none; } 30% { opacity: 1; transform: translateY(-2px); } }
+.m-typing i { display: inline-block; width: 4px; height: 4px; margin-right: 3px; border-radius: 50%; background: currentColor; animation: m-dot 1.1s ease-in-out infinite; }
+.m-typing i:nth-child(2) { animation-delay: 0.15s; }
+.m-typing i:nth-child(3) { animation-delay: 0.3s; }
+
+/* Something needs you: one ring leaves the dot every few seconds. */
+@keyframes m-ring { 0% { opacity: 0.5; transform: scale(1); } 40%, 100% { opacity: 0; transform: scale(2.6); } }
+.m-ring { position: relative; }
+.m-ring::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--signal); animation: m-ring 3.6s ease-out infinite; }
+
+/* A figure changes: the old value leaves up, the new one comes from below. */
+@keyframes m-tick { from { opacity: 0; transform: translateY(40%); } to { opacity: 1; transform: none; } }
+.m-tick { display: inline-block; animation: m-tick 200ms var(--ease-out) both; }
+
+/* A merge lands: one ring, once. */
+@keyframes m-land { from { opacity: 0.6; transform: scale(1); } to { opacity: 0; transform: scale(3); } }
+.m-land::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: currentColor; animation: m-land 600ms ease-out both; }
+
+/* A bar fills: width only through a transition on the element. */
+.m-fill { transition: width 500ms var(--ease-out), background-color 300ms ease; }
+.m-tone { transition: background-color 400ms ease, opacity 400ms ease; }
+
+/* A card folds away once the user has answered: the body collapses, one line stays. */
+.m-fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 280ms var(--ease-out), opacity 200ms ease; }
+.m-fold[data-folded="true"] { grid-template-rows: 0fr; opacity: 0; }
+.m-fold > * { min-height: 0; overflow: hidden; }
+
+/* The agent icon of a working agent sends out a slow ring. */
+@keyframes m-ringout { 0% { opacity: 0.6; transform: scale(1); } 70%, 100% { opacity: 0; transform: scale(1.35); } }
+.m-ringout { animation: m-ringout 2.4s ease-out infinite; }
+
+/* A scan: one thin line travels across the card, once per pass. */
+@keyframes m-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.m-sweep { position: relative; overflow: hidden; }
+.m-sweep::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 30%; background: color-mix(in srgb, var(--foreground) 14%, transparent); animation: m-sweep 1.4s ease-in-out infinite; }
+
+/* A row that just arrived: a quiet wash that fades out. */
+@keyframes m-wash { from { background-color: color-mix(in srgb, var(--foreground) 7%, transparent); } to { background-color: transparent; } }
+.m-wash { animation: m-wash 1400ms ease-out both; }
+
+/* A command's output: lines are written in, the last one keeps a caret. */
+@keyframes m-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+.m-type { display: inline-block; animation: m-type 380ms steps(24, end) both; }
+
+/* A graph edge lights up when what it depends on is done. */
+.m-edge { transition: stroke 300ms ease, stroke-opacity 300ms ease; }
+
+/* A menu opens from its corner: a short fade and 3% of scale, nothing travels. */
+@keyframes m-menu { from { opacity: 0; transform: translateY(-3px) scale(0.97); } to { opacity: 1; transform: none; } }
+.m-menu { animation: m-menu 160ms var(--ease-out) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .m-menu { animation: none; }
+  .m-fold { transition: none; }
+  .m-ringout, .m-sweep::after, .m-wash, .m-type { animation: none; }
+  .m-edge { transition: none; }
+  .m-rise, .m-pop, .m-tick { animation: none; }
+  .m-reveal { animation: none; clip-path: none; }
+  .m-draw { animation: none; stroke-dashoffset: 0; }
+  .m-breathe, .m-typing i, .m-ring::after, .m-land::after, .m-caret::after { animation: none; }
+  .m-fill, .m-tone { transition: none; }
+}

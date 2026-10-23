@@ -1,6 +1,8 @@
 // Dev-only Tauri mock (http://localhost:1420/?mock) to work on the UI in a
 // plain browser. Never bundled in production builds.
 
+import { lotThread } from "../canvas/cards/threadData";
+
 const projects = [
   { id: "p1", name: "harness-test", root: "C:/work/harness-test", active: true, running: true, phase: "working", panes: 3, working: 2, waiting: 1, proxy_port: 62346 },
   { id: "p2", name: "site-vitrine", root: "C:/work/site-vitrine", active: false, running: false, phase: null, panes: 1, working: 0, waiting: 0, proxy_port: 62400 },
@@ -14,9 +16,9 @@ const panes = [
 ];
 const now = Date.now();
 const threads = [
-  { id: "run-1", title: "Ajouter une page contact", kind: "run", status: "open", messages: 6, last_at: now - 20000, last_author: "harnes", last_body: "Vague 1 : L1, L2" },
-  { id: "lot-1-L1", title: "L1 · Formulaire de contact", kind: "lot", status: "open", messages: 3, last_at: now - 5000, last_author: "1-worker-L1-r0/scout", last_body: "Endpoint trouvé : POST /api/contact" },
-  { id: "lot-0-L1", title: "L1 · Header", kind: "lot", status: "closed", messages: 4, last_at: now - 900000, last_author: "teacher", last_body: "Fil clos : lot terminé", summary: "lot terminé" },
+  { id: "run-1", title: "Add a contact page", kind: "run", status: "open", messages: 6, last_at: now - 20000, last_author: "harnes", last_body: "Wave 1: L1, L2" },
+  { id: "lot-1-L1", title: "L1 · Contact form", kind: "lot", status: "open", messages: 3, last_at: now - 5000, last_author: "1-worker-L1-r0/scout", last_body: "Endpoint found: POST /api/contact" },
+  { id: "lot-0-L1", title: "L1 · Header", kind: "lot", status: "closed", messages: 4, last_at: now - 900000, last_author: "teacher", last_body: "Thread closed: lot finished", summary: "lot finished" },
 ];
 
 const pack = (id: string, purpose: string, roles: string[], skills: string[]) => ({ id, title: id, version: "0.1.0", purpose, provides: skills, depends_on: [], confidence: "A", skills, agents: [], roles });
@@ -44,21 +46,25 @@ const responses: Record<string, unknown> = {
   trust_accept: { findings: [], blocked: false },
   budget_get: { limits: { five_hour: 0.27, five_hour_reset: Math.round(now / 1000) + 7200, seven_day: 0.65, seven_day_reset: Math.round(now / 1000) + 3 * 86400, status: "allowed", seen: Math.round(now / 1000) }, week_elapsed: 0.57, eco: true },
   threads_list: threads,
-  threads_recent: [{ id: 9, thread: "lot-1-L1", author: "1-worker-L1-r0/scout", at: now, kind: "message", body: "Endpoint trouvé" }],
-  thread_read: { thread: threads[1], messages: [{ id: 1, thread: "lot-1-L1", author: "planner", at: now - 60000, kind: "handoff", body: "Lot L1 (feature). Fichiers : contact.html" }, { id: 2, thread: "lot-1-L1", author: "1-worker-L1-r0", at: now - 30000, kind: "message", body: "Quel endpoint pour l'envoi ?" }, { id: 3, thread: "lot-1-L1", author: "1-worker-L1-r0/scout", at: now - 5000, kind: "message", body: "Endpoint trouvé : POST /api/contact" }] },
+  threads_recent: [{ id: 9, thread: "lot-1-L1", author: "1-worker-L1-r0/scout", at: now, kind: "message", body: "Endpoint found" }],
+  thread_read: { thread: threads[1], messages: [{ id: 1, thread: "lot-1-L1", author: "planner", at: now - 60000, kind: "handoff", body: lotThread.messages[0].text }, { id: 2, thread: "lot-1-L1", author: "1-worker-L1-r0", at: now - 30000, kind: "message", body: "Which endpoint sends the mail?" }, { id: 3, thread: "lot-1-L1", author: "1-worker-L1-r0/scout", at: now - 5000, kind: "message", body: "Endpoint found: POST /api/contact" }, { id: 4, thread: "lot-1-L1", author: "1-worker-L1-r0", at: now - 2000, kind: "message", body: lotThread.messages[3].text }, { id: 5, thread: "lot-1-L1", author: "teacher", at: now - 1000, kind: "event", body: "Teacher closed the thread: lot terminé" }] },
   conversation: { started: true, state: "working", pane: "a1", items: [
-    { role: "user", text: "Ajoute une page contact avec un formulaire qui envoie un e-mail.", at: new Date(now - 300000).toISOString() },
-    { role: "assistant", text: "Je lance l'équipage : le planner découpe, le teacher fixe la barre, puis les workers construisent et testent.", at: new Date(now - 290000).toISOString() },
-    { role: "tool", tool: "crew_start", text: "Page contact avec formulaire et envoi d'e-mail", at: new Date(now - 285000).toISOString() },
+    { role: "user", text: "Add a contact page with a form that sends an email.", at: new Date(now - 300000).toISOString() },
+    { role: "assistant", text: "Starting the crew: the planner cuts the plan, the teacher sets the bar, then the workers build and test.", at: new Date(now - 290000).toISOString() },
+    { role: "tool", tool: "crew_start", text: "Contact page with a form and email", at: new Date(now - 285000).toISOString() },
     { role: "tool", tool: "thread_read", text: "lot-1-L1", at: new Date(now - 60000).toISOString() },
-    { role: "assistant", text: "Le plan compte 2 lots en une vague. worker-L1 a une question sur l'endpoint : un scout l'a trouvé (POST /api/contact), c'est intégré.", at: new Date(now - 50000).toISOString() },
-    { role: "assistant", text: ["**Calculatrice web vanilla, 6 commits.**", "", "- `index.html` + `styles.css` : page calculatrice", "- `app.js` : logique (opérations, reset après `=`)", "", "Pas lancé les tests — *état réel non vérifié*."].join(String.fromCharCode(10)), at: new Date(now - 40000).toISOString() },
+    { role: "assistant", text: "The plan has 2 lots in one wave. worker-L1 asked about the endpoint: a scout found it (POST /api/contact) and it is wired in.", at: new Date(now - 50000).toISOString() },
+    { role: "assistant", text: ["**Vanilla web calculator, 6 commits.**", "", "- `index.html` + `styles.css`: the calculator page", "- `app.js`: logic (operations, reset after `=`)", "", "Tests not run: *real state not verified*."].join(String.fromCharCode(10)), at: new Date(now - 40000).toISOString() },
   ] },
-  asks_pending: [{ id: "a1", agent: "1-worker-L1-r0", at: now, card: { kind: "choice", question: "Le formulaire envoie l'e-mail par SMTP ou par l'API du fournisseur ?", options: [{ id: "smtp", label: "SMTP", detail: "nodemailer, déjà installé" }, { id: "api", label: "API du fournisseur", detail: "nécessite une clé" }], default: "smtp" } }],
+  run_view: { schema: "harnes.view.v1", run: "run-1", task: "Add a contact page with a form that sends an email", phase: "working", started_at: now - 2280000,
+    plan: { lots: [{ id: "L1", title: "Contact form", instructions: "The form validates and sends.", files: ["contact.html", "server/mail.js"] }, { id: "L2", title: "Page layout", instructions: "A responsive contact page.", files: ["contact.html"] }, { id: "L3", title: "Validation messages", instructions: "Readable errors.", files: ["contact.html"] }] },
+    reviews: [{ verdict: "changes", lots: { L2: "ok" }, fixes: [{ lot: "L2", where: "contact.html:12", problem: "label without for", fix: "link the label to its field" }], commits: [{ lot: "L2", message: "Add the contact page layout", files: ["contact.html", "site.css"] }] }],
+    gate: null, metrics: null, trace: [{ id: "t1", at: now - 120000, kind: "tool", role: "worker", lot: "L2", tool: "Edit", path: "contact.html", command: null, status: "ok", summary: "Edit", evidence: [] }, { id: "t2", at: now - 60000, kind: "tool", role: "worker", lot: "L1", tool: "Bash", path: null, command: "npm test", status: "ok", summary: "Run", evidence: [] }], findings: [], usage: { input_tokens: 51000, output_tokens: 9100, cache_read_tokens: 380000, cache_write_tokens: 12000, cost_usd: 0, requests: 42 }, decisions: [], memory: [], files: ["contact.html", "site.css"] },
+  asks_pending: [{ id: "a1", agent: "1-worker-L1-r0", at: now, card: { kind: "choice", question: "Does the form send the email through SMTP or the provider API?", options: [{ id: "smtp", label: "SMTP", detail: "nodemailer, already installed" }, { id: "api", label: "Provider API", detail: "needs a key" }], default: "smtp" } }],
   ask_answer: null,
   ask_decline: null,
   permissions_pending: [{ id: "x1", agent: "1-worker-L1-r0", tool: "Bash", summary: "npm install nodemailer", input: {}, can_remember: true, at: now }],
-  screen_prompts: [{ pane: "a2", agent: "1-worker-L2-r0", project: "p1", prompt: { question: "Le fichier contact.html existe déjà. Que faire ?", choices: [{ keys: "1", label: "Remplacer" }, { keys: "2", label: "Garder les deux" }, { keys: "3", label: "Annuler" }] } }],
+  screen_prompts: [{ pane: "a2", agent: "1-worker-L2-r0", project: "p1", prompt: { question: "contact.html already exists. What now?", choices: [{ keys: "1", label: "Replace" }, { keys: "2", label: "Keep both" }, { keys: "3", label: "Cancel" }] } }],
   providers_list: ["claude", "codex", "gemini", "opencode"],
   lookout: { snapshot: { generated_at: now, sessions: [], sources: [] }, events: [], history: [] },
 };

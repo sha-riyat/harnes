@@ -1,0 +1,23 @@
+/* Token sets of the design canvas directions. Each sets its own values under
+   [data-dir]; the canvas theme is [data-mode]. One hue only: --signal. */
+@import "../styles/base.css";
+
+/* Ledger: light first, a rail, white cards on a near-white ground. */
+[data-mode="light"] [data-dir="ledger"], [data-mode="light"] [data-dir="gen"] { --radius: 0.5rem; --background: #f8f8f8; --foreground: #0a0a0a; --card: #fff; --card-foreground: #0a0a0a; --popover: #fff; --popover-foreground: #0a0a0a; --primary: #141414; --primary-foreground: #fafafa; --secondary: #eee; --secondary-foreground: #141414; --muted: #f0f0f0; --muted-foreground: #6b6b6b; --accent: #eee; --accent-foreground: #0a0a0a; --destructive: #c4242a; --border: #e6e6e6; --input: #d4d4d4; --ring: #a3a3a3; --signal: #15803d; --signal-foreground: #fff; --frame: #f8f8f8; }
+[data-mode="dark"] [data-dir="ledger"], [data-mode="dark"] [data-dir="gen"] { --radius: 0.5rem; --background: #0a0a0a; --foreground: #f5f5f5; --card: #111; --card-foreground: #f5f5f5; --popover: #141414; --popover-foreground: #f5f5f5; --primary: #f5f5f5; --primary-foreground: #0a0a0a; --secondary: #1a1a1a; --secondary-foreground: #f5f5f5; --muted: #181818; --muted-foreground: #a3a3a3; --accent: #1a1a1a; --accent-foreground: #f5f5f5; --destructive: #e5566f; --border: #1f1f1f; --input: #333; --ring: #666; --signal: #4ade80; --signal-foreground: #04140a; --frame: #0a0a0a; }
+
+/* Terminal: dark first, dense, cards darker than the ground, 1px selections. */
+[data-mode="dark"] [data-dir="terminal"] { --radius: 0.375rem; --background: #141414; --foreground: #f5f5f5; --card: #0d0d0d; --card-foreground: #f5f5f5; --popover: #0d0d0d; --popover-foreground: #f5f5f5; --primary: #f5f5f5; --primary-foreground: #0d0d0d; --secondary: #1c1c1c; --secondary-foreground: #f5f5f5; --muted: #1b1b1b; --muted-foreground: #8f8f8f; --accent: #1f1f1f; --accent-foreground: #f5f5f5; --destructive: #e5566f; --border: #242424; --input: #3a3a3a; --ring: #6b6b6b; --signal: #4ade80; --signal-foreground: #04140a; --frame: #141414; }
+[data-mode="light"] [data-dir="terminal"] { --radius: 0.375rem; --background: #f2f2f2; --foreground: #0d0d0d; --card: #fff; --card-foreground: #0d0d0d; --popover: #fff; --popover-foreground: #0d0d0d; --primary: #111; --primary-foreground: #fafafa; --secondary: #ebebeb; --secondary-foreground: #111; --muted: #ececec; --muted-foreground: #666; --accent: #ececec; --accent-foreground: #0d0d0d; --destructive: #c4242a; --border: #e0e0e0; --input: #cfcfcf; --ring: #999; --signal: #15803d; --signal-foreground: #fff; --frame: #f2f2f2; }
+
+/* Frame: one tinted L-shaped frame, the work on a sheet with soft corners. */
+[data-mode="light"] [data-dir="frame"], [data-mode="light"] [data-dir="fusion"] { --radius: 0.5rem; --background: #fff; --foreground: #131313; --card: #fff; --card-foreground: #131313; --popover: #fff; --popover-foreground: #131313; --primary: #131313; --primary-foreground: #fafafa; --secondary: #f0f0f0; --secondary-foreground: #131313; --muted: #f4f4f4; --muted-foreground: #5f5f5f; --accent: #ececec; --accent-foreground: #131313; --destructive: #c4242a; --border: #e8e8e8; --input: #cfcfcf; --ring: #a3a3a3; --signal: #15803d; --signal-foreground: #fff; --frame: #f6f6f6; }
+[data-mode="dark"] [data-dir="frame"], [data-mode="dark"] [data-dir="fusion"] { --radius: 0.5rem; --background: #1b1b1b; --foreground: #f5f5f5; --card: #1f1f1f; --card-foreground: #f5f5f5; --popover: #222; --popover-foreground: #f5f5f5; --primary: #f5f5f5; --primary-foreground: #131313; --secondary: #262626; --secondary-foreground: #f5f5f5; --muted: #232323; --muted-foreground: #a3a3a3; --accent: #2a2a2a; --accent-foreground: #f5f5f5; --destructive: #e5566f; --border: #2c2c2c; --input: #3a3a3a; --ring: #6b6b6b; --signal: #4ade80; --signal-foreground: #04140a; --frame: #111; }
+
+@layer base {
+  [data-mode="light"] { color-scheme: light; }
+  [data-mode="dark"] { color-scheme: dark; }
+  [data-dir] { background: var(--background); color: var(--foreground); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  [data-dir] * { border-color: var(--border); }
+  [data-dir] .num { font-variant-numeric: tabular-nums; }
+}

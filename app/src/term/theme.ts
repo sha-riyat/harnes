@@ -25,7 +25,7 @@ function read() {
 
 if (typeof document !== "undefined") {
   read();
-  new MutationObserver(read).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class"] });
+  new MutationObserver(read).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-mode", "class"] });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", read);
 }
 

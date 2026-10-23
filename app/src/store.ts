@@ -19,8 +19,8 @@ export const [info, setInfo] = createSignal<AppInfo | null>(null);
 export const [stats, setStats] = createSignal<Stats | null>(null);
 export const [focused, setFocused] = createSignal<string | null>(null);
 export const [maximized, setMaximized] = createSignal<string | null>(null);
-/** Main area: conversation with the orchestrator, terminals grid, or every agent on the machine. */
-export const [view, setView] = createSignal<"chat" | "run" | "panes" | "agents" | "os">("chat");
+/** Main area: the run at a glance, the conversation, the run's record, the crew, terminals, methods or settings. */
+export const [view, setView] = createSignal<"overview" | "chat" | "run" | "panes" | "agents" | "os" | "settings">("overview");
 /** Terminals docked under the main view, opened on demand (they stay hidden otherwise). */
 export const [dockTabs, setDockTabs] = createSignal<string[]>([]);
 /** The docked terminal shown; null folds the dock away. */
@@ -71,7 +71,7 @@ export function pushCrew(ev: CrewEvent & { project?: string }) {
   setCrews(id, produce((c) => {
     c.phase = ev.phase;
     c.round = ev.round;
-    c.log.push(ev);
+    c.log.push({ ...ev, at: ev.at ?? Date.now() });
     if (c.log.length > 200) c.log.splice(0, c.log.length - 200);
     if (ev.review) c.review = ev.review;
     if (ev.gate) c.gate = ev.gate;

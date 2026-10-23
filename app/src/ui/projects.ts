@@ -31,7 +31,7 @@ export async function openPath(path: string) {
   try {
     const rep = await api.openProject(path, false);
     await refreshProjects();
-    setView("panes");
+    setView("overview");
     if (rep.written.length) toast({ title: "Projet équipé", body: `${rep.written.length} fichier(s) installé(s) dans ${path}`, tone: "ok" });
   } catch (e) {
     toast({ title: "Ouverture impossible", body: String(e), tone: "danger" });
@@ -43,7 +43,7 @@ export async function switchProject(id: string) {
   await api.activate(id).catch(() => {});
   setInfo(await api.info().catch(() => null));
   setFocused(projectPanes()[0]?.id ?? null);
-  setView("panes");
+  setView("overview");
 }
 
 export async function closeProject(id: string, name: string) {

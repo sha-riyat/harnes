@@ -1,25 +1,17 @@
-import { Match, Show, Switch, onCleanup, onMount } from "solid-js";
+import { onCleanup, onMount } from "solid-js";
 import { api, on, subscribeFrames, type AgentState, type AskPending, type CrewEvent, type PaneInfo, type PermissionAsk, type ScreenPrompt } from "./api";
-import Conversation from "./components/Conversation";
-import LookoutView from "./components/LookoutView";
-import MethodsView from "./components/MethodsView";
-import { ProjectDialog, Toasts } from "./components/Overlays";
-import Palette from "./components/Palette";
-import PaneGrid from "./components/PaneGrid";
-import RightPanel from "./components/RightPanel";
-import RunView from "./components/RunView";
-import Sidebar from "./components/Sidebar";
-import TermDock from "./components/TermDock";
-import TopBar from "./components/TopBar";
-import { activeProject, addPane, markExited, setAsks, pushCrew, pushFrame, removePane, setAgentState, setPermissions, setScreenPrompts, setStats, view } from "./store";
+import { activeProject, addPane, markExited, setAsks, pushCrew, pushFrame, removePane, setAgentState, setPermissions, setScreenPrompts, setStats } from "./store";
 import { refreshProjects } from "./ui/projects";
-import { applyTheme, panelOpen, sidebarOpen, toast } from "./ui/state";
+import Overlays from "./app/Overlays";
+import Palette from "./app/Palette";
+import Shell from "./app/Shell";
+import { applyTheme, prefs, toast } from "./ui/state";
 
 function onCrew(ev: CrewEvent & { project?: string }) {
   pushCrew(ev);
-  const elsewhere = ev.project && ev.project !== activeProject() ? " · autre projet" : "";
-  if (ev.phase === "done") toast({ title: `Prêt pour toi${elsewhere}`, body: ev.gate?.summary_for_user, tone: "ok" }, 0);
-  if (ev.phase === "failed") toast({ title: `Run arrêté${elsewhere}`, body: ev.message, tone: "danger" }, 0);
+  const elsewhere = ev.project && ev.project !== activeProject() ? " · other project" : "";
+  if (ev.phase === "done" && prefs().toastDone) toast({ title: `Ready for you${elsewhere}`, body: ev.gate?.summary_for_user, tone: "ok" }, 0);
+  if (ev.phase === "failed" && prefs().toastFail) toast({ title: `Run stopped${elsewhere}`, body: ev.message, tone: "danger" }, 0);
 }
 
 function onScreenPrompt(p: ScreenPrompt) {
@@ -62,39 +54,10 @@ export default function App() {
   });
 
   return (
-    <div class="shell" classList={{ "no-side": !sidebarOpen(), "no-panel": !panelOpen() }}>
-      <TopBar />
-      <Show when={sidebarOpen()}>
-        <Sidebar />
-      </Show>
-      <main class="center">
-        <div class="view">
-        <Switch>
-          <Match when={view() === "chat"}>
-            <Conversation />
-          </Match>
-          <Match when={view() === "run"}>
-            <RunView />
-          </Match>
-          <Match when={view() === "panes"}>
-            <PaneGrid />
-          </Match>
-          <Match when={view() === "os"}>
-            <MethodsView />
-          </Match>
-          <Match when={view() === "agents"}>
-            <LookoutView />
-          </Match>
-        </Switch>
-        </div>
-        <TermDock />
-      </main>
-      <Show when={panelOpen()}>
-        <RightPanel />
-      </Show>
+    <>
+      <Shell />
       <Palette />
-      <ProjectDialog />
-      <Toasts />
-    </div>
+      <Overlays />
+    </>
   );
 }

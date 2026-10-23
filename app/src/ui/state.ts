@@ -34,13 +34,26 @@ export const [dockHeight, setDockHeight] = persisted("harnes.dockHeight", 300);
 export const [panelOpen, setPanelOpen] = persisted("harnes.panel", true);
 export const [panelTab, setPanelTab] = persisted<PanelTab>("harnes.panelTab.v2", "threads");
 export const [theme, setThemeRaw] = persisted<Theme>("harnes.theme", "system");
+export interface Prefs { toastDone: boolean; toastFail: boolean }
+/** Which interruptions harnes may raise as a toast, besides the questions that wait for you. */
+export const [prefs, setPrefs] = persisted<Prefs>("harnes.prefs", { toastDone: true, toastFail: true });
 export const [paletteOpen, setPaletteOpen] = createSignal(false);
+/** The settings area shown; the notification panel can send you straight to one. */
+export const [settingsSection, setSettingsSection] = createSignal("models");
 export const [projectDialog, setProjectDialog] = createSignal(false);
 
+const dark = matchMedia("(prefers-color-scheme: dark)");
+
+/** The look the user asked for, or the system's when they asked for none. */
+export const resolvedMode = () => (theme() === "system" ? (dark.matches ? "dark" : "light") : theme());
+
 export function applyTheme(t: Theme = theme()) {
-  if (t === "system") document.documentElement.removeAttribute("data-theme");
-  else document.documentElement.setAttribute("data-theme", t);
+  const root = document.documentElement;
+  if (t === "system") root.removeAttribute("data-theme");
+  else root.setAttribute("data-theme", t);
+  root.setAttribute("data-mode", t === "system" ? (dark.matches ? "dark" : "light") : t);
 }
+dark.addEventListener("change", () => applyTheme());
 
 export function setTheme(t: Theme) {
   setThemeRaw(t);
