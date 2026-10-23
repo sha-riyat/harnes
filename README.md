@@ -3,12 +3,15 @@
 </p>
 
 <p align="center">
-  <img src="docs/field.svg" width="100%" alt="harnes: a field of ASCII characters drifting from clouds to a turning torus, a vortex and a network">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="docs/shots/overview-light.png">
+    <img src="docs/shots/overview-dark.png" width="100%" alt="harnes overview: the run as a strip of lots, the figures, the threads and, on the right, the cards that wait for you">
+  </picture>
 </p>
 
 <p align="center">
   A desktop cockpit for a crew of coding agents.<br>
-  <sub>Rust · Tauri 2 · SolidJS · libghostty-vt · black and white · MIT</sub>
+  <sub>Rust · Tauri 2 · SolidJS · libghostty-vt · black, white and one green · MIT</sub>
 </p>
 
 <p align="center">
@@ -45,7 +48,7 @@ Ponytail, Caveman and TasteSkill v2 (`design-taste-frontend`) remain Claude Code
 
 ## The crew
 
-<p align="center"><img src="docs/crew.svg" width="100%" alt="Agents drawn as one character each: breathing while they work, blinking when they need you, with the run's progress and a message travelling to a thread"></p>
+<p align="center"><img src="docs/shots/agents-dark.png" width="100%" alt="The crew as icons: one per role, a ring while it works, green when it waits for you"></p>
 
 | Role | Model | Job | Output |
 |---|---|---|---|
@@ -101,30 +104,27 @@ The review loop is built to land in few rounds, with Opus reserved for planning.
 - **Severities.** Each finding is `important`, `nit` or `pre-existing`, with a `file:line` as evidence. Only `important` goes back to a worker; nits are dropped, since an agent author fixes every one at the cost of a round; bugs that were there before the run go to the run thread instead.
 - **Convergence.** From the second round the reviewer reads only what the fixes changed, against its earlier verdicts, never repeats a finding and names a whole class of bug once. After three rounds the run stops and the orchestrator proposes another approach rather than starting the same run again.
 - **`REVIEW.md`** (optional, written by you at the project root): what failure means in each area, paths to skip, sensitive paths.
-- **Your limits, read live.** Every response Anthropic sends through a project's proxy carries the account's usage: the 5-hour window and the week, each as a share used, with their reset times. harnes reads them there, so there is nothing to configure, and the usage tab draws both against a straight line to their reset. When the week runs ahead of that line, or the 5-hour window passes 85 %, runs start in eco: deep reviews are skipped, while the Planner stays on Opus medium and every other role stays on Sonnet high. Once the 5-hour window is spent, no run starts until it resets.
-- **Measured.** Each run leaves `metrics.json` (mode, rounds, findings by severity, how workers answered each fix: fixed, wrong, intentional, irrelevant). The usage tab shows reviews per run, the share that passes first time, blocking findings and the share of findings that were wrong.
+- **Your limits, read live.** Every response Anthropic sends through a project's proxy carries the account's usage: the 5-hour window and the week, each as a share used, with their reset times. harnes reads them there, so there is nothing to configure, and the usage panel draws both against a straight line to their reset. When the week runs ahead of that line, or the 5-hour window passes 85 %, runs start in eco: deep reviews are skipped, while the Planner stays on Opus medium and every other role stays on Sonnet high. Once the 5-hour window is spent, no run starts until it resets.
+- **Measured.** Each run leaves `metrics.json` (mode, rounds, findings by severity, how workers answered each fix: fixed, wrong, intentional, irrelevant). The usage panel and the run record show reviews per run, the share that passes first time, blocking findings and the share of findings that were wrong.
 - Workers no longer preload TasteSkill: they load it only for a public web page.
 
 ## Interface
 
-Black and white, square corners, no shadows. Shape, fill and motion carry state, never colour. A row under the pointer gets a thin rule on its left, the current one a solid rule. Buttons answer with their outline. Overlays are flat sheets with a heavy top rule over a dark veil. Icons are [Phosphor](https://phosphoricons.com/) (light, MIT).
+A tinted frame around one white sheet, black and white with a single green for what needs you. Rounded corners, no shadows on anything at rest. Icons are [Phosphor](https://phosphoricons.com/) (light, MIT), components are [shadcn-solid](https://shadcn-solid.netlify.app/) on Kobalte and Tailwind, the type is Geist, bundled with the app.
 
-Everything that lives is drawn in animated ASCII, on one shared loop that runs only while an element is on screen. With reduced motion, each piece holds a still frame.
+Every agent has an icon for its role: the orchestrator a compass, the planner a map, the teacher a mortarboard, workers a hammer, scouts binoculars, reviewers a seal. A ring breathes while an agent works, turns green when it waits for you and gets a check when it is done. Motion is quiet by rule (transform and opacity only, under 300 ms) and holds still with reduced motion.
 
-```
- +  orchestrator     working      plan --- bar --- w#rk ·:=+· review ··· gate ··· ready
- !  worker-L1      needs you      worker-L1 ····#=-:···· lot-1-L1
- =  worker-L2        working      ·:=+*#*+=:·:-=+*#  thinking
-```
-
-- **Chat first.** The main view is the chat with the orchestrator. Its terminal stays hidden; its Claude transcript becomes messages with real Markdown (bold, lists, code, quotes), and one mono line per tool call.
-- **The field.** An empty view fills with a field of characters that takes the whole centre and widens when the side panels close. It moves through 23 motifs, organic and geometric in turn: clouds, a blueprint being drawn, typing messages, halftone, currents, a turning torus, a node network, Truchet tiles, ripples, type specimens, oscilloscope signals, moiré, contours, a pen plotter, a murmuration, Bauhaus shapes, a vortex, a layout grid, aurora, phyllotaxis, rain, swatches and tides. Each dissolves into the next along a noisy front, and the field scrambles under the pointer.
-- **Views.** `chat`, `run` (the typed trace, gate, reviews, memory and eval), `methods` (the OS packs) and `machine` (every agent on the computer). The terminal grid is in the palette (`Ctrl K`).
-- **Docked terminals.** A terminal opens only when you ask, in a dock under the main view: one tab per terminal, resizable, folded away in one click. Terminal colours follow the light or dark theme.
-- **Permissions as cards.** Each agent gets a blocking Claude Code `PermissionRequest` hook. The request shows as *Allow · Always · Deny*; your answer is the hook's decision. Without an answer within about 10 minutes, Claude Code falls back to its own prompt.
+- **Overview.** The one question first: does the crew need me? The run as a strip of lots, four figures (agents working, what needs you, lots done, the 5-hour window), what the orchestrator did last, the threads, the commits of the review, and on the right what waits for you.
+- **Chat.** The orchestrator's Claude transcript becomes messages with real Markdown and one line per tool call. Questions, permissions and the end-of-run summary arrive as cards in the stream. The message box runs from the paperclip (attach a file or a folder with the system picker; it becomes an `@path` mention) to send, and a ring shows the 5-hour usage and opens the usage panel, with *Compact now* for the orchestrator.
+- **Cards that answer.** A typed question (`ask_user`), a permission, a question read off an agent's terminal and the trust scan are cards. Answering folds the card to one line and the agent goes back to work.
+- **Run.** The typed trace, gate, reviews, plan, memory to read, decisions, guard findings, harness, worktrees and evaluation.
+- **Agents.** The crew as icons, and every agent session found on the machine with its changes.
+- **Terminals.** The terminal grid, and a dock under any view: one tab per terminal, resizable, folded in one click. Terminal colours follow the theme.
+- **Methods and Settings.** The OS packs (doctrine, oracle, skills, import), and settings by area (models profile, safety, notifications, look, projects) that save as you change them.
+- **Bell and profile.** The bell lists what needs you and what the run just did, with an *Answer* or *Review* action on the rows that need one. The avatar opens the usage, the theme and the shortcuts. `Ctrl K` searches actions, projects and terminals.
+- **Permissions as cards.** Each agent gets a blocking Claude Code `PermissionRequest` hook. The request shows as *Allow once · Always · Deny*; your answer is the hook's decision. Without an answer within about 10 minutes, Claude Code falls back to its own prompt.
 - **Questions read from the screen.** Like a computer-use agent reading an accessibility tree, harnes reads each agent's Ghostty grid, finds numbered menus and `(y/n)` prompts, and shows them as cards. Your choice goes back as arrow keys and Enter, one key at a time.
-- **Side panel.** Three icons: threads, the run log, usage.
-- `?mock` (dev only) fakes the backend so the UI can be worked on in a browser. `npm run readme:art` redraws the animations on this page from the app's own scenes.
+- `?mock` (dev only) fakes the backend so the UI can be worked on in a browser; `?mock&view=chat&theme=light` opens a view and a theme. `?canvas` opens the design canvas.
 
 ## Threads
 
@@ -216,7 +216,7 @@ steps:
 
 ## Machine
 
-The `machine` view polls every 2 s the files each tool already writes. It never starts, stops or messages a session.
+The Agents tab (On this machine) polls every 2 s the files each tool already writes. It never starts, stops or messages a session.
 
 | Source | Reads |
 |---|---|
@@ -264,7 +264,7 @@ crates/eval     deterministic suites, results, ledger, tune plans
 crates/crew     setup, hooks, providers, crew engine, harness spec, typed views, hand-offs
 app/            Tauri 2 app (src-tauri) + SolidJS UI
 template/       agents (orchestrator, planner, teacher, worker, reviewer, scout), settings, CLAUDE.md
-docs/           the animations on this page and control-plane contracts
+docs/           screenshots and control-plane contracts
 site/           the website (English and French) and the logo
 ```
 </details>
@@ -289,7 +289,7 @@ npm run app:build  # release + NSIS installer
 
 1. **+** next to *projects*, pick a folder. harnes writes the agents, settings and `.mcp.json` (`harnes-ctx`, `harnes-e2e`) and starts the proxy.
 2. The first time, open a Claude session and accept the folder trust prompt.
-3. Talk to the orchestrator in the chat. Follow the work in the sidebar, the `machine` view and the threads.
+3. Talk to the orchestrator in the chat. Follow the work in the sidebar, the Agents tab and the threads.
 4. When the gate opens, read *ready for you* and the proposed commits. Test the result, then approve.
 
 ## Notes

@@ -58,6 +58,23 @@ Each pack contains the upstream `LICENSE-ECC`, a `NOTICE`, and a
 - No Harness 2.0 Python source, benchmark data or harness code is copied or
   bundled. harnes implements the method independently in Rust.
 
+## Used and bundled in the interface
+
+These are npm dependencies of `app/`. Their code or assets end up in the built
+app, under their own licences.
+
+- **Phosphor Icons** (`@phosphor-icons/core`, light weight): MIT.
+  <https://phosphoricons.com/>
+- **Kobalte** (`@kobalte/core`): MIT. <https://kobalte.dev/>
+- **shadcn-solid** component recipes, copied into `app/src/components/ui` and
+  adapted: MIT. <https://shadcn-solid.netlify.app/>
+- **Tailwind CSS** (`tailwindcss`, `@tailwindcss/vite`), **tailwind-merge**,
+  **clsx** and **tw-animate-css**: MIT.
+- **cva** (`cva`, pinned to `1.0.0-beta.4`): Apache License 2.0.
+- **Geist** and **Geist Mono** (`@fontsource-variable/geist`,
+  `@fontsource-variable/geist-mono`): SIL Open Font License 1.1, self-hosted so
+  the app needs no network for fonts.
+
 ## Not used: OpenUI and CopilotKit
 
 OpenUI and CopilotKit are MIT-licensed, but harnes does not add React,

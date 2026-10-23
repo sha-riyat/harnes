@@ -3,12 +3,15 @@
 </p>
 
 <p align="center">
-  <img src="docs/field.svg" width="100%" alt="harnes : un champ de caractères ASCII qui passe de nuages à un tore en rotation, un vortex et un réseau">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="docs/shots/overview-light.png">
+    <img src="docs/shots/overview-dark.png" width="100%" alt="harnes, vue d'ensemble : le run en bande de lots, les chiffres, les fils et, à droite, les cartes qui vous attendent">
+  </picture>
 </p>
 
 <p align="center">
   Un cockpit de bureau pour un équipage d'agents de code.<br>
-  <sub>Rust · Tauri 2 · SolidJS · libghostty-vt · noir et blanc · MIT</sub>
+  <sub>Rust · Tauri 2 · SolidJS · libghostty-vt · noir, blanc et un seul vert · MIT</sub>
 </p>
 
 <p align="center">
@@ -45,7 +48,7 @@ Ponytail, Caveman et TasteSkill v2 (`design-taste-frontend`) restent des skills 
 
 ## L'équipage
 
-<p align="center"><img src="docs/crew.svg" width="100%" alt="Les agents dessinés par un caractère chacun : il respire pendant le travail, clignote quand on a besoin de vous, avec l'avancement du run et un message qui voyage vers un fil"></p>
+<p align="center"><img src="docs/shots/agents-dark.png" width="100%" alt="L'équipage en icônes : une par rôle, un anneau pendant le travail, vert quand il vous attend"></p>
 
 | Rôle | Modèle | Travail | Sortie |
 |---|---|---|---|
@@ -101,30 +104,27 @@ La boucle de revue est faite pour aboutir en peu de tours, avec Opus réservé a
 - **Gravités.** Chaque problème est `important`, `nit` ou `pre-existing`, avec un `fichier:ligne` comme preuve. Seuls les `important` repartent vers un worker ; les nits sont abandonnés, car un agent auteur les corrige tous au prix d'un tour ; les bugs déjà là avant le run vont dans le fil du run.
 - **Convergence.** Dès le deuxième tour, le relecteur ne lit que ce que les corrections ont changé, face à ses verdicts précédents, ne répète aucun problème et nomme une fois toute une classe de bug. Après trois tours, le run s'arrête et l'orchestrateur propose une autre approche au lieu de relancer le même run.
 - **`REVIEW.md`** (facultatif, écrit par vous à la racine du projet) : ce qu'est un échec par zone, les chemins à ignorer, les chemins sensibles.
-- **Vos limites, lues en direct.** Chaque réponse d'Anthropic qui passe par le proxy d'un projet porte l'usage du compte : la fenêtre de 5 h et la semaine, en part utilisée, avec leurs heures de reset. harnes les lit là, donc rien à configurer, et l'onglet usage les dessine face à une ligne droite jusqu'au reset. Quand la semaine va plus vite que cette ligne, ou que la fenêtre de 5 h dépasse 85 %, les runs démarrent en économie : la revue renforcée est coupée, mais le Planner reste sur Opus medium et tous les autres rôles restent sur Sonnet high. Une fois la fenêtre de 5 h épuisée, aucun run ne démarre avant son reset.
-- **Mesuré.** Chaque run laisse `metrics.json` (mode, tours, problèmes par gravité, réponse des workers à chaque correction : corrigé, faux, voulu, sans importance). L'onglet usage montre les revues par run, la part qui passe du premier coup, les problèmes bloquants et la part de problèmes faux.
+- **Vos limites, lues en direct.** Chaque réponse d'Anthropic qui passe par le proxy d'un projet porte l'usage du compte : la fenêtre de 5 h et la semaine, en part utilisée, avec leurs heures de reset. harnes les lit là, donc rien à configurer, et le panneau d'usage les dessine face à une ligne droite jusqu'au reset. Quand la semaine va plus vite que cette ligne, ou que la fenêtre de 5 h dépasse 85 %, les runs démarrent en économie : la revue renforcée est coupée, mais le Planner reste sur Opus medium et tous les autres rôles restent sur Sonnet high. Une fois la fenêtre de 5 h épuisée, aucun run ne démarre avant son reset.
+- **Mesuré.** Chaque run laisse `metrics.json` (mode, tours, problèmes par gravité, réponse des workers à chaque correction : corrigé, faux, voulu, sans importance). Le panneau d'usage et le run record montrent les revues par run, la part qui passe du premier coup, les problèmes bloquants et la part de problèmes faux.
 - Les workers ne préchargent plus TasteSkill : ils ne le chargent que pour une page web publique.
 
 ## Interface
 
-Noir et blanc, angles droits, aucune ombre. La forme, le remplissage et le mouvement portent l'état, jamais la couleur. Une ligne sous le pointeur reçoit un filet fin à gauche, la ligne courante un filet plein. Les boutons répondent par leur contour. Les surcouches sont des feuilles plates avec un filet épais en haut, sur un voile sombre. Les icônes viennent de [Phosphor](https://phosphoricons.com/) (light, MIT).
+Un cadre teinté autour d'une feuille blanche, noir et blanc avec un seul vert pour ce qui vous attend. Angles arrondis, aucune ombre sur ce qui est au repos. Les icônes sont [Phosphor](https://phosphoricons.com/) (light, MIT), les composants [shadcn-solid](https://shadcn-solid.netlify.app/) sur Kobalte et Tailwind, la police Geist, livrée avec l'app.
 
-Tout ce qui vit est dessiné en ASCII animé, sur une seule boucle partagée qui ne tourne que lorsqu'un élément est à l'écran. Avec le mouvement réduit, chaque pièce reste sur une image fixe.
+Chaque agent a l'icône de son rôle : l'orchestrateur une boussole, le planner une carte, le teacher un mortier, les workers un marteau, les scouts des jumelles, les reviewers un sceau. Un anneau respire pendant que l'agent travaille, devient vert quand il vous attend et reçoit une coche quand il a fini. Le mouvement est discret par règle (transform et opacité seulement, sous 300 ms) et s'immobilise avec le mouvement réduit.
 
-```
- +  orchestrator     working      plan --- bar --- w#rk ·:=+· review ··· gate ··· ready
- !  worker-L1      needs you      worker-L1 ····#=-:···· lot-1-L1
- =  worker-L2        working      ·:=+*#*+=:·:-=+*#  thinking
-```
-
-- **Le chat d'abord.** La vue principale est le chat avec l'orchestrateur. Son terminal reste caché ; sa transcription Claude devient des messages en vrai Markdown (gras, listes, code, citations), avec une ligne mono par appel d'outil.
-- **Le champ.** Une vue vide se remplit d'un champ de caractères qui occupe tout le centre et s'élargit quand les panneaux latéraux se ferment. Il passe par 23 motifs, organiques et géométriques en alternance : nuages, plan en train de se dessiner, messages qui s'écrivent, trame, courants, tore en rotation, réseau de nœuds, tuiles de Truchet, ondes, spécimens typographiques, signaux d'oscilloscope, moiré, courbes de niveau, traceur, nuée d'oiseaux, formes Bauhaus, vortex, grille de mise en page, aurore, phyllotaxie, pluie, nuanciers et marées. Chacun se dissout dans le suivant le long d'un front bruité, et le champ se brouille sous le pointeur.
-- **Vues.** `chat`, `run` (la trace typée, la gate, les revues, la mémoire et l'éval), `methods` (les packs OS) et `machine` (tous les agents de l'ordinateur). La grille de terminaux est dans la palette (`Ctrl K`).
-- **Terminaux en dock.** Un terminal ne s'ouvre que si vous le demandez, dans un dock sous la vue principale : un onglet par terminal, redimensionnable, replié en un clic. Les couleurs du terminal suivent le thème clair ou sombre.
-- **Permissions en cartes.** Chaque agent reçoit un hook Claude Code `PermissionRequest` bloquant. La demande s'affiche en *Allow · Always · Deny* ; votre réponse devient la décision du hook. Sans réponse en 10 minutes environ, Claude Code revient à sa propre invite.
-- **Questions lues à l'écran.** Comme un agent computer-use lit un arbre d'accessibilité, harnes lit la grille Ghostty de chaque agent, repère les menus numérotés et les invites `(y/n)`, et les affiche en cartes. Votre choix repart en flèches puis Entrée, une touche à la fois.
-- **Panneau latéral.** Trois icônes : les fils, le journal du run, l'usage.
-- `?mock` (développement seulement) simule le backend pour travailler l'interface dans un navigateur. `npm run readme:art` redessine les animations de cette page à partir des scènes de l'app.
+- **Vue d'ensemble.** La question d'abord : l'équipage a-t-il besoin de moi ? Le run en bande de lots, quatre chiffres (agents au travail, ce qui vous attend, lots finis, fenêtre de 5 h), ce que l'orchestrateur a fait en dernier, les fils, les commits de la revue, et à droite ce qui vous attend.
+- **Chat.** La transcription Claude de l'orchestrateur devient des messages en vrai Markdown, avec une ligne par appel d'outil. Les questions, les permissions et le résumé de fin de run arrivent en cartes dans le fil. La zone de saisie va du trombone (joindre un fichier ou un dossier par le sélecteur du système ; il devient une mention `@chemin`) à l'envoi, et un anneau montre l'usage de la fenêtre de 5 h et ouvre le panneau d'usage, avec *Compact now* pour l'orchestrateur.
+- **Des cartes qui répondent.** Une question typée (`ask_user`), une permission, une question lue dans le terminal d'un agent et le contrôle de confiance sont des cartes. Répondre replie la carte en une ligne et l'agent reprend.
+- **Run.** La trace typée, la gate, les revues, le plan, la mémoire à relire, les décisions, les findings de garde, le harnais, les worktrees et l'évaluation.
+- **Agents.** L'équipage en icônes, et toutes les sessions d'agents trouvées sur la machine avec leurs changements.
+- **Terminaux.** La grille de terminaux, et un dock sous n'importe quelle vue : un onglet par terminal, redimensionnable, replié en un clic. Les couleurs du terminal suivent le thème.
+- **Méthodes et réglages.** Les packs OS (doctrine, oracle, skills, import), et des réglages par zone (profil de modèles, sécurité, notifications, apparence, projets) qui se sauvent à chaque changement.
+- **Cloche et profil.** La cloche liste ce qui vous attend et ce que le run vient de faire, avec une action *Answer* ou *Review* sur les lignes qui en demandent une. L'avatar ouvre l'usage, le thème et les raccourcis. `Ctrl K` cherche des actions, des projets et des terminaux.
+- **Permissions en cartes.** Chaque agent reçoit un hook Claude Code `PermissionRequest` bloquant. La demande s'affiche en *Allow once · Always · Deny* ; votre réponse devient la décision du hook. Sans réponse en 10 minutes environ, Claude Code revient à sa propre invite.
+- **Questions lues à l'écran.** Comme un agent computer-use lit un arbre d'accessibilité, harnes lit la grille Ghostty de chaque agent, repère les menus numérotés et les invites `(y/n)`, et les affiche en cartes. Votre choix repart en flèches et Entrée, une touche à la fois.
+- `?mock` (développement seulement) simule le backend pour travailler l'interface dans un navigateur ; `?mock&view=chat&theme=light` ouvre une vue et un thème. `?canvas` ouvre le canvas de design.
 
 ## Fils
 
@@ -216,7 +216,7 @@ steps:
 
 ## Machine
 
-La vue `machine` interroge toutes les 2 s les fichiers que chaque outil écrit déjà. Elle ne démarre, n'arrête ni ne contacte jamais une session.
+L'onglet Agents (On this machine) interroge toutes les 2 s les fichiers que chaque outil écrit déjà. Elle ne démarre, n'arrête ni ne contacte jamais une session.
 
 | Source | Lit |
 |---|---|
@@ -264,7 +264,7 @@ crates/eval     suites déterministes, résultats, ledger, plans de réglage
 crates/crew     installation, hooks, fournisseurs, HarnessSpec, vues typées, passations
 app/            app Tauri 2 (src-tauri) + interface SolidJS
 template/       agents (orchestrator, planner, teacher, worker, reviewer, scout), réglages, CLAUDE.md
-docs/           les animations de cette page et les contrats du plan de contrôle
+docs/           captures d'écran et contrats du plan de contrôle
 site/           le site (anglais et français) et le logo
 ```
 </details>
@@ -289,7 +289,7 @@ npm run app:build  # release + installateur NSIS
 
 1. **+** à côté de *projects*, choisissez un dossier. harnes y écrit les agents, les réglages et `.mcp.json` (`harnes-ctx`, `harnes-e2e`) et démarre le proxy.
 2. La première fois, ouvrez une session Claude et acceptez la demande de confiance du dossier.
-3. Parlez à l'orchestrateur dans le chat. Suivez le travail dans la barre latérale, la vue `machine` et les fils.
+3. Parlez à l'orchestrateur dans le chat. Suivez le travail dans la barre latérale, l'onglet Agents et les fils.
 4. Quand la gate s'ouvre, lisez *ready for you* et les commits proposés. Testez le résultat, puis validez.
 
 ## Notes

@@ -15,6 +15,10 @@ The harness evaluation and tuning method is informed by Harness 2.0
 (https://github.com/google-research/harness2, Copyright Google LLC, Apache
 License 2.0). No Harness 2.0 source code or benchmark data is bundled.
 
+The interface bundles Phosphor Icons, Kobalte, shadcn-solid recipes, Tailwind CSS,
+tailwind-merge, clsx, tw-animate-css (MIT), cva (Apache License 2.0) and the
+Geist fonts (SIL OFL 1.1). See THIRD_PARTY.md.
+
 OpenUI and CopilotKit are not bundled and are not runtime dependencies.
 
 See THIRD_PARTY.md for details and for the attribution rules applied to future
