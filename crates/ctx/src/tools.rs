@@ -23,6 +23,9 @@ pub fn all_definitions(ctx: &Ctx) -> Value {
         v.extend(crate::threads::definitions(orchestrator));
     }
     v.push(crate::digest::definition());
+    if crate::ask::available() {
+        v.push(crate::ask::definition());
+    }
     v.extend(crate::os::definitions());
     if ctx.memory.is_some() {
         v.extend(crate::memory::definitions());
@@ -193,6 +196,7 @@ pub fn call(ctx: &Ctx, name: &str, args: &Value) -> Result<String> {
             }
         }
         "ctx_digest" => crate::digest::call(ctx, args),
+        "ask_user" => crate::ask::call(args),
         "ctx_stats" => Ok(serde_json::to_string_pretty(&ctx.store.stats()?)?),
         other => Err(anyhow!("unknown tool {other}")),
     }
