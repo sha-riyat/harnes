@@ -2,7 +2,7 @@
 
 import { createMemo, createSignal } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-import type { AgentState, AppInfo, CrewEvent, Gate, PaneInfo, PermissionAsk, Phase, ProjectSummary, Review, ScreenPrompt, Stats } from "./api";
+import type { AgentState, AppInfo, AskPending, CrewEvent, Gate, PaneInfo, PermissionAsk, Phase, ProjectSummary, Review, ScreenPrompt, Stats } from "./api";
 
 export interface PaneView extends PaneInfo {
   key?: string;
@@ -31,6 +31,8 @@ export function setDrawerPane(id: string | null) {
   showDocked(id);
 }
 export const [permissions, setPermissions] = createSignal<PermissionAsk[]>([]);
+/** Typed questions from agents (`ask_user`) waiting for an answer. */
+export const [asks, setAsks] = createSignal<AskPending[]>([]);
 export const [screenPrompts, setScreenPrompts] = createSignal<ScreenPrompt[]>([]);
 
 /** Panes of the active project (the workspace shows only these). */

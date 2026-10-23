@@ -3,10 +3,11 @@
 
 import { For, Show, createMemo } from "solid-js";
 import { api } from "../api";
-import { activeProject, panes, permissions, screenPrompts, setDrawerPane, setPermissions, setScreenPrompts } from "../store";
+import { activeProject, asks as pendingAsksSignal, panes, permissions, screenPrompts, setDrawerPane, setPermissions, setScreenPrompts } from "../store";
 import Icon from "../ui/Icon";
 import { icons as D } from "../ui/icons";
 import { toast } from "../ui/state";
+import AskCards from "./AskCards";
 
 const short = (key: string) => key.replace(/^\d+-/, "").replace(/^orch-.*/, "orchestrator");
 
@@ -16,6 +17,7 @@ export default function Attention() {
     const pane = panes.find((p) => p.key === a.agent);
     return !pane?.project || pane.project === activeProject();
   }));
+  const pendingAsks = () => pendingAsksSignal();
   const questions = createMemo(() => screenPrompts().filter((q) => q.prompt && q.project === activeProject()));
 
   const decide = async (id: string, d: "allow" | "always" | "deny") => {
@@ -28,8 +30,9 @@ export default function Attention() {
   };
 
   return (
-    <Show when={asks().length || questions().length}>
+    <Show when={asks().length || questions().length || pendingAsks().length}>
       <div class="attention">
+        <AskCards />
         <For each={asks()}>
           {(a) => (
             <div class="att-card">

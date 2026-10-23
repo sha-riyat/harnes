@@ -245,6 +245,19 @@ export interface PermissionAsk {
   at: number;
 }
 
+export interface AskPending {
+  id: string;
+  agent: string;
+  at: number;
+  card: {
+    kind: "choice" | "confirm" | "text";
+    question: string;
+    options: { id: string; label: string; detail: string }[];
+    default?: string | null;
+    timeout_secs?: number | null;
+  };
+}
+
 export interface ScreenPrompt {
   pane: string;
   agent: string;
@@ -323,6 +336,9 @@ export const api = {
   osRead: (id: string, path: string) => invoke<string>("os_read", { id, path }),
   osImport: (path: string) => invoke<string[]>("os_import", { path }),
   permissions: () => invoke<PermissionAsk[]>("permissions_pending"),
+  asks: () => invoke<AskPending[]>("asks_pending"),
+  askAnswer: (id: string, choice?: string, text?: string) => invoke<void>("ask_answer", { id, choice, text }),
+  askDecline: (id: string) => invoke<void>("ask_decline", { id }),
   answerPermission: (id: string, decision: "allow" | "always" | "deny") => invoke<void>("permission_answer", { id, decision }),
   screenPrompts: () => invoke<ScreenPrompt[]>("screen_prompts"),
   answerScreen: (pane: string, keys: string) => invoke<void>("screen_answer", { pane, keys }),

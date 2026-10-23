@@ -1,5 +1,5 @@
 import { Match, Show, Switch, onCleanup, onMount } from "solid-js";
-import { api, on, subscribeFrames, type AgentState, type CrewEvent, type PaneInfo, type PermissionAsk, type ScreenPrompt } from "./api";
+import { api, on, subscribeFrames, type AgentState, type AskPending, type CrewEvent, type PaneInfo, type PermissionAsk, type ScreenPrompt } from "./api";
 import Conversation from "./components/Conversation";
 import LookoutView from "./components/LookoutView";
 import MethodsView from "./components/MethodsView";
@@ -11,7 +11,7 @@ import RunView from "./components/RunView";
 import Sidebar from "./components/Sidebar";
 import TermDock from "./components/TermDock";
 import TopBar from "./components/TopBar";
-import { activeProject, addPane, markExited, pushCrew, pushFrame, removePane, setAgentState, setPermissions, setScreenPrompts, setStats, view } from "./store";
+import { activeProject, addPane, markExited, setAsks, pushCrew, pushFrame, removePane, setAgentState, setPermissions, setScreenPrompts, setStats, view } from "./store";
 import { refreshProjects } from "./ui/projects";
 import { applyTheme, panelOpen, sidebarOpen, toast } from "./ui/state";
 
@@ -45,12 +45,14 @@ export default function App() {
       on<{ key: string; state: AgentState }>("agent-state", (p) => setAgentState(p.key, p.state)),
       on<CrewEvent>("crew", onCrew),
       on<PermissionAsk>("permission-request", (a) => setPermissions((l) => [...l.filter((x) => x.id !== a.id), a])),
+      on<AskPending>("ask-request", (a) => setAsks((l) => [...l.filter((x) => x.id !== a.id), a])),
       on<ScreenPrompt>("screen-prompt", onScreenPrompt),
     ]);
     await subscribeFrames(pushFrame);
     for (const p of await api.list()) addPane(p);
     await refreshProjects();
     setPermissions(await api.permissions().catch(() => []));
+    setAsks(await api.asks().catch(() => []));
     setScreenPrompts(await api.screenPrompts().catch(() => []));
     const poll = setInterval(async () => setStats(await api.stats().catch(() => null)), 3000);
     onCleanup(() => {
