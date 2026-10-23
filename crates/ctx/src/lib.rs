@@ -4,6 +4,7 @@
 //! in SQLite FTS5 instead of being pasted into the model context. The agent
 //! gets a short summary plus a handle it can search or page through.
 
+pub mod digest;
 pub mod exec;
 pub mod mcp;
 pub mod memory;

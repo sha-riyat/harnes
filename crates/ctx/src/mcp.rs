@@ -194,7 +194,7 @@ mod tests {
         )
         .is_none());
         let r = handle(&c, &json!({"jsonrpc":"2.0","id":1,"method":"tools/list"})).unwrap();
-        assert_eq!(r["result"]["tools"].as_array().unwrap().len(), 15);
+        assert_eq!(r["result"]["tools"].as_array().unwrap().len(), 16);
     }
 
     #[test]
