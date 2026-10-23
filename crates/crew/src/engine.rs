@@ -52,6 +52,21 @@ pub trait AgentHost: Send + Sync + 'static {
         let _ = cwd;
         self.spawn(key, role, prompt, settings, tune)
     }
+    /// Starts the agent on a free OpenCode `model`. The prompt is in
+    /// `prompt_file`: it never goes on a command line. Hosts without OpenCode
+    /// keep this default, an error, and the engine runs the step on Claude.
+    fn spawn_free(
+        &self,
+        key: &str,
+        role: Role,
+        prompt_file: &Path,
+        settings: &Path,
+        model: &str,
+        cwd: Option<&Path>,
+    ) -> Result<String> {
+        let _ = (key, role, prompt_file, settings, model, cwd);
+        bail!("aucun hôte OpenCode")
+    }
     fn close(&self, pane: &str);
     /// Whether the CLI running `role` reports lifecycle through Claude Code hooks.
     /// Without hooks, completion is detected by polling the output file.
@@ -90,6 +105,10 @@ pub(crate) struct Run {
     pub(crate) id: String,
     pub(crate) dir: PathBuf,
     pub(crate) task: String,
+    /// A small change: one worker, a short review.
+    pub(crate) light: bool,
+    /// The Teacher rated the run high risk (set once the bar is known).
+    pub(crate) high_risk: std::sync::atomic::AtomicBool,
 }
 
 /// What a successful run hands to the user.
@@ -156,6 +175,8 @@ impl<H: AgentHost> Engine<H> {
             dir: setup::run_dir(&self.root, &id),
             id,
             task: task.to_string(),
+            light: budget::effective(self.mode, self.eco) == Mode::Light,
+            high_risk: Default::default(),
         };
         std::fs::create_dir_all(run.dir.join("reports"))?;
         std::fs::create_dir_all(run.dir.join("agents"))?;
@@ -168,6 +189,31 @@ impl<H: AgentHost> Engine<H> {
                 .detail(serde_json::json!({"mode": format!("{:?}", self.mode).to_lowercase(), "eco": self.eco})),
         );
         let mut metrics = Metrics::new(budget::effective(self.mode, self.eco), self.eco);
+        // A resumed run must keep the harness it started with: otherwise its
+        // numbers mix two. Say so, and mark the metrics so comparisons skip it.
+        metrics.harness = crate::harness::fingerprint(&self.root);
+        let fp_file = run.dir.join("harness.fp");
+        match std::fs::read_to_string(&fp_file) {
+            Ok(before) if before.trim() != metrics.harness => {
+                metrics.harness_changed = true;
+                self.say(
+                    &run,
+                    Phase::Working,
+                    0,
+                    format!("Le harnais a changé depuis le début de ce run ({} → {}) : ses mesures ne sont plus comparables.", before.trim(), metrics.harness),
+                );
+                self.event(
+                    &run,
+                    harnes_telemetry::Event::new(&run.id, "", "run.harness.changed")
+                        .status("warn")
+                        .summary(format!("{} → {}", before.trim(), metrics.harness)),
+                );
+            }
+            Ok(_) => {}
+            Err(_) => {
+                let _ = std::fs::write(&fp_file, &metrics.harness);
+            }
+        }
         let result = self.run_inner(&run, &mut metrics).await;
         metrics.passed = result.is_ok();
         let _ = std::fs::write(
@@ -303,6 +349,8 @@ impl<H: AgentHost> Engine<H> {
         let high = bar
             .as_ref()
             .is_some_and(|b| b.risk.eq_ignore_ascii_case("high"));
+        run.high_risk
+            .store(high, std::sync::atomic::Ordering::Relaxed);
         // A risky run gets the deep review, unless the week is short of allowance.
         let deep = mode == Mode::Deep || (high && !self.eco);
 
@@ -553,8 +601,16 @@ impl<H: AgentHost> Engine<H> {
                 &crate::threading::lot_thread(&run.id, id),
             );
             let cwd = isolation.as_ref().map(|(_, wt)| wt.path.as_path());
+            let task = harnes_free::Task {
+                kind: harnes_free::Kind::Worker,
+                round,
+                light: run.light,
+                files: &lot.files,
+                isolated: isolation.is_some(),
+                high_risk: run.high_risk.load(std::sync::atomic::Ordering::Relaxed),
+            };
             let result = self
-                .agent_at::<Report>(run, &key, Role::Worker, &prompt, &path, cwd)
+                .agent_routed::<Report>(run, &key, Role::Worker, &prompt, &path, cwd, &task)
                 .await;
             if let Some((w, wt)) = &isolation {
                 match &result {
@@ -633,28 +689,13 @@ impl<H: AgentHost> Engine<H> {
         out: &Path,
         tune: Option<Tune>,
     ) -> Result<T> {
-        self.agent_tuned_at(run, name, role, prompt, out, tune, None)
+        self.agent_tuned_at(run, name, role, prompt, out, tune, None, None)
             .await
     }
 
-    /// Agent in a specific directory (worktree). The rest of the lifecycle is
-    /// identical: settings point at the shared hook server and threads stay in
-    /// the project root.
-    pub(crate) async fn agent_at<T: DeserializeOwned>(
-        &self,
-        run: &Run,
-        name: &str,
-        role: Role,
-        prompt: &str,
-        out: &Path,
-        cwd: Option<&Path>,
-    ) -> Result<T> {
-        let tune = Some(budget::tune(role));
-        self.agent_tuned_at(run, name, role, prompt, out, tune, cwd)
-            .await
-    }
-
-    async fn agent_tuned_at<T: DeserializeOwned>(
+    /// One agent, on Claude (`free` is None) or on a free OpenCode model.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn agent_tuned_at<T: DeserializeOwned>(
         &self,
         run: &Run,
         name: &str,
@@ -663,6 +704,7 @@ impl<H: AgentHost> Engine<H> {
         out: &Path,
         tune: Option<Tune>,
         cwd: Option<&Path>,
+        free: Option<&str>,
     ) -> Result<T> {
         if let Ok(Some(done)) = read_json::<T>(out) {
             return Ok(done); // resumed run: this step is already done
@@ -674,6 +716,22 @@ impl<H: AgentHost> Engine<H> {
             serde_json::to_string_pretty(&self.hooks.settings_for_root(&key, Some(&self.root)))?,
         )?;
         let mut rx = self.hooks.registry.register(&key);
+        // The always-on context is paid by every agent at every start.
+        if let Ok(spec) = crate::harness::HarnessSpec::load(&self.root) {
+            let used = crate::harness::always_on_tokens(&self.root, role.agent());
+            if used > spec.budgets.always_on_tokens {
+                self.event(
+                    run,
+                    harnes_telemetry::Event::new(&run.id, "", "budget.exceeded")
+                        .role(role.agent())
+                        .status("warn")
+                        .summary(format!(
+                            "{name} charge ~{used} tokens avant de commencer (budget {})",
+                            spec.budgets.always_on_tokens
+                        )),
+                );
+            }
+        }
         // Each role gets its method packs (OS) named in its first prompt.
         let prompt = format!(
             "{prompt}{}",
@@ -685,12 +743,25 @@ impl<H: AgentHost> Engine<H> {
                 .role(role.agent())
                 .status("running")
                 .summary(format!("{name} démarre"))
-                .detail(serde_json::json!({"cwd": cwd.map(|c| c.display().to_string())})),
+                .detail(serde_json::json!({"cwd": cwd.map(|c| c.display().to_string()), "free_model": free, "model": free.map(String::from).or(tune.map(|t| t.model.to_string()))})),
         );
-        let pane = match self
-            .host
-            .spawn_in(&key, role, &prompt, &settings, tune, cwd)
-        {
+        let spawned = match free {
+            Some(model) => {
+                // The prompt goes in a file: it can hold any character, and it
+                // never travels on a command line.
+                let file = run.dir.join("agents").join(format!("{name}.prompt.md"));
+                std::fs::write(&file, &prompt)
+                    .map_err(anyhow::Error::from)
+                    .and_then(|_| {
+                        self.host
+                            .spawn_free(&key, role, &file, &settings, model, cwd)
+                    })
+            }
+            None => self
+                .host
+                .spawn_in(&key, role, &prompt, &settings, tune, cwd),
+        };
+        let pane = match spawned {
             Ok(p) => p,
             Err(e) => {
                 self.event(
@@ -703,10 +774,21 @@ impl<H: AgentHost> Engine<H> {
                 return Err(e);
             }
         };
-        if !self.host.has_hooks(role) {
+        // OpenCode reports nothing through hooks, so its output file is the
+        // only signal; its time is also shorter: a free try that has not
+        // answered in a quarter of an hour is not worth waiting for.
+        let hooks = free.is_none() && self.host.has_hooks(role);
+        if !hooks {
             self.hooks.registry.set(&key, AgentState::Working, false);
         }
-        let result = self.wait_output(run, name, &mut rx, out).await;
+        let limit = if free.is_some() {
+            self.agent_timeout.min(FREE_TIMEOUT)
+        } else {
+            self.agent_timeout
+        };
+        let result = self
+            .wait_output(run, name, &mut rx, out, hooks, limit)
+            .await;
         self.host.close(&pane);
         self.hooks.registry.forget(&key);
         match &result {
@@ -734,19 +816,30 @@ impl<H: AgentHost> Engine<H> {
         name: &str,
         rx: &mut watch::Receiver<crate::hooks::Turn>,
         out: &Path,
+        hooks: bool,
+        limit: Duration,
     ) -> Result<T> {
         let mut cancel = self.cancel.clone();
-        let deadline = tokio::time::Instant::now() + self.agent_timeout;
+        let deadline = tokio::time::Instant::now() + limit;
+        // Heartbeat: every hook event is a sign of life. An agent that is neither
+        // waiting for the user nor sending any is stuck (a hung tool, a dead
+        // session): quarantine it instead of waiting out the whole timeout.
+        // Providers without hooks send nothing, so they are only timed out.
+        let stall = (limit / 3).min(Duration::from_secs(20 * 60));
+        let mut last_beat = tokio::time::Instant::now();
         let mut seen_stops = 0;
         let mut warned_blocked = false;
         loop {
             tokio::select! {
-                changed = rx.changed() => { changed.map_err(|_| anyhow!("{name} : canal d'état fermé"))?; }
+                changed = rx.changed() => { changed.map_err(|_| anyhow!("{name} : canal d'état fermé"))?; last_beat = tokio::time::Instant::now(); }
                 _ = cancel.changed() => {}
                 // Providers without hooks: the output file is the only signal.
                 _ = tokio::time::sleep(Duration::from_secs(2)) => {
                     if let Ok(Some(v)) = read_json::<T>(out) {
                         return Ok(v);
+                    }
+                    if hooks && rx.borrow().state == AgentState::Working && last_beat.elapsed() > stall {
+                        bail!("{name} est figé : aucun signe de vie depuis {} min, il est arrêté", stall.as_secs() / 60);
                     }
                     continue;
                 }
@@ -789,6 +882,9 @@ impl<H: AgentHost> Engine<H> {
         }
     }
 }
+
+/// How long a free-model attempt may take before the step moves to Claude.
+pub(crate) const FREE_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 
 /// `s`, or `fallback` when it is blank.
 fn or<'a>(s: &'a str, fallback: &'a str) -> &'a str {

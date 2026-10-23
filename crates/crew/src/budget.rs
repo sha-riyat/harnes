@@ -1,6 +1,7 @@
 //! The model policy for every crew role: the Planner alone runs on Opus, in
-//! medium effort; the orchestrator, Teacher, Workers, reviewers and scouts run
-//! on Sonnet, in high effort. The run's mode and the weekly pace never change
+//! medium effort; the orchestrator, Teacher, Workers and reviewers run on
+//! Sonnet, in high effort; scouts (short, read-only errands) run on Haiku,
+//! in high effort. The run's mode and the weekly pace never change
 //! that split.
 
 use crate::Role;
@@ -35,6 +36,11 @@ pub const OPUS_MEDIUM: Tune = Tune {
 };
 pub const SONNET_HIGH: Tune = Tune {
     model: "sonnet",
+    effort: "high",
+};
+/// Scouts only look things up for the others and never edit.
+pub const HAIKU_HIGH: Tune = Tune {
+    model: "haiku",
     effort: "high",
 };
 /// Interactive Claude panes (the orchestrator included) are launched outside

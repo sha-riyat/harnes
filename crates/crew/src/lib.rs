@@ -12,6 +12,7 @@ pub mod plan;
 pub mod prompts;
 pub mod providers;
 pub mod review;
+mod route;
 pub mod screen;
 pub mod setup;
 pub mod threading;

@@ -21,6 +21,8 @@ harnes-telemetry.workspace = true
 harnes-memory.workspace = true
 harnes-worktree.workspace = true
 harnes-guards.workspace = true
+sha2.workspace = true
+harnes-free.workspace = true
 
 [dev-dependencies]
 harnes-threads.workspace = true

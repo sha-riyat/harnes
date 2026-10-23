@@ -191,9 +191,98 @@ impl HarnessSpec {
     }
 }
 
+/// Files an agent of `role` carries into every session: its own prompt, the
+/// project's CLAUDE.md, and what that imports.
+fn always_on_files(root: &Path, role: &str) -> Vec<PathBuf> {
+    let mut v = vec![
+        root.join("CLAUDE.md"),
+        root.join(".claude")
+            .join("agents")
+            .join(format!("{role}.md")),
+    ];
+    if let Ok(md) = std::fs::read_to_string(root.join("CLAUDE.md")) {
+        for line in md.lines().map(str::trim).filter(|l| l.starts_with('@')) {
+            let rel = line.trim_start_matches('@');
+            if safe_relative(rel) {
+                v.push(root.join(rel));
+            }
+        }
+    }
+    v
+}
+
+/// Rough tokens (bytes / 4) an agent of `role` reads before it does anything.
+pub fn always_on_tokens(root: &Path, role: &str) -> u64 {
+    always_on_files(root, role)
+        .iter()
+        .filter_map(|p| std::fs::metadata(p).ok())
+        .map(|m| m.len() / 4)
+        .sum()
+}
+
+/// A short hash of everything that shapes an agent's behaviour: the spec, the
+/// role prompts and the guard rules. Two runs with the same fingerprint ran
+/// the same harness, so their numbers can be compared.
+pub fn fingerprint(root: &Path) -> String {
+    use sha2::{Digest, Sha256};
+    let mut files = vec![
+        path(root),
+        root.join(".harnes").join("guards.json"),
+        root.join("CLAUDE.md"),
+        root.join(".claude").join("HARNESS.md"),
+    ];
+    if let Ok(dir) = std::fs::read_dir(root.join(".claude").join("agents")) {
+        let mut agents: Vec<PathBuf> = dir.flatten().map(|e| e.path()).collect();
+        agents.sort();
+        files.extend(agents);
+    }
+    let mut h = Sha256::new();
+    for f in files {
+        if let Ok(text) = std::fs::read_to_string(&f) {
+            h.update(
+                f.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("")
+                    .as_bytes(),
+            );
+            h.update([0]);
+            h.update(text.replace("\r\n", "\n").as_bytes());
+            h.update([0]);
+        }
+    }
+    h.finalize()
+        .iter()
+        .take(6)
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fingerprint_follows_the_prompts_and_the_budget_counts_them() {
+        let root = std::env::temp_dir().join(format!("harnes-fp-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join(".claude/agents")).unwrap();
+        std::fs::write(root.join(".claude/agents/worker.md"), "x".repeat(400)).unwrap();
+        std::fs::write(root.join("CLAUDE.md"), "# p\n@.claude/HARNESS.md\n").unwrap();
+        std::fs::write(root.join(".claude/HARNESS.md"), "y".repeat(800)).unwrap();
+        assert_eq!(
+            always_on_tokens(&root, "worker"),
+            400 / 4 + 24 / 4 + 800 / 4
+        );
+        let a = fingerprint(&root);
+        assert_eq!(a, fingerprint(&root), "stable");
+        std::fs::write(root.join(".claude/agents/worker.md"), "changed").unwrap();
+        assert_ne!(
+            a,
+            fingerprint(&root),
+            "a prompt change is a different harness"
+        );
+        let _ = std::fs::remove_dir_all(&root);
+    }
 
     #[test]
     fn writes_loads_and_rejects_escape() {

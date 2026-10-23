@@ -1,6 +1,6 @@
 //! Equips a project for harnes: agents, settings, MCP registration, CLAUDE.md import.
 
-use crate::budget::{Tune, OPUS_MEDIUM, SONNET_HIGH};
+use crate::budget::{Tune, HAIKU_HIGH, OPUS_MEDIUM, SONNET_HIGH};
 use anyhow::{Context, Result};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
@@ -190,7 +190,7 @@ pub fn equip(root: &Path, ctx_bin: &Path, force: bool) -> Result<SetupReport> {
     write_agent(
         &agents.join("scout.md"),
         SCOUT,
-        SONNET_HIGH,
+        HAIKU_HIGH,
         force,
         &mut rep,
         root,
@@ -311,7 +311,7 @@ mod tests {
         .unwrap();
         std::fs::write(
             agents.join("scout.md"),
-            "---\nname: scout\nmodel: haiku\neffort: high\n---\n\nMon scout.\n",
+            "---\nname: scout\nmodel: sonnet\neffort: medium\n---\n\nMon scout.\n",
         )
         .unwrap();
 
@@ -322,7 +322,7 @@ mod tests {
         assert!(planner.contains("effort: medium"));
         assert!(planner.contains("Mon planner."));
         let scout = std::fs::read_to_string(agents.join("scout.md")).unwrap();
-        assert!(scout.contains("model: sonnet"));
+        assert!(scout.contains("model: haiku"));
         assert!(scout.contains("effort: high"));
         assert!(scout.contains("Mon scout."));
         let _ = std::fs::remove_dir_all(&dir);

@@ -25,6 +25,12 @@ pub struct Metrics {
     pub pre_existing: u32,
     /// fixed / wrong / intentional / irrelevant, as the workers answered.
     pub resolved: BTreeMap<String, u32>,
+    /// Fingerprint of the harness the run used (see `harness::fingerprint`).
+    #[serde(default)]
+    pub harness: String,
+    /// The harness changed while the run was interrupted: its numbers mix two.
+    #[serde(default)]
+    pub harness_changed: bool,
 }
 
 impl Metrics {
@@ -38,6 +44,8 @@ impl Metrics {
             nits: 0,
             pre_existing: 0,
             resolved: BTreeMap::new(),
+            harness: String::new(),
+            harness_changed: false,
         }
     }
 
@@ -118,6 +126,7 @@ impl<H: AgentHost> Engine<H> {
         e2e: Option<&str>,
         deep: bool,
     ) -> Result<Review> {
+        let high_risk = run.high_risk.load(std::sync::atomic::Ordering::Relaxed);
         let path = run.dir.join(format!("review-{round}.json"));
         let notes = prompts::threads_note(&run.id, plan);
         let prompt = |out: &str| {
@@ -138,13 +147,24 @@ impl<H: AgentHost> Engine<H> {
             let out = run.dir.join(format!("review-{round}-f{k}.json"));
             let p = prompt(&self.rel(&out));
             async move {
-                self.agent_tuned::<Review>(
+                // One reviewer among several, arbitrated by a verifier: a free
+                // model may take this seat, unless the run is high risk.
+                let task = harnes_free::Task {
+                    kind: harnes_free::Kind::Finder,
+                    round,
+                    light: false,
+                    files: &[],
+                    isolated: false,
+                    high_risk,
+                };
+                self.agent_routed::<Review>(
                     run,
                     &format!("reviewer-{round}-f{k}"),
                     Role::Reviewer,
                     &p,
                     &out,
-                    Some(budget::tune(Role::Reviewer)),
+                    None,
+                    &task,
                 )
                 .await
                 .map(|_| self.rel(&out))
