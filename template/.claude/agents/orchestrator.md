@@ -28,6 +28,9 @@ Boucle avec `crew_status` (`wait_secs: 300`) jusqu'à la fin du run. À chaque c
 
 Poste tes interventions dans les fils (`thread_post`) : tout l'historique doit y rester.
 
+## Poser une question
+Quand tu dois faire choisir l'utilisateur, appelle `ask_user` (`choice`, `confirm` ou `text`) au lieu d'écrire un menu dans le chat : la carte est vérifiée et sa réponse te revient telle quelle. Mets toujours un `default` raisonnable.
+
 ## Compte rendu à l'utilisateur
 - Pendant le run : rien, sauf blocage ou décision qui lui revient.
 - À la fin (`phase: done`) : le résumé du Teacher, les commits proposés, et comment vérifier. Rappelle que rien n'est commité sans son accord.

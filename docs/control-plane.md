@@ -278,6 +278,43 @@ tool call, every file and every approval until the next prompt.
   that imports, about 4 bytes to a token). Going over it is a `budget.exceeded`
   event; `harness_get` returns both numbers.
 
+## Typed questions (`ask_user`)
+
+An agent that needs a decision that is the user's no longer prints a menu for
+harnes to read off the screen. It calls the `ask_user` MCP tool with one of three
+registered kinds, and the cockpit draws a card:
+
+| Kind | Fields | Answer |
+|---|---|---|
+| `choice` | `question`, 2 to 8 `options` (`id`, `label`, `detail?`) | the option's `id` |
+| `confirm` | `question` | `yes` or `no` |
+| `text` | `question` | free text, 2,000 characters at most |
+
+Common fields: `default` (what stands if nobody answers) and `timeout_secs` (5 to
+540, 300 by default). The result is `{answered: true, choice, text}` or
+`{answered: false, reason: timeout | declined | cancelled, default}`.
+
+The model describes what it needs, never the interface:
+
+- a kind that is not registered, an unknown field, too many options, a duplicate
+  id or an over-long text is refused with a message the agent can read and fix;
+- the card is drawn as text, never as markup;
+- the answer is checked against the card (an option that does not exist, a blank
+  text, a `maybe` for a confirm) and a bad one leaves the question open;
+- an agent has one question open at a time, and 20 may be open over every agent;
+- while it waits, the agent shows as blocked on the user, not as working;
+- closing the agent's pane cancels its question; the user can also skip it.
+
+Events: `question.asked`, `question.answered` (a choice is kept, a free-text
+answer is not, only its length) and `question.declined`. The route is
+`POST /ask/<agent key>` on the hook server; every agent now gets `HARNES_API` in
+its environment, and the tool only appears for agents launched by harnes.
+
+Screen reading stays as the fallback for questions that come from an agent's own
+terminal UI (a Claude Code menu, a `(y/n)`). The idea of a closed registry of
+typed components is the one OpenUI and CopilotKit share; harnes takes the idea
+and none of their code or React.
+
 ## Free models (OpenCode)
 
 A free model proposes, a paid one checks. The profile, per project in
@@ -384,5 +421,6 @@ harnes originals. Not all 311 ECC skills are imported.
 | `.harnes/experiments/library.jsonl` | what was tried, with fingerprints and numbers |
 | `.harnes/runs/<run>/harness.fp` | the harness the run started with |
 | `opencode.json` | harnes MCP servers for OpenCode, written when a profile uses it |
+| `question.*` events in `telemetry.db` | typed questions and what became of them |
 
 `.harnes/.gitignore` contains `*`: run artefacts are local by default.

@@ -21,6 +21,7 @@ Les agents communiquent par **fils** (MCP harnes-ctx : `thread_list`, `thread_re
 - **Proxy harnes** : compresse les gros résultats d'outils avant l'envoi au modèle. Un marqueur `[harnes: … elided … id=XYZ]` signifie que l'original est lisible avec `ctx_retrieve id=XYZ`.
 - **harnes-e2e** (MCP) : tests `tests/**/*.e2e.yaml` mêlant étapes exactes et objectifs `act` en langage naturel. Les agents résolvent eux-mêmes les `act` en pilotant le vrai navigateur ; les actions sont rejouées ensuite sans modèle. harnes relance toute la suite avant chaque revue.
 - Skills : **Ponytail** (le moins de code possible), **Caveman** (sorties compactes), **TasteSkill v2** `design-taste-frontend` (pages web publiques seulement, chargé à la demande).
+- **`ask_user`** (MCP harnes-ctx) : pose une question à l'utilisateur et attends sa réponse, en `choice` (2 à 8 options), `confirm` ou `text`, avec un `default` qui vaut s'il ne répond pas. Réserve-le à une décision qui lui revient et que ni le code ni le plan ne tranchent ; sinon décide et dis-le dans ton rapport. Une seule question à la fois. Un Worker pose d'abord ses questions de lot dans son fil.
 - **`REVIEW.md`** (facultatif, écrit par l'utilisateur) : règles de revue du projet. Ce qu'est un échec par zone, chemins à ignorer, chemins sensibles. Le Reviewer et le Teacher l'appliquent.
 
 ## Règles maison

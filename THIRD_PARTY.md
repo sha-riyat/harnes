@@ -61,7 +61,10 @@ Each pack contains the upstream `LICENSE-ECC`, a `NOTICE`, and a
 ## Not used: OpenUI and CopilotKit
 
 OpenUI and CopilotKit are MIT-licensed, but harnes does not add React,
-CopilotKit or OpenUI to its Tauri/SolidJS app. The run view is a native,
+CopilotKit or OpenUI to its Tauri/SolidJS app. Their shared idea, a closed
+registry of typed components that the model fills in instead of describing the
+interface, informed the `ask_user` cards (`crates/crew/src/ask.rs`) with no code
+copied. The run view is a native,
 typed `harnes.view.v1` SolidJS view. No OpenUI or CopilotKit code is bundled.
 
 ## Other dependencies
