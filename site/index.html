@@ -10,7 +10,7 @@
 <link rel="alternate" hreflang="fr" href="https://sha-riyat.github.io/harnes/fr/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=__V__">
 <script type="module" src="main.js?v=__V__"></script>
 </head>
@@ -19,9 +19,9 @@
   <a class="mark" href="#top"><img src="favicon.svg" width="24" height="24" alt="">harnes</a>
   <nav aria-label="Sections">
     <a href="#interface">Interface</a>
-    <a href="#start">Start</a>
+    <a href="#cards">Cards</a>
     <a href="#crew">Crew</a>
-    <a href="#chat">Chat</a>
+    <a href="#start">Start</a>
   </nav>
   <a class="lang" href="fr/" hreflang="fr" lang="fr" title="Français">FR</a>
   <a class="btn" href="https://github.com/sha-riyat/harnes">GitHub</a>
@@ -29,218 +29,76 @@
 
 <main id="top">
 <section class="hero">
-  <canvas class="field hero-field" data-field="scenes" data-seed="3" data-cell="15" aria-hidden="true"></canvas>
   <div class="hero-copy">
     <h1>One chat.<br>A whole crew.</h1>
     <p class="lede">harnes is a desktop cockpit for coding agents. You talk to one orchestrator; it plans, staffs, tests, and comes back only when the bar is met.</p>
     <div class="actions">
       <a class="btn solid" href="https://github.com/sha-riyat/harnes">Get it on GitHub</a>
-      <a class="link" href="#crew">See who does what</a>
+      <a class="link" href="#interface">See the interface</a>
     </div>
   </div>
+  <div class="shot hero-shot"><img src="shots/overview-dark.png" width="2880" height="1800" alt="harnes overview: the run as a strip of lots, the figures, the threads and, on the right, the cards that wait for you"></div>
+</section>
 
-  <div class="sim" data-ui data-run aria-label="A crew run, played in the page">
-    <div class="sim-bar">
-      <span class="sim-proj">calculator</span>
-      <span class="track" data-track>plan --- bar --- work --- review --- gate --- ready</span>
-    </div>
-    <div class="sim-body">
-      <ul class="sim-crew">
-        <li data-agent="orchestrator" data-state="done"><span class="mk">*</span><span>orchestrator</span><span class="st"></span></li>
-        <li data-agent="planner" data-state="done"><span class="mk">*</span><span>planner</span><span class="st"></span></li>
-        <li data-agent="teacher" data-state="done"><span class="mk">*</span><span>teacher</span><span class="st"></span></li>
-        <li data-agent="worker-L1" data-state="done"><span class="mk">*</span><span>worker-L1</span><span class="st"></span></li>
-        <li data-agent="worker-L2" data-state="done"><span class="mk">*</span><span>worker-L2</span><span class="st"></span></li>
-        <li data-agent="reviewer" data-state="done"><span class="mk">*</span><span>reviewer</span><span class="st"></span></li>
-      </ul>
-      <ol class="sim-log" data-log>
-        <li><span class="who">orchestrator</span><span class="tool">crew_start</span><span class="what">Add a contact page that sends an email</span></li>
-        <li><span class="who">planner</span><span class="tool">plan.json</span><span class="what">2 lots, 1 wave, no shared files</span></li>
-        <li><span class="who">teacher</span><span class="tool">bar.json</span><span class="what">4 criteria, each with its evidence</span></li>
-        <li><span class="who">worker-L1</span><span class="tool">e2e_save</span><span class="what">reports/L1-r0.json</span></li>
-        <li><span class="who">reviewer</span><span class="tool">review-1.json</span><span class="what">PASS</span></li>
-        <li><span class="who">teacher</span><span class="tool">gate-1.json</span><span class="what">bar met</span></li>
-      </ol>
-    </div>
-    <div class="sim-ask" data-ask hidden>
-      <p class="ask-head"><span>Permission · worker-L1</span><span>Bash</span></p>
-      <code class="ask-what">npm install nodemailer</code>
-      <div class="ask-actions">
-        <button class="u-btn solid" data-allow>Allow</button>
-        <button class="u-btn" data-allow>Always</button>
-        <button class="u-btn ghost">Deny</button>
-      </div>
-    </div>
-    <div class="sim-ready" data-ready>
-      <p class="ready-head">ready for you · teacher bar met</p>
-      <p><span data-task-echo>Add a contact page that sends an email</span>: 2 lots, e2e passed, review PASS.</p>
-      <p class="commit"><code>Add contact page with form</code><span>L1 · 3 files</span></p>
-      <p class="commit"><code>Send contact emails with nodemailer</code><span>L2 · 2 files</span></p>
-      <p class="faint">nothing is committed without you</p>
-    </div>
-    <div class="sim-composer">
-      <span class="think" data-think aria-hidden="true"></span>
-      <label class="sr" for="task">Task for the crew</label>
-      <input id="task" data-task placeholder="Add a contact page that sends an email" autocomplete="off">
-      <button class="u-btn solid" data-go>Run</button>
-    </div>
+<section class="block" id="interface">
+  <div class="head" data-in><h2>What you see</h2><p>One sheet, one question at a time. What needs you comes to you as a card.</p></div>
+  <div class="tabs" role="tablist" aria-label="What you see" data-tabs>
+      <button role="tab" aria-selected="true" aria-controls="p-overview" id="t-overview">Overview</button>
+      <button role="tab" aria-selected="false" aria-controls="p-chat" id="t-chat">Chat</button>
+      <button role="tab" aria-selected="false" aria-controls="p-run" id="t-run">Run</button>
+      <button role="tab" aria-selected="false" aria-controls="p-agents" id="t-agents">Agents</button>
+      <button role="tab" aria-selected="false" aria-controls="p-methods" id="t-methods">Methods</button>
+      <button role="tab" aria-selected="false" aria-controls="p-settings" id="t-settings">Settings</button>
+  </div>
+  <div class="panels" data-in>
+    <figure role="tabpanel" id="p-overview" aria-labelledby="t-overview"><div class="shot"><img src="shots/overview-dark.png" width="2880" height="1800" alt="The overview" loading="lazy"></div><figcaption>The run at a glance: lots as a strip, four figures, what the orchestrator did, the threads, the commits and, on the right, what waits for you.</figcaption></figure>
+    <figure role="tabpanel" id="p-chat" aria-labelledby="t-chat" hidden><div class="shot"><img src="shots/chat-dark.png" width="2880" height="1800" alt="The chat with cards" loading="lazy"></div><figcaption>The orchestrator's transcript as a chat. Questions, permissions and the summary arrive as cards; the message box attaches files and folders and shows your usage.</figcaption></figure>
+    <figure role="tabpanel" id="p-run" aria-labelledby="t-run" hidden><div class="shot"><img src="shots/run-dark.png" width="2880" height="1800" alt="The run record" loading="lazy"></div><figcaption>The typed record of a run: gate, reviews, plan, memory to read, trace, worktrees and evaluation.</figcaption></figure>
+    <figure role="tabpanel" id="p-agents" aria-labelledby="t-agents" hidden><div class="shot"><img src="shots/agents-dark.png" width="2880" height="1800" alt="The crew and the machine" loading="lazy"></div><figcaption>The crew as icons, and every agent session found on the machine.</figcaption></figure>
+    <figure role="tabpanel" id="p-methods" aria-labelledby="t-methods" hidden><div class="shot"><img src="shots/methods-dark.png" width="2880" height="1800" alt="The methods view" loading="lazy"></div><figcaption>The OS packs the crew works with: doctrine, oracle and skills, by role.</figcaption></figure>
+    <figure role="tabpanel" id="p-settings" aria-labelledby="t-settings" hidden><div class="shot"><img src="shots/settings-dark.png" width="2880" height="1800" alt="The settings view" loading="lazy"></div><figcaption>Settings by area, saved as you change them. Nothing leaves for a third party unless you pick it.</figcaption></figure>
   </div>
 </section>
 
-<section class="show" id="interface" data-reveal>
-  <div class="show-row" data-row>
-    <figure data-panel data-name="The chat" data-text="The orchestrator's transcript as a chat: real Markdown, one line per tool call, the run on one line of text.">
-      <img src="shots/chat.png" width="2880" height="1800" alt="The harnes chat view: the orchestrator's replies, tool calls, a permission card and a question card" loading="lazy">
-    </figure>
-    <figure data-panel class="crop crop-cards" data-name="Cards, not prompts" data-text="Permission requests and on-screen menus become cards. Your answer goes straight back to the agent.">
-      <img src="shots/chat.png" width="2880" height="1800" alt="Close-up of a permission card for npm install nodemailer and a question card" loading="lazy">
-    </figure>
-    <figure data-panel class="crop crop-side" data-name="One character per agent" data-text="Every project and agent in the sidebar. A mark breathes while it works and blinks when it needs you.">
-      <img src="shots/chat.png" width="2880" height="1800" alt="Close-up of the sidebar: orchestrator working, worker-L1 needs you" loading="lazy">
-    </figure>
-    <figure data-panel data-name="Methods by role" data-text="27 OS packs ship inside the binary, including 80 curated ECC skills. Each role loads its own; the rest are a call away.">
-      <img src="shots/methods.png" width="2880" height="1800" alt="The methods view listing OS packs grouped by role" loading="lazy">
-    </figure>
-    <figure data-panel data-name="Black and white, both ways" data-text="The light theme keeps the same shapes. Terminals follow it too.">
-      <img src="shots/chat-light.png" width="2880" height="1800" alt="The harnes chat view in its light theme" loading="lazy">
-    </figure>
-  </div>
-  <div class="show-say">
-    <h2 data-panel-name>The chat</h2>
-    <p data-panel-text>The orchestrator's transcript as a chat: real Markdown, one line per tool call, the run on one line of text.</p>
-    <div class="show-nav">
-      <button class="btn" data-step="-1" aria-label="Previous view">Previous</button>
-      <button class="btn" data-step="1" aria-label="Next view">Next</button>
-    </div>
+<section class="block" id="cards">
+  <div class="head" data-in><h2>Cards that answer</h2><p>Answering folds the card to one line, and the agent goes back to work.</p></div>
+  <div class="cards">
+    <article class="card" data-in><h3>Questions</h3><p>An agent asks with a typed question: a choice, a yes or no, or a few words. A default stands if nobody answers.</p></article>
+    <article class="card" data-in><h3>Permissions</h3><p>Each command waits for Allow once, Always or Deny. Nothing runs behind your back.</p></article>
+    <article class="card" data-in><h3>Trust</h3><p>Before a crew starts, harnes reads the project's own config and holds the launch on anything serious until you have read it.</p></article>
   </div>
 </section>
 
-<div class="dither" aria-hidden="true"><canvas class="field" data-field="ramp" data-seed="7" data-cell="13"></canvas></div>
+<section class="block" id="crew">
+  <div class="head" data-in><h2>Six roles.<br>One of them is you.</h2><p>Every run takes the same road: brief, plan, bar, work, test, review, gate, you.</p></div>
+  <ul class="roles">
+    <li class="role" data-in><span class="tile"><svg class="ico" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M128,26A102,102,0,1,0,230,128,102.12,102.12,0,0,0,128,26Zm0,192a90,90,0,1,1,90-90A90.1,90.1,0,0,1,128,218ZM173.32,74.63l-64,32a6,6,0,0,0-2.69,2.69l-32,64A6,6,0,0,0,80,182a6.06,6.06,0,0,0,2.68-.63l64-32a6,6,0,0,0,2.69-2.69l32-64a6,6,0,0,0-8.05-8.05Zm-33.79,64.9L93.42,162.58l23-46.11,46.11-23Z"/></svg></span><div><h3>Orchestrator <span>Sonnet 5.5 · high</span></h3><p>Your only interlocutor. Turns your messages into runs and reports back.</p></div></li>
+    <li class="role" data-in><span class="tile"><svg class="ico" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M227.69,51.27a6,6,0,0,0-5.15-1.09L160.7,65.64l-62-31a6,6,0,0,0-4.14-.45l-64,16A6,6,0,0,0,26,56V200a6,6,0,0,0,7.46,5.82L95.3,190.36l62,31a6,6,0,0,0,4.14.45l64-16A6,6,0,0,0,230,200V56A6,6,0,0,0,227.69,51.27ZM102,49.71l52,26V206.29l-52-26Zm-64,11,52-13V179.32l-52,13ZM218,195.32l-52,13V76.68l52-13Z"/></svg></span><div><h3>Planner <span>Opus 5.5 · medium</span></h3><p>Splits the task into lots and waves, so workers never share a file.</p></div></li>
+    <li class="role" data-in><span class="tile"><svg class="ico" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M250.82,90.71l-120-64a5.94,5.94,0,0,0-5.64,0l-120,64a6,6,0,0,0,0,10.58L34,116.67v49.62a14,14,0,0,0,3.55,9.32C50.42,189.94,79.29,214,128,214a127.21,127.21,0,0,0,50-9.73V240a6,6,0,0,0,12,0V198.35a113.18,113.18,0,0,0,28.45-22.75,13.91,13.91,0,0,0,3.55-9.31V116.67l28.82-15.38a6,6,0,0,0,0-10.58ZM128,202c-44,0-70-21.56-81.52-34.41a2,2,0,0,1-.48-1.3V123.07l79.18,42.22a6,6,0,0,0,5.64,0L178,140.13v51C165,197.35,148.45,202,128,202Zm82-35.71a2,2,0,0,1-.48,1.3A100.25,100.25,0,0,1,190,184.3V133.73l20-10.66Zm-22.15-45a6.27,6.27,0,0,0-1-.71l-56-29.86a6,6,0,0,0-5.64,10.58L175.25,128,128,153.2,20.75,96,128,38.8,235.25,96Z"/></svg></span><div><h3>Teacher <span>Sonnet 5.5 · high</span></h3><p>Fixes the bar before anyone works, then holds the results against it.</p></div></li>
+    <li class="role" data-in><span class="tile"><svg class="ico" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M249.92,113.4,182.47,45.49a94.12,94.12,0,0,0-133,.06L35.68,59.78a6,6,0,0,0,8.63,8.35L58,54A82,82,0,0,1,78.55,39l49,49L30.09,185.4a14,14,0,0,0,0,19.81L50.78,225.9a14,14,0,0,0,19.8,0L168,128.46l33.42,33.42a14,14,0,0,0,19.8,0l28.68-28.69A14,14,0,0,0,249.92,113.4ZM62.1,217.41a2,2,0,0,1-2.83,0L38.58,196.72a2,2,0,0,1,0-2.83L108,124.46,131.51,148ZM163.76,115.73,140,139.49,116.48,116l23.76-23.76a6,6,0,0,0,0-8.49L90.54,34A82.07,82.07,0,0,1,174,54l45.62,45.93L188,131.49l-15.76-15.76A6,6,0,0,0,163.76,115.73Zm77.66,9-28.69,28.7a2,2,0,0,1-2.83,0L196.49,140l31.56-31.57,13.37,13.46A2,2,0,0,1,241.42,124.7Z"/></svg></span><div><h3>Workers <span>Sonnet 5.5 · high</span></h3><p>Each builds one lot in its own worktree and tests it.</p></div></li>
+    <li class="role" data-in><span class="tile"><svg class="ico" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M224.42,104.2c-3.9-4.07-7.93-8.27-9.55-12.18-1.5-3.63-1.58-9-1.67-14.68-.14-9.38-.3-20-7.42-27.12S188,42.94,178.66,42.8c-5.68-.09-11-.17-14.68-1.67-3.91-1.62-8.11-5.65-12.18-9.55C145.16,25.22,137.64,18,128,18s-17.16,7.22-23.8,13.58c-4.07,3.9-8.27,7.93-12.18,9.55-3.63,1.5-9,1.58-14.68,1.67-9.38.14-20,.3-27.12,7.42S42.94,68,42.8,77.34c-.09,5.68-.17,11-1.67,14.68-1.62,3.91-5.65,8.11-9.55,12.18C25.22,110.84,18,118.36,18,128s7.22,17.16,13.58,23.8c3.9,4.07,7.93,8.27,9.55,12.18,1.5,3.63,1.58,9,1.67,14.68.14,9.38.3,20,7.42,27.12S68,213.06,77.34,213.2c5.68.09,11,.17,14.68,1.67,3.91,1.62,8.11,5.65,12.18,9.55C110.84,230.78,118.36,238,128,238s17.16-7.22,23.8-13.58c4.07-3.9,8.27-7.93,12.18-9.55,3.63-1.5,9-1.58,14.68-1.67,9.38-.14,20-.3,27.12-7.42s7.28-17.74,7.42-27.12c.09-5.68.17-11,1.67-14.68,1.62-3.91,5.65-8.11,9.55-12.18C230.78,145.16,238,137.64,238,128S230.78,110.84,224.42,104.2Zm-8.66,39.3c-4.67,4.86-9.5,9.9-12,15.9-2.38,5.74-2.48,12.52-2.58,19.08-.11,7.44-.23,15.14-3.9,18.82s-11.38,3.79-18.82,3.9c-6.56.1-13.34.2-19.08,2.58-6,2.48-11,7.31-15.91,12-5.25,5-10.68,10.24-15.49,10.24s-10.24-5.21-15.5-10.24c-4.86-4.67-9.9-9.5-15.9-12-5.74-2.38-12.52-2.48-19.08-2.58-7.44-.11-15.14-.23-18.82-3.9s-3.79-11.38-3.9-18.82c-.1-6.56-.2-13.34-2.58-19.08-2.48-6-7.31-11-12-15.91C35.21,138.24,30,132.81,30,128s5.21-10.24,10.24-15.5c4.67-4.86,9.5-9.9,12-15.9,2.38-5.74,2.48-12.52,2.58-19.08.11-7.44.23-15.14,3.9-18.82s11.38-3.79,18.82-3.9c6.56-.1,13.34-.2,19.08-2.58,6-2.48,11-7.31,15.91-12C117.76,35.21,123.19,30,128,30s10.24,5.21,15.5,10.24c4.86,4.67,9.9,9.5,15.9,12,5.74,2.38,12.52,2.48,19.08,2.58,7.44.11,15.14.23,18.82,3.9s3.79,11.38,3.9,18.82c.1,6.56.2,13.34,2.58,19.08,2.48,6,7.31,11,12,15.91,5,5.25,10.24,10.68,10.24,15.49S220.79,138.24,215.76,143.5ZM172.24,99.76a6,6,0,0,1,0,8.48l-56,56a6,6,0,0,1-8.48,0l-24-24a6,6,0,0,1,8.48-8.48L112,151.51l51.76-51.75A6,6,0,0,1,172.24,99.76Z"/></svg></span><div><h3>Reviewers <span>Sonnet 5.5 · high</span></h3><p>Read the diff against the plan and the real test results.</p></div></li>
+    <li class="role" data-in><span class="tile"><svg class="ico" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M233,147.24,191.43,52.6a6,6,0,0,0-1.25-1.83,30,30,0,0,0-42.42,0A6,6,0,0,0,146,55V82H110V55a6,6,0,0,0-1.76-4.25,30,30,0,0,0-42.42,0,6,6,0,0,0-1.25,1.83L23,147.24A46,46,0,1,0,110,168V94h36v74a46,46,0,1,0,87-20.76ZM64,202a34,34,0,1,1,34-34A34,34,0,0,1,64,202Zm0-80a45.77,45.77,0,0,0-18.55,3.92L75.06,58.54A18,18,0,0,1,98,57.71V137A45.89,45.89,0,0,0,64,122Zm94-64.28a18,18,0,0,1,22.94.83l29.61,67.37A45.9,45.9,0,0,0,158,137ZM192,202a34,34,0,1,1,34-34A34,34,0,0,1,192,202Z"/></svg></span><div><h3>Scouts <span>Haiku 5.5 · high</span></h3><p>Short errands: find code, sum up a file, run one command.</p></div></li>
+  </ul>
+  <p class="you" data-in>You are the last stop: read the summary and the proposed commits, test it, then approve. Nothing is committed without you.</p>
+</section>
 
-<div class="paper">
-<section class="steps" id="start" data-reveal>
-  <div class="steps-head" data-in>
-    <h2>Three steps in</h2>
-    <p>Windows 11 with Rust, Zig, Node via nvm and Claude Code signed in. Nothing else to set up.</p>
-  </div>
-  <ol class="steps-row">
-    <li class="step" data-in>
-      <p class="say">Build it</p>
-      <div class="code"><pre id="c1"><code>git clone https://github.com/sha-riyat/harnes
+<section class="block" id="start">
+  <div class="head" data-in><h2>Three steps in</h2><p>Windows 11 with Rust, Zig, Node via nvm and Claude Code signed in. Nothing else to set up.</p></div>
+  <ol class="steps">
+    <li class="step" data-in><p class="say">Build it</p><div class="code"><pre id="c0"><code>git clone https://github.com/sha-riyat/harnes
 cd harnes/app; npm install
-npm run app</code></pre><button class="copy" data-copy="c1">Copy</button></div>
-      <div class="resp" data-ui>
-        <p><b>harnes-ctx</b> built</p>
-        <p><b>harnes-e2e</b> built</p>
-        <p class="dim">tauri dev · opens on an empty chat</p>
-      </div>
-    </li>
-    <li class="step" data-in>
-      <p class="say">Add a project</p>
-      <div class="code"><pre><code>+ projects
-C:\work\calculator</code></pre></div>
-      <div class="resp" data-ui>
-        <p><b>.claude/agents/</b> 6 roles written</p>
-        <p><b>.mcp.json</b> harnes-ctx, harnes-e2e</p>
-        <p class="dim">proxy on 62346 · 27 OS packs indexed</p>
-      </div>
-    </li>
-    <li class="step" data-in>
-      <p class="say">Say what to build</p>
-      <div class="code"><pre><code>Add a contact page
-that sends an email.</code></pre></div>
-      <div class="resp" data-ui>
-        <p class="ready-head">ready for you · bar met</p>
-        <p class="commit"><code>Add contact page with form</code><span>L1</span></p>
-        <p class="commit"><code>Send contact emails</code><span>L2</span></p>
-        <p class="dim">you test, then approve the commits</p>
-      </div>
-    </li>
-  </ol>
+npm run app</code></pre><button class="copy" data-copy="c0" data-done="Copied">Copy</button></div></li>
+    <li class="step" data-in><p class="say">Add a project</p><div class="code"><pre id="c1"><code>+ projects
+C:\work\calculator</code></pre><button class="copy" data-copy="c1" data-done="Copied">Copy</button></div></li>
+    <li class="step" data-in><p class="say">Say what to build</p><div class="code"><pre id="c2"><code>Add a contact page
+that sends an email.</code></pre><button class="copy" data-copy="c2" data-done="Copied">Copy</button></div></li>
+    </ol>
 </section>
 
-<section class="loop" id="crew" data-reveal>
-  <div class="loop-head" data-in>
-    <h2><span class="soft">Eight stops.</span><br>One of them is you.</h2>
-    <p>Every run takes the same road. Pick a stop to see who works there, with what, and what it leaves behind.</p>
-  </div>
-  <div class="stops" role="tablist" aria-label="Stops of a run" data-tabs data-cycle data-in>
-    <button role="tab" aria-selected="true" aria-controls="s-brief"><span class="w" data-wire></span><b>brief</b><span>orchestrator</span></button>
-    <button role="tab" aria-selected="false" aria-controls="s-plan"><span class="w" data-wire></span><b>plan</b><span>planner</span></button>
-    <button role="tab" aria-selected="false" aria-controls="s-bar"><span class="w" data-wire></span><b>bar</b><span>teacher</span></button>
-    <button role="tab" aria-selected="false" aria-controls="s-work"><span class="w" data-wire></span><b>work</b><span>workers × N</span></button>
-    <button role="tab" aria-selected="false" aria-controls="s-e2e"><span class="w" data-wire></span><b>e2e</b><span>harnes-e2e</span></button>
-    <button role="tab" aria-selected="false" aria-controls="s-review"><span class="w" data-wire></span><b>review</b><span>reviewer</span></button>
-    <button role="tab" aria-selected="false" aria-controls="s-gate"><span class="w" data-wire></span><b>gate</b><span>teacher</span></button>
-    <button role="tab" aria-selected="false" aria-controls="s-you"><span class="w" data-wire></span><b>ready</b><span>you</span></button>
-  </div>
-  <p class="back" aria-label="CHANGES from review and not ready from the gate go back to the workers" data-in>
-    <span class="back-flow" data-back aria-hidden="true">◄················</span>
-    <span>CHANGES or not ready: back to the workers, as a new round</span>
-  </p>
-  <div class="stop-detail" data-in>
-    <article role="tabpanel" id="s-brief"><h3>Orchestrator <span>Sonnet 5.5 · high</span></h3><p>Turns your message into one complete brief and starts the run. Quick questions it answers itself.</p><dl><dt>Tools</dt><dd>crew_start · crew_status · scout · os_route</dd><dt>Leaves</dt><dd>.harnes/runs/&lt;id&gt;/</dd></dl></article>
-    <article role="tabpanel" id="s-plan" hidden><h3>Planner <span>Opus 5.5 · medium</span></h3><p>Splits the task into lots and waves. Lots in the same wave never share a file, so workers never collide.</p><dl><dt>Tools</dt><dd>os_brief · Read · Grep · ctx_search</dd><dt>Leaves</dt><dd>plan.json, one thread per lot</dd></dl></article>
-    <article role="tabpanel" id="s-bar" hidden><h3>Teacher <span>Sonnet 5.5 · high</span></h3><p>Fixes the bar before anyone works: the criteria, the evidence each one needs, and when to involve you.</p><dl><dt>Tools</dt><dd>os_brief · validation pack</dd><dt>Leaves</dt><dd>bar.json</dd></dl></article>
-    <article role="tabpanel" id="s-work" hidden><h3>Workers × N <span>Sonnet 5.5 · high</span></h3><p>Each reads its lot thread, touches only its own files, then writes and runs its own end-to-end test.</p><dl><dt>Tools</dt><dd>thread_read · thread_post · ctx_execute · e2e_observe · e2e_check · e2e_save</dd><dt>Leaves</dt><dd>reports/&lt;lot&gt;-r&lt;n&gt;.json</dd></dl></article>
-    <article role="tabpanel" id="s-e2e" hidden><h3>e2e suite <span>no model</span></h3><p>Runs every spec in a real browser. Steps already resolved replay from the cache without a model call.</p><dl><dt>Tools</dt><dd>harnes-e2e run · Chrome or Edge over CDP</dd><dt>Leaves</dt><dd>results per spec, .harnes/e2e/cache/</dd></dl></article>
-    <article role="tabpanel" id="s-review" hidden><h3>Reviewer <span>Sonnet 5.5 · high</span></h3><p>Reads the diff against the plan and the real test results. PASS moves on; CHANGES go back to the lots.</p><dl><dt>Tools</dt><dd>diff · thread_post · quality and security packs</dd><dt>Leaves</dt><dd>review-&lt;n&gt;.json</dd></dl></article>
-    <article role="tabpanel" id="s-gate" hidden><h3>Teacher <span>Sonnet 5.5 · high</span></h3><p>Holds the results against its own bar. Ready goes to you; not ready goes back to the workers.</p><dl><dt>Tools</dt><dd>bar.json · the results</dd><dt>Leaves</dt><dd>gate-&lt;n&gt;.json, threads closed</dd></dl></article>
-    <article role="tabpanel" id="s-you" hidden><h3>You <span>the last stop</span></h3><p>Read the summary and the proposed commits, one per lot. Test it yourself, then approve.</p><dl><dt>Tools</dt><dd>the chat</dd><dt>Leaves</dt><dd>commits, only once you say so</dd></dl></article>
-  </div>
-  <p class="scouts" data-in>Any role can send a scout (Haiku 5.5 · high) for a short errand: find code, sum up a file, run one command.</p>
-</section>
-
-<section class="plate-wrap" id="chat" data-reveal>
-  <h2 class="plate-title" data-in>Nothing to babysit</h2>
-  <div class="plate" data-plate>
-    <div class="notes left">
-      <button class="note" data-note="track"><b>The run, on one line</b><span>The current step decodes and its wire flows.</span></button>
-      <button class="note" data-note="reply"><b>Real Markdown</b><span>Bold, lists, code and quotes, rendered.</span></button>
-      <button class="note" data-note="tools"><b>One line per tool call</b><span>What the orchestrator did, without the noise.</span></button>
-    </div>
-    <div class="chatcol" data-ui>
-      <p class="p-track" data-part="track">idle · 3 sessions <span>plan --- bar --- w#rk ·:=+· review</span></p>
-      <div class="p-reply" data-part="reply">
-        <p class="who">orchestrator</p>
-        <p><b>Calculator, 6 commits.</b></p>
-        <p>– <code>index.html</code> + <code>styles.css</code>: the page<br>– <code>app.js</code>: operations, reset after <code>=</code></p>
-      </div>
-      <div class="p-tools" data-part="tools">
-        <p><code>crew_start</code> Contact page with form and email</p>
-        <p><code>thread_read</code> lot-1-L1</p>
-      </div>
-      <div class="p-card" data-part="ask">
-        <p class="who">permission · worker-L1-r0 <span>bash</span></p>
-        <code class="ask-what">npm install nodemailer</code>
-        <p class="ask-actions"><span class="u-btn solid">Allow</span><span class="u-btn">Always</span><span class="u-btn ghost">Deny</span></p>
-      </div>
-      <div class="p-card" data-part="question">
-        <p class="who">question · worker-L2-r0</p>
-        <p>contact.html already exists. What now?</p>
-        <p class="ask-actions"><span class="u-btn solid">Replace</span><span class="u-btn">Keep both</span></p>
-      </div>
-      <p class="p-composer" data-part="composer">Write to the orchestrator… <span>↑</span></p>
-    </div>
-    <div class="notes right">
-      <button class="note" data-note="ask"><b>Permissions as cards</b><span>A blocking hook waits for Allow, Always or Deny.</span></button>
-      <button class="note" data-note="question"><b>Questions read from the screen</b><span>Menus on an agent's grid become buttons.</span></button>
-      <button class="note" data-note="composer"><b>One place to talk</b><span>Your message goes to the orchestrator only.</span></button>
-    </div>
-  </div>
-</section>
-</div>
-
-<div class="dither up" aria-hidden="true"><canvas class="field" data-field="ramp" data-seed="11" data-cell="13"></canvas></div>
-
-<section class="close" id="get" data-reveal>
-  <div class="tile side"><canvas class="field" data-field="scenes" data-seed="9" data-cell="12" aria-hidden="true"></canvas></div>
-  <div class="tile main" data-in>
-    <h2>Run your first crew.</h2>
-    <p>Open source, MIT. Windows 11 with Rust, Zig, Node via nvm and Claude Code signed in. Codex, Gemini CLI and OpenCode can take any role.</p>
-    <a class="btn ink" href="https://github.com/sha-riyat/harnes">Clone it on GitHub</a>
-  </div>
-  <div class="tile side grad" aria-hidden="true"></div>
+<section class="end">
+  <h2 data-in>Run your first crew.</h2>
+  <p data-in>Open source, MIT. Codex, Gemini CLI and OpenCode can take any role.</p>
+  <a class="btn solid" href="https://github.com/sha-riyat/harnes" data-in>Clone it on GitHub</a>
 </section>
 </main>
 
