@@ -5,6 +5,8 @@
 //! example: a secret read followed by a network call) and emits findings.
 //! The defaults are intentionally conservative but useful without config.
 
+pub mod trust;
+
 use anyhow::{bail, Context, Result};
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use regex::Regex;
@@ -56,6 +58,10 @@ pub struct Rule {
     /// Regex matched against the command or the serialized tool input.
     #[serde(default)]
     pub pattern: Option<String>,
+    /// Agent roles this rule applies to (`worker`, `reviewer`, `reviewer-finder`,
+    /// `teacher-bar`…). Empty means every agent.
+    #[serde(default)]
+    pub roles: Vec<String>,
     #[serde(default)]
     pub message: String,
 }
@@ -70,6 +76,14 @@ pub struct GuardsFile {
     pub version: u32,
     #[serde(default)]
     pub rules: Vec<Rule>,
+    /// Keep harnes' built-in isolation rules (workers never read the bar,
+    /// review finders never read each other) after the rules above.
+    #[serde(default = "yes")]
+    pub builtins: bool,
+}
+
+fn yes() -> bool {
+    true
 }
 
 fn version() -> u32 {
@@ -121,9 +135,43 @@ pub struct ToolInput {
     pub text: String,
     pub session: Option<String>,
     pub run: Option<String>,
+    /// The agent's role and its finer name, from its key (see `agent_roles`).
+    pub roles: Vec<String>,
+}
+
+/// Roles of an agent key such as `1792261200-worker-L1-r0`: `worker`, and for
+/// a deep review `reviewer` plus `reviewer-finder` or `reviewer-verifier`.
+pub fn agent_roles(key: &str) -> Vec<String> {
+    let name = match key.split_once('-') {
+        Some((head, rest)) if !head.is_empty() && head.chars().all(|c| c.is_ascii_digit()) => rest,
+        _ => key,
+    };
+    let role = name.split('-').next().unwrap_or("").to_string();
+    let mut out = vec![role.clone()];
+    if role == "reviewer" {
+        let last = name.rsplit('-').next().unwrap_or("");
+        if last.len() > 1 && last.starts_with('f') && last[1..].chars().all(|c| c.is_ascii_digit())
+        {
+            out.push("reviewer-finder".into());
+        } else if last == "verify" {
+            out.push("reviewer-verifier".into());
+        }
+    }
+    if name.starts_with("teacher-bar") {
+        out.push("teacher-bar".into());
+    } else if name.starts_with("teacher-gate") {
+        out.push("teacher-gate".into());
+    }
+    out
 }
 
 impl ToolInput {
+    /// The same input from a known agent.
+    pub fn from_agent(mut self, key: &str) -> Self {
+        self.roles = agent_roles(key);
+        self
+    }
+
     pub fn from_hook(payload: &Value) -> Self {
         let tool = payload
             .get("tool_name")
@@ -159,6 +207,7 @@ impl ToolInput {
                 .get("run_id")
                 .and_then(Value::as_str)
                 .map(String::from),
+            roles: vec![],
         }
     }
 }
@@ -190,8 +239,12 @@ impl Guard {
                 file.version
             );
         }
+        let mut all = file.rules;
+        if file.builtins {
+            all.extend(builtin_rules());
+        }
         let mut rules = Vec::new();
-        for rule in file.rules {
+        for rule in all {
             let mut b = GlobSetBuilder::new();
             let mut any = false;
             for p in &rule.paths {
@@ -224,6 +277,9 @@ impl Guard {
             if !c.rule.tools.is_empty()
                 && !c.rule.tools.iter().any(|t| tool_matches(t, &input.tool))
             {
+                continue;
+            }
+            if !c.rule.roles.is_empty() && !c.rule.roles.iter().any(|r| input.roles.contains(r)) {
                 continue;
             }
             // Every condition present in a rule must match: a path glob and a
@@ -341,7 +397,10 @@ pub fn hook_main() -> i32 {
         eprintln!("harnes-hook: {e:#}");
         Guard::new(default_guards()).expect("default guards compile")
     });
-    let input = ToolInput::from_hook(&payload);
+    let mut input = ToolInput::from_hook(&payload);
+    if let Ok(key) = std::env::var("HARNES_AGENT") {
+        input = input.from_agent(&key);
+    }
     let decision = guard.decide(&input);
     if payload.get("hook_event_name").and_then(Value::as_str) == Some("PreToolUse") {
         if let Ok(text) = serde_json::to_string(&hook_response(&decision)) {
@@ -451,6 +510,7 @@ pub fn default_guards() -> GuardsFile {
                 "**/.github/workflows/**".into(),
             ],
             pattern: None,
+            roles: vec![],
             message: "Ce fichier pilote les agents ou la CI : confirme la modification.".into(),
         },
         Rule {
@@ -461,6 +521,7 @@ pub fn default_guards() -> GuardsFile {
             tools: vec!["Bash".into(), "PowerShell".into(), "Shell".into()],
             paths: vec![],
             pattern: Some(r"(?i)(rm\s+-rf\s+(/|~|\*)|git\s+reset\s+--hard|git\s+clean\s+-[a-z]*f|git\s+push\s+(--force|-f)|Remove-Item\s+-Recurse\s+-Force\s+[A-Z]:\\)".into()),
+            roles: vec![],
             message: "Commande irreversible ou destructrice bloquée par harnes.".into(),
         },
         Rule {
@@ -471,6 +532,7 @@ pub fn default_guards() -> GuardsFile {
             tools: vec!["Write".into(), "Edit".into(), "MultiEdit".into()],
             paths: vec!["**/.env".into(), "**/.env.*".into(), "**/secrets/**".into(), "**/*.pem".into(), "**/.ssh/**".into()],
             pattern: None,
+            roles: vec![],
             message: "Ce chemin contient des secrets : confirme l'écriture.".into(),
         },
         Rule {
@@ -481,6 +543,7 @@ pub fn default_guards() -> GuardsFile {
             tools: vec!["Bash".into(), "PowerShell".into(), "Shell".into()],
             paths: vec![],
             pattern: Some(r"(?i)(cat|type|get-content)\s+[^|]*\.env[^|]*\|\s*(curl|wget|invoke-webrequest)|(curl|wget)\s+[^ ]*\.env".into()),
+            roles: vec![],
             message: "Lecture de secrets envoyée au réseau : bloqué.".into(),
         },
         Rule {
@@ -491,10 +554,84 @@ pub fn default_guards() -> GuardsFile {
             tools: vec!["Bash".into(), "PowerShell".into()],
             paths: vec![],
             pattern: Some(r"(?i)(npm\s+publish|cargo\s+publish|twine\s+upload|gh\s+release\s+create)".into()),
+            roles: vec![],
             message: "Publication externe : confirme.".into(),
         },
     ];
-    GuardsFile { version: 1, rules }
+    GuardsFile {
+        version: 1,
+        rules,
+        builtins: true,
+    }
+}
+
+fn isolation(
+    id: &str,
+    title: &str,
+    roles: &[&str],
+    tools: &[&str],
+    paths: &[&str],
+    pattern: Option<&str>,
+    message: &str,
+) -> Rule {
+    Rule {
+        id: id.into(),
+        title: title.into(),
+        severity: Severity::High,
+        action: Action::Deny,
+        tools: tools.iter().map(|t| t.to_string()).collect(),
+        paths: paths.iter().map(|t| t.to_string()).collect(),
+        pattern: pattern.map(String::from),
+        roles: roles.iter().map(|t| t.to_string()).collect(),
+        message: message.into(),
+    }
+}
+
+/// Isolation between roles, so a judge is not tuned to its candidate: workers
+/// never read the bar or the verdicts they are judged by, and the finders of a
+/// deep review never read each other. Harness2 saw an agent fetch the rubric it
+/// was graded on; this closes the same door.
+pub fn builtin_rules() -> Vec<Rule> {
+    const READ: &[&str] = &["Read", "Grep", "Glob", "NotebookRead"];
+    const SHELL: &[&str] = &["Bash", "PowerShell", "Shell"];
+    vec![
+        isolation(
+            "workers-skip-the-bar",
+            "Critères de validation",
+            &["worker"],
+            READ,
+            &["**/.harnes/runs/*/bar.json", "**/.harnes/runs/*/review-*.json", "**/.harnes/runs/*/gate-*.json"],
+            None,
+            "La barre du Teacher et les verdicts sont hors de portée des Workers : ils jugent, ils ne se règlent pas dessus.",
+        ),
+        isolation(
+            "workers-skip-the-bar-shell",
+            "Critères de validation",
+            &["worker"],
+            SHELL,
+            &[],
+            Some(r#"(?i)\.harnes[/\\]+runs[/\\]+[^\s'"]*(bar|review-\d|gate-\d)"#),
+            "La barre du Teacher et les verdicts sont hors de portée des Workers.",
+        ),
+        isolation(
+            "finders-read-alone",
+            "Relecteurs indépendants",
+            &["reviewer-finder"],
+            READ,
+            &["**/.harnes/runs/*/review-*-f*.json", "**/.harnes/runs/*/review-*-verify.json"],
+            None,
+            "Dans une revue renforcée, chaque relecteur cherche sans voir les autres.",
+        ),
+        isolation(
+            "finders-read-alone-shell",
+            "Relecteurs indépendants",
+            &["reviewer-finder"],
+            SHELL,
+            &[],
+            Some(r#"(?i)(cat|type|get-content|head|tail|more|less|grep|rg|select-string)\s+[^|;&]*review-\d+-f\d+\.json"#),
+            "Dans une revue renforcée, chaque relecteur cherche sans voir les autres.",
+        ),
+    ]
 }
 
 #[cfg(test)]
@@ -577,6 +714,84 @@ mod tests {
             ))
             .action,
             Action::Deny
+        );
+    }
+
+    fn as_agent(tool: &str, value: Value, key: &str) -> ToolInput {
+        input(tool, value).from_agent(key)
+    }
+
+    #[test]
+    fn agent_keys_give_roles() {
+        assert_eq!(agent_roles("1792261200-worker-L1-r0"), ["worker"]);
+        assert_eq!(
+            agent_roles("17-reviewer-0-f2"),
+            ["reviewer", "reviewer-finder"]
+        );
+        assert_eq!(
+            agent_roles("17-reviewer-0-verify"),
+            ["reviewer", "reviewer-verifier"]
+        );
+        assert_eq!(agent_roles("17-teacher-bar"), ["teacher", "teacher-bar"]);
+        assert_eq!(agent_roles("orch-abc"), ["orch"]);
+    }
+
+    #[test]
+    fn workers_cannot_see_the_bar_but_the_teacher_can() {
+        let g = Guard::new(default_guards()).unwrap();
+        let bar = json!({"file_path": "C:\\work\\p\\.harnes\\runs\\17\\bar.json"});
+        assert_eq!(
+            g.decide(&as_agent("Read", bar.clone(), "17-worker-L1-r0"))
+                .action,
+            Action::Deny
+        );
+        assert_eq!(
+            g.decide(&as_agent("Read", bar, "17-teacher-gate-0")).action,
+            Action::Allow
+        );
+        let sh = json!({"command": "cat .harnes/runs/17/bar.json"});
+        let d = g.decide(&as_agent("Bash", sh.clone(), "17-worker-L2-r1"));
+        assert_eq!(d.rule.as_deref(), Some("workers-skip-the-bar-shell"));
+        assert_eq!(
+            g.decide(&as_agent("Bash", sh, "17-reviewer-0")).action,
+            Action::Allow
+        );
+        let own = json!({"file_path": ".harnes/runs/17/reports/L1-r0.json"});
+        assert_eq!(
+            g.decide(&as_agent("Read", own, "17-worker-L1-r0")).action,
+            Action::Allow
+        );
+    }
+
+    #[test]
+    fn finders_do_not_read_each_other_but_the_verifier_reads_all() {
+        let g = Guard::new(default_guards()).unwrap();
+        let other = json!({"file_path": ".harnes/runs/17/review-0-f1.json"});
+        assert_eq!(
+            g.decide(&as_agent("Read", other.clone(), "17-reviewer-0-f0"))
+                .action,
+            Action::Deny
+        );
+        assert_eq!(
+            g.decide(&as_agent("Read", other, "17-reviewer-0-verify"))
+                .action,
+            Action::Allow
+        );
+        let own = json!({"file_path": ".harnes/runs/17/review-0-f0.json", "content": "{}"});
+        assert_eq!(
+            g.decide(&as_agent("Write", own, "17-reviewer-0-f0")).action,
+            Action::Allow,
+            "a finder writes its own verdict"
+        );
+    }
+
+    #[test]
+    fn user_rules_come_first_and_builtins_can_be_turned_off() {
+        let off = Guard::from_value(json!({"version": 1, "rules": [], "builtins": false})).unwrap();
+        let bar = json!({"file_path": ".harnes/runs/17/bar.json"});
+        assert_eq!(
+            off.decide(&as_agent("Read", bar, "17-worker-L1-r0")).action,
+            Action::Allow
         );
     }
 

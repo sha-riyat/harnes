@@ -74,7 +74,7 @@ pub fn install(st: &Shared) {
         let Some(p) = st.project_of_key(key) else { return json!({}) };
         let event = payload.get("hook_event_name").and_then(Value::as_str).unwrap_or("");
         let tool = tool_of(payload);
-        let input = ToolInput::from_hook(payload);
+        let input = ToolInput::from_hook(payload).from_agent(key);
         let run = run_of(&p);
         let role = role_of(&st, key);
         let mut base = harnes_telemetry::Event::new(&run, &p.id, kind_of(event, Some(&tool)))

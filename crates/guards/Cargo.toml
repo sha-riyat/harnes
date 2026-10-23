@@ -16,3 +16,4 @@ serde_json.workspace = true
 regex.workspace = true
 globset.workspace = true
 harnes-telemetry.workspace = true
+sha2.workspace = true
