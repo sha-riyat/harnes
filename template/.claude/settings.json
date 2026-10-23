@@ -98,7 +98,7 @@
     "ponytail@ponytail": true,
     "context-mode@context-mode": false
   },
-  "enableAllProjectMcpServers": true,
+  "enableAllProjectMcpServers": false,
   "enabledMcpjsonServers": [
     "harnes-ctx",
     "harnes-e2e"
